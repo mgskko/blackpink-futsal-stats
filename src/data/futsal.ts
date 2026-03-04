@@ -1093,7 +1093,53 @@ export function getPlayerRecentForm(playerId: number, count = 5): ("승" | "패"
   });
 }
 
-export function getDeadlyDuos(topN = 5) {
+export function getPlayerBestAPMatch(playerId: number): { matchId: number; goals: number; assists: number; ap: number; date: string } | null {
+  const playerMatchIds = [...new Set(rosters.filter(r => r.playerId === playerId).map(r => r.matchId))];
+  let best: { matchId: number; goals: number; assists: number; ap: number; date: string } | null = null;
+
+  playerMatchIds.forEach(matchId => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+    let g = 0, a = 0;
+    if (match.hasDetailLog) {
+      g = goalEvents.filter(e => e.matchId === matchId && e.goalPlayerId === playerId && !e.isOwnGoal).length;
+      a = goalEvents.filter(e => e.matchId === matchId && e.assistPlayerId === playerId).length;
+    } else {
+      const r = rosters.find(r => r.matchId === matchId && r.playerId === playerId);
+      g = r?.goals || 0;
+      a = r?.assists || 0;
+    }
+    const ap = g + a;
+    if (!best || ap > best.ap) {
+      best = { matchId, goals: g, assists: a, ap, date: match.date };
+    }
+  });
+  return best;
+}
+
+export function getPlayerAssistGiven(playerId: number, topN = 7): { partnerId: number; count: number }[] {
+  // Times this player assisted someone's goal
+  const map = new Map<number, number>();
+  goalEvents.forEach(g => {
+    if (g.assistPlayerId === playerId && g.goalPlayerId && !g.isOwnGoal) {
+      map.set(g.goalPlayerId, (map.get(g.goalPlayerId) || 0) + 1);
+    }
+  });
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN).map(([partnerId, count]) => ({ partnerId, count }));
+}
+
+export function getPlayerAssistReceived(playerId: number, topN = 7): { partnerId: number; count: number }[] {
+  // Times this player scored with someone's assist
+  const map = new Map<number, number>();
+  goalEvents.forEach(g => {
+    if (g.goalPlayerId === playerId && g.assistPlayerId && !g.isOwnGoal) {
+      map.set(g.assistPlayerId, (map.get(g.assistPlayerId) || 0) + 1);
+    }
+  });
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, topN).map(([partnerId, count]) => ({ partnerId, count }));
+}
+
+export function getDeadlyDuos(topN = 10) {
   const duoMap = new Map<string, { p1: number; p2: number; count: number }>();
 
   goalEvents.forEach(g => {

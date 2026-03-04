@@ -1,14 +1,16 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft, User, Trophy } from "lucide-react";
 import {
   players,
   getPlayerStats,
-  getPlayerRecentForm,
+  getPlayerBestAPMatch,
+  getPlayerAssistGiven,
+  getPlayerAssistReceived,
   goalEvents,
-  rosters,
   matches,
   getPlayerName,
+  getMatchResult,
 } from "@/data/futsal";
 
 const PlayerDetailPage = () => {
@@ -26,21 +28,11 @@ const PlayerDetailPage = () => {
   }
 
   const stats = getPlayerStats(playerId);
-  const recentForm = getPlayerRecentForm(playerId, 5);
+  const bestAP = getPlayerBestAPMatch(playerId);
+  const assistGiven = getPlayerAssistGiven(playerId, 7);
+  const assistReceived = getPlayerAssistReceived(playerId, 7);
 
-  // Labels/badges based on stats
-  const labels: string[] = [];
-  if (stats.goals >= 20) labels.push("득점기계");
-  if (stats.assists >= 15) labels.push("어시왕");
-  if (stats.appearances >= 30) labels.push("철강왕");
-  if (stats.winRate >= 60) labels.push("승리요정");
-  if (stats.attackPoints >= 30) labels.push("핵심선수");
-  if (stats.goals >= 10 && stats.assists >= 10) labels.push("올라운더");
-
-  // Goals per game
-  const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
-
-  // Top duos for this player
+  // Best partners (combined goal+assist connections) top 7
   const playerDuos = new Map<number, number>();
   goalEvents.forEach((g) => {
     if (g.goalPlayerId === playerId && g.assistPlayerId) {
@@ -52,7 +44,49 @@ const PlayerDetailPage = () => {
   });
   const topDuos = [...playerDuos.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+    .slice(0, 7);
+
+  const labels: string[] = [];
+  if (stats.goals >= 20) labels.push("득점기계");
+  if (stats.assists >= 15) labels.push("어시왕");
+  if (stats.appearances >= 30) labels.push("철강왕");
+  if (stats.winRate >= 60) labels.push("승리요정");
+  if (stats.attackPoints >= 30) labels.push("핵심선수");
+  if (stats.goals >= 10 && stats.assists >= 10) labels.push("올라운더");
+
+  const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
+
+  const bestAPMatch = bestAP ? matches.find(m => m.id === bestAP.matchId) : null;
+  const bestAPResult = bestAP ? getMatchResult(bestAP.matchId) : null;
+
+  const PartnerList = ({ title, data, subLabel }: { title: string; data: { partnerId: number; count: number }[]; subLabel: string }) => (
+    data.length > 0 ? (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-4 mt-4 rounded-lg border border-border bg-card p-4"
+      >
+        <h3 className="mb-3 font-display text-lg text-primary">{title}</h3>
+        <div className="space-y-2">
+          {data.map(({ partnerId, count }, i) => (
+            <div
+              key={partnerId}
+              onClick={() => navigate(`/player/${partnerId}`)}
+              className="flex cursor-pointer items-center justify-between rounded-md bg-secondary/50 px-3 py-2 transition-colors hover:bg-secondary"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                  i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}>{i + 1}</span>
+                <span className="text-sm font-medium text-foreground">{getPlayerName(partnerId)}</span>
+              </div>
+              <span className="text-sm text-primary">{count}회 {subLabel}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    ) : null
+  );
 
   return (
     <div className="pb-20">
@@ -87,10 +121,7 @@ const PlayerDetailPage = () => {
             {labels.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {labels.map((label) => (
-                  <span
-                    key={label}
-                    className="rounded-full gradient-pink px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground"
-                  >
+                  <span key={label} className="rounded-full gradient-pink px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                     {label}
                   </span>
                 ))}
@@ -115,13 +146,8 @@ const PlayerDetailPage = () => {
           { label: "출전", value: stats.appearances, glow: false },
           { label: "승률", value: `${stats.winRate}%`, glow: true },
         ].map(({ label, value, glow }) => (
-          <div
-            key={label}
-            className="rounded-lg border border-border bg-card p-4 text-center"
-          >
-            <div className={`font-display text-3xl ${glow ? "text-primary text-glow" : "text-foreground"}`}>
-              {value}
-            </div>
+          <div key={label} className="rounded-lg border border-border bg-card p-4 text-center">
+            <div className={`font-display text-3xl ${glow ? "text-primary text-glow" : "text-foreground"}`}>{value}</div>
             <div className="mt-1 text-xs text-muted-foreground">{label}</div>
           </div>
         ))}
@@ -151,33 +177,45 @@ const PlayerDetailPage = () => {
         </div>
       </motion.div>
 
-      {/* Recent Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mx-4 mt-4 rounded-lg border border-border bg-card p-4"
-      >
-        <h3 className="mb-3 font-display text-lg text-primary">RECENT FORM</h3>
-        <div className="flex justify-center gap-2">
-          {recentForm.map((result, i) => (
-            <div
-              key={i}
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-                result === "승"
-                  ? "gradient-pink text-primary-foreground"
-                  : result === "패"
-                  ? "bg-muted text-muted-foreground"
-                  : "border border-primary/40 text-primary"
-              }`}
-            >
-              {result}
+      {/* Best AP Match */}
+      {bestAP && bestAP.ap > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mx-4 mt-4 rounded-lg border border-primary/30 bg-card p-4 box-glow"
+        >
+          <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">
+            <Trophy size={18} /> BEST MATCH
+          </h3>
+          <div
+            onClick={() => navigate(`/match/${bestAP.matchId}`)}
+            className="cursor-pointer rounded-md bg-secondary/50 p-3 transition-colors hover:bg-secondary"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground">{bestAP.date}</div>
+                {bestAPResult && (
+                  <div className="mt-1 text-sm text-foreground">
+                    vs {bestAPResult.opponentTeam.name}
+                    <span className={`ml-2 text-xs font-bold ${
+                      bestAPResult.ourResult.result === "승" ? "text-primary" : "text-muted-foreground"
+                    }`}>{bestAPResult.ourResult.result}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="font-display text-2xl text-primary text-glow">{bestAP.ap}AP</div>
+                <div className="text-xs text-muted-foreground">
+                  {bestAP.goals}골 {bestAP.assists}어시
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </motion.div>
+          </div>
+        </motion.div>
+      )}
 
-      {/* Best Duos */}
+      {/* Best Partners (combined) */}
       {topDuos.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -187,19 +225,30 @@ const PlayerDetailPage = () => {
         >
           <h3 className="mb-3 font-display text-lg text-primary">BEST PARTNERS</h3>
           <div className="space-y-2">
-            {topDuos.map(([partnerId, count]) => (
+            {topDuos.map(([partnerId, count], i) => (
               <div
                 key={partnerId}
                 onClick={() => navigate(`/player/${partnerId}`)}
                 className="flex cursor-pointer items-center justify-between rounded-md bg-secondary/50 px-3 py-2 transition-colors hover:bg-secondary"
               >
-                <span className="text-sm font-medium text-foreground">{getPlayerName(partnerId)}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                    i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}>{i + 1}</span>
+                  <span className="text-sm font-medium text-foreground">{getPlayerName(partnerId)}</span>
+                </div>
                 <span className="text-sm text-primary">{count}회 합작</span>
               </div>
             ))}
           </div>
         </motion.div>
       )}
+
+      {/* Assist Given (내가 어시스트 해준 선수) */}
+      <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
+
+      {/* Assist Received (나에게 어시스트 해준 선수) */}
+      <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
     </div>
   );
 };
