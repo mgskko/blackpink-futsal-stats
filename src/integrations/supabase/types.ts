@@ -232,22 +232,28 @@ export type Database = {
       }
       players: {
         Row: {
+          back_number: number | null
           id: number
           is_active: boolean
           join_date: string
           name: string
+          profile_image_url: string | null
         }
         Insert: {
+          back_number?: number | null
           id: number
           is_active?: boolean
           join_date: string
           name: string
+          profile_image_url?: string | null
         }
         Update: {
+          back_number?: number | null
           id?: number
           is_active?: boolean
           join_date?: string
           name?: string
+          profile_image_url?: string | null
         }
         Relationships: []
       }

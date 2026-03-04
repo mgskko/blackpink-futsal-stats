@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export interface Player { id: number; name: string; is_active: boolean; join_date: string; }
+export interface Player { id: number; name: string; is_active: boolean; join_date: string; back_number: number | null; profile_image_url: string | null; }
 export interface Venue { id: number; name: string; }
 export interface Match { id: number; date: string; venue_id: number; match_type: string; is_custom: boolean; has_detail_log: boolean; youtube_link: string | null; }
 export interface Team { id: number; match_id: number; name: string; is_ours: boolean; original_age_desc: string | null; age_category: string | null; }

@@ -129,32 +129,57 @@ const PlayerDetailPage = () => {
         onFilterChange={handleFilterChange}
       />
 
-      {/* Profile Header */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-6 box-glow">
-        <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/50 bg-secondary">
-            <User size={40} className="text-primary" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
-              <PlayerTierBadge tier={tier} size="md" />
-              {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
-              {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
+      {/* Profile Header - Stat Card Style */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card overflow-hidden box-glow">
+        {/* Hero section with gradient background */}
+        <div className="relative bg-gradient-to-br from-primary/20 via-card to-card p-6">
+          {/* Back number watermark */}
+          {player.back_number !== null && player.back_number !== undefined && (
+            <div className="absolute top-2 right-4 font-display text-[80px] leading-none text-primary/10 select-none pointer-events-none">
+              {player.back_number}
             </div>
-            <p className="text-xs text-muted-foreground">
-              가입일: {player.join_date}
-              {player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
-            </p>
-            {formGuide.recentGames > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                최근 {formGuide.recentGames}경기 AP: <span className={formGuide.form === "hot" ? "text-primary font-bold" : formGuide.form === "cold" ? "text-destructive" : "text-foreground"}>{formGuide.recentAP}</span>
+          )}
+          <div className="flex items-center gap-5 relative z-10">
+            {/* Profile image */}
+            <div className="relative flex-shrink-0">
+              <div className="h-24 w-24 overflow-hidden rounded-2xl border-2 border-primary/50 bg-secondary shadow-lg shadow-primary/20">
+                {player.profile_image_url ? (
+                  <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <User size={44} className="text-primary/60" />
+                  </div>
+                )}
+              </div>
+              {/* Back number badge */}
+              {player.back_number !== null && player.back_number !== undefined && (
+                <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-lg gradient-pink text-sm font-bold text-primary-foreground shadow-md">
+                  {player.back_number}
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+                <PlayerTierBadge tier={tier} size="md" />
+                {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+                {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                가입일: {player.join_date}
+                {player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
               </p>
-            )}
+              {formGuide.recentGames > 0 && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  최근 {formGuide.recentGames}경기 AP: <span className={formGuide.form === "hot" ? "text-primary font-bold" : formGuide.form === "cold" ? "text-destructive" : "text-foreground"}>{formGuide.recentAP}</span>
+                </p>
+              )}
+            </div>
           </div>
         </div>
         {allBadges.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
+          <div className="px-6 pb-5 pt-3 flex flex-wrap gap-1.5">
             {allBadges.map((badge, i) => (
               <span key={i} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                 badge.emoji === "🚨" ? "border-destructive/40 bg-destructive/10 text-destructive"
