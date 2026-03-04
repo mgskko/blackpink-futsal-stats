@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
@@ -9,7 +9,9 @@ import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PlayerFilterTabs, { getAvailableYears, filterMatchesByMode, type FilterMode } from "@/components/player/PlayerFilterTabs";
-import PlayerTierBadge, { getPlayerTier } from "@/components/player/PlayerTierBadge";
+import PlayerTierBadge, { getPlayerTier, TIER_CONFIG } from "@/components/player/PlayerTierBadge";
+import ActivityHeatmap from "@/components/player/ActivityHeatmap";
+import SeasonWrapped from "@/components/player/SeasonWrapped";
 
 const PlayerDetailPage = () => {
   const { id } = useParams();
