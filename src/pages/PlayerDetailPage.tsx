@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
-import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
+import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ const PlayerDetailPage = () => {
   const myFairy = winFairyAll.find(d => d.playerId === playerId);
 
   const formGuide = getPlayerFormGuide(playerId, matches, rosters, goalEvents);
-  const scoutingReport = getScoutingReport(playerId, matches, rosters, goalEvents);
+  const scoutingReport = getDeepScoutingReport(playerId, players, matches, teams, results, rosters, goalEvents, momVotes);
 
   const playerDuos = new Map<number, number>();
   goalEvents.forEach(g => {
@@ -70,6 +70,11 @@ const PlayerDetailPage = () => {
     ) : null
   );
 
+  const trendIcon = scoutingReport.trend === "up" ? <TrendingUp size={16} className="text-primary" />
+    : scoutingReport.trend === "down" ? <TrendingDown size={16} className="text-destructive" />
+    : scoutingReport.trend === "special" ? <Sparkles size={16} className="text-primary" />
+    : <Minus size={16} className="text-muted-foreground" />;
+
   return (
     <div className="pb-20">
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-lg">
@@ -88,7 +93,6 @@ const PlayerDetailPage = () => {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
-              {/* Form indicator */}
               {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
               {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
             </div>
@@ -103,7 +107,6 @@ const PlayerDetailPage = () => {
             )}
           </div>
         </div>
-        {/* Badges */}
         {allBadges.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
             {allBadges.map((badge, i) => (
@@ -120,13 +123,19 @@ const PlayerDetailPage = () => {
         )}
       </motion.div>
 
-      {/* Scouting Report */}
+      {/* Deep Scouting Report */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
         <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
-          {scoutingReport.trend === "up" ? <TrendingUp size={16} className="text-primary" /> : scoutingReport.trend === "down" ? <TrendingDown size={16} className="text-destructive" /> : <Minus size={16} className="text-muted-foreground" />}
-          스카우팅 리포트
+          {trendIcon}
+          수석코치 AI 스카우팅 리포트
         </h3>
-        <p className="text-xs text-muted-foreground">{scoutingReport.comment}</p>
+        <div className="flex items-start gap-3">
+          <span className="text-3xl">{scoutingReport.emoji}</span>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-foreground mb-1">{scoutingReport.label}</div>
+            <p className="text-xs text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
+          </div>
+        </div>
       </motion.div>
 
       {/* Stats Grid */}
