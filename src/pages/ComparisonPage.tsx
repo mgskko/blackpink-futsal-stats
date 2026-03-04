@@ -4,17 +4,24 @@ import { motion } from "framer-motion";
 import { ArrowLeft, User, Swords } from "lucide-react";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend } from "recharts";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
+import type { Match } from "@/hooks/useFutsalData";
 import { getMOMRanking } from "@/hooks/useAdvancedStats";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+function getAvailableYears(matches: Match[]): string[] {
+  const years = new Set(matches.map(m => m.date.slice(0, 4)));
+  return [...years].sort((a, b) => b.localeCompare(a));
+}
+
 const ComparisonPage = () => {
   const navigate = useNavigate();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [player1, setPlayer1] = useState("");
   const [player2, setPlayer2] = useState("");
+  const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes"],
@@ -26,32 +33,38 @@ const ComparisonPage = () => {
 
   if (isLoading) return <SplashScreen />;
 
+  const years = getAvailableYears(matches);
+
+  // Filter data by year
+  const filteredMatches = selectedYear ? matches.filter(m => m.date.startsWith(selectedYear)) : matches;
+  const filteredMatchIds = new Set(filteredMatches.map(m => m.id));
+  const filteredRosters = selectedYear ? rosters.filter(r => filteredMatchIds.has(r.match_id)) : rosters;
+  const filteredGoalEvents = selectedYear ? goalEvents.filter(g => filteredMatchIds.has(g.match_id)) : goalEvents;
+  const filteredResults = selectedYear ? results.filter(r => filteredMatchIds.has(r.match_id)) : results;
+  const filteredMomVotes = selectedYear ? (momVotes || []).filter(v => filteredMatchIds.has(v.match_id)) : (momVotes || []);
+
   const activePlayers = players.filter(p => p.is_active).sort((a, b) => a.name.localeCompare(b.name));
   const p1 = player1 ? players.find(p => p.id === Number(player1)) : null;
   const p2 = player2 ? players.find(p => p.id === Number(player2)) : null;
 
   const getStatsNormalized = (pid: number) => {
-    const s = getPlayerStats(players, matches, teams, results, rosters, goalEvents, pid);
-    const momRank = getMOMRanking(players, momVotes || []);
+    const s = getPlayerStats(players, filteredMatches, teams, filteredResults, filteredRosters, filteredGoalEvents, pid);
+    const momRank = getMOMRanking(players, filteredMomVotes);
     const mom = momRank.find(m => m.playerId === pid)?.count || 0;
     const goalsPerGame = s.appearances > 0 ? s.goals / s.appearances : 0;
     const assistsPerGame = s.appearances > 0 ? s.assists / s.appearances : 0;
-    const attendanceRate = (() => {
-      const totalMatches = matches.filter(m => !m.is_custom).length;
-      return totalMatches > 0 ? Math.round((s.appearances / totalMatches) * 100) : 0;
-    })();
+    const totalNonCustom = filteredMatches.filter(m => !m.is_custom).length;
+    const attendanceRate = totalNonCustom > 0 ? Math.round((s.appearances / totalNonCustom) * 100) : 0;
     return { goalsPerGame, assistsPerGame, attendanceRate, winRate: s.winRate, mom, appearances: s.appearances, goals: s.goals, assists: s.assists, attackPoints: s.attackPoints };
   };
 
   const s1 = p1 ? getStatsNormalized(p1.id) : null;
   const s2 = p2 ? getStatsNormalized(p2.id) : null;
 
-  // Normalize for radar (0-100 scale)
   const maxVals = {
     goalsPerGame: Math.max(s1?.goalsPerGame || 1, s2?.goalsPerGame || 1, 1),
     assistsPerGame: Math.max(s1?.assistsPerGame || 1, s2?.assistsPerGame || 1, 1),
-    attendanceRate: 100,
-    winRate: 100,
+    attendanceRate: 100, winRate: 100,
     mom: Math.max(s1?.mom || 1, s2?.mom || 1, 1),
   };
 
@@ -72,8 +85,23 @@ const ComparisonPage = () => {
         </div>
       </div>
 
-      <div className="px-4 mt-4 space-y-4">
-        {/* Player Selectors */}
+      {/* Year filter */}
+      <div className="px-4 mt-4 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <button onClick={() => setSelectedYear(undefined)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${!selectedYear ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+            전체
+          </button>
+          {years.map(y => (
+            <button key={y} onClick={() => setSelectedYear(y)}
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedYear === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">선수 1</label>
@@ -99,29 +127,20 @@ const ComparisonPage = () => {
           </div>
         </div>
 
-        {/* VS Header */}
         {p1 && p2 && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center justify-center gap-6 py-4">
             <div className="flex flex-col items-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/50 bg-secondary">
-                <User size={32} className="text-primary" />
-              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/50 bg-secondary"><User size={32} className="text-primary" /></div>
               <span className="mt-2 font-bold text-foreground">{p1.name}</span>
             </div>
+            <div className="flex flex-col items-center"><Swords size={28} className="text-primary text-glow" /><span className="font-display text-sm text-primary mt-1">VS</span></div>
             <div className="flex flex-col items-center">
-              <Swords size={28} className="text-primary text-glow" />
-              <span className="font-display text-sm text-primary mt-1">VS</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent/50 bg-secondary">
-                <User size={32} className="text-accent" />
-              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent/50 bg-secondary"><User size={32} className="text-accent" /></div>
               <span className="mt-2 font-bold text-foreground">{p2.name}</span>
             </div>
           </motion.div>
         )}
 
-        {/* Radar Chart */}
         {s1 && s2 && radarData.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-border bg-card p-4">
             <ResponsiveContainer width="100%" height={300}>
@@ -137,7 +156,6 @@ const ComparisonPage = () => {
           </motion.div>
         )}
 
-        {/* Stat Comparison Table */}
         {s1 && s2 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card overflow-hidden">
             {[
