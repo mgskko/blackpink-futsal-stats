@@ -21,6 +21,7 @@ const PlayerDetailPage = () => {
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
+  const [showWrapped, setShowWrapped] = useState(false);
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
