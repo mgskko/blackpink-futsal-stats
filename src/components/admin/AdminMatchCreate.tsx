@@ -8,6 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 
+const AGE_CATEGORIES = [
+  "20대 초반", "20대 중반", "20대 후반",
+  "2030 혼합", "30대 초반", "30대 중반", "30대 후반",
+  "3040 혼합", "30대초중반", "30대중~40대",
+  "정보없음",
+];
+
 const AdminMatchCreate = () => {
   const { venues, players } = useAllFutsalData();
   const queryClient = useQueryClient();
@@ -16,19 +23,36 @@ const AdminMatchCreate = () => {
   const [matchType, setMatchType] = useState("6:6 풋살");
   const [isCustom, setIsCustom] = useState(false);
   const [opponentName, setOpponentName] = useState("");
+  const [ageCategory, setAgeCategory] = useState("");
+  const [teamAName, setTeamAName] = useState("버니즈 A");
+  const [teamBName, setTeamBName] = useState("버니즈 B");
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
+  const [playerTeams, setPlayerTeams] = useState<Record<number, "A" | "B">>({});
   const [saving, setSaving] = useState(false);
+  const [youtubeLink, setYoutubeLink] = useState("");
 
   const activePlayers = players.filter(p => p.is_active);
 
   const togglePlayer = (id: number) => {
-    setSelectedPlayers(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setSelectedPlayers(prev => {
+      if (prev.includes(id)) {
+        const next = prev.filter(p => p !== id);
+        const copy = { ...playerTeams };
+        delete copy[id];
+        setPlayerTeams(copy);
+        return next;
+      }
+      setPlayerTeams(pt => ({ ...pt, [id]: "A" }));
+      return [...prev, id];
+    });
   };
 
   const selectAll = () => {
-    setSelectedPlayers(activePlayers.map(p => p.id));
+    const ids = activePlayers.map(p => p.id);
+    setSelectedPlayers(ids);
+    const pt: Record<number, "A" | "B"> = {};
+    ids.forEach(id => { pt[id] = "A"; });
+    setPlayerTeams(pt);
   };
 
   const handleCreate = async () => {
@@ -38,7 +62,6 @@ const AdminMatchCreate = () => {
     }
     setSaving(true);
     try {
-      // Create match
       const { data: match, error: matchErr } = await supabase
         .from("matches")
         .insert({
@@ -46,21 +69,28 @@ const AdminMatchCreate = () => {
           venue_id: venueId ? Number(venueId) : null,
           match_type: matchType,
           is_custom: isCustom,
+          youtube_link: youtubeLink || null,
         })
         .select()
         .single();
 
       if (matchErr) throw matchErr;
 
-      // Create teams
-      const teamInserts = [
-        { match_id: match.id, name: "버니즈", is_ours: true },
-      ];
-      if (!isCustom && opponentName) {
-        teamInserts.push({ match_id: match.id, name: opponentName, is_ours: false });
-      }
+      const teamInserts: any[] = [];
       if (isCustom) {
-        teamInserts.push({ match_id: match.id, name: "버니즈 B", is_ours: true });
+        teamInserts.push({ match_id: match.id, name: teamAName, is_ours: true });
+        teamInserts.push({ match_id: match.id, name: teamBName, is_ours: true });
+      } else {
+        teamInserts.push({ match_id: match.id, name: "버니즈", is_ours: true });
+        if (opponentName) {
+          teamInserts.push({
+            match_id: match.id,
+            name: opponentName,
+            is_ours: false,
+            original_age_desc: ageCategory || null,
+            age_category: ageCategory || null,
+          });
+        }
       }
 
       const { data: createdTeams, error: teamErr } = await supabase
@@ -70,15 +100,28 @@ const AdminMatchCreate = () => {
 
       if (teamErr) throw teamErr;
 
-      // Create roster entries for our team
-      const ourTeam = createdTeams.find((t: any) => t.name === "버니즈");
-      if (ourTeam && selectedPlayers.length > 0) {
-        const rosterInserts = selectedPlayers.map(pid => ({
-          match_id: match.id,
-          team_id: ourTeam.id,
-          player_id: pid,
-        }));
-        await supabase.from("rosters").insert(rosterInserts);
+      // Create roster entries
+      if (selectedPlayers.length > 0) {
+        if (isCustom) {
+          const teamA = createdTeams.find((t: any) => t.name === teamAName);
+          const teamB = createdTeams.find((t: any) => t.name === teamBName);
+          const rosterInserts = selectedPlayers.map(pid => ({
+            match_id: match.id,
+            team_id: (playerTeams[pid] === "B" ? teamB?.id : teamA?.id) || createdTeams[0].id,
+            player_id: pid,
+          }));
+          await supabase.from("rosters").insert(rosterInserts);
+        } else {
+          const ourTeam = createdTeams.find((t: any) => t.name === "버니즈");
+          if (ourTeam) {
+            const rosterInserts = selectedPlayers.map(pid => ({
+              match_id: match.id,
+              team_id: ourTeam.id,
+              player_id: pid,
+            }));
+            await supabase.from("rosters").insert(rosterInserts);
+          }
+        }
       }
 
       // Create empty results
@@ -98,12 +141,14 @@ const AdminMatchCreate = () => {
       queryClient.invalidateQueries({ queryKey: ["rosters"] });
 
       toast({ title: "경기가 생성되었습니다! ⚽" });
-      // Reset
       setDate("");
       setVenueId("");
       setOpponentName("");
       setSelectedPlayers([]);
+      setPlayerTeams({});
       setIsCustom(false);
+      setAgeCategory("");
+      setYoutubeLink("");
     } catch (err: any) {
       toast({ title: "오류", description: err.message, variant: "destructive" });
     } finally {
@@ -136,9 +181,15 @@ const AdminMatchCreate = () => {
             <SelectItem value="6:6 풋살">6:6 풋살</SelectItem>
             <SelectItem value="7:7 풋살">7:7 풋살</SelectItem>
             <SelectItem value="5:5 풋살">5:5 풋살</SelectItem>
+            <SelectItem value="8:8 축구">8:8 축구</SelectItem>
             <SelectItem value="11:11 축구">11:11 축구</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">유튜브 링크</label>
+        <Input value={youtubeLink} onChange={e => setYoutubeLink(e.target.value)} placeholder="https://youtube.com/..." className="bg-card border-border" />
       </div>
 
       <div className="flex items-center gap-2">
@@ -150,10 +201,32 @@ const AdminMatchCreate = () => {
         <label className="text-sm text-foreground">자체전</label>
       </div>
 
-      {!isCustom && (
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">상대팀 이름</label>
-          <Input value={opponentName} onChange={e => setOpponentName(e.target.value)} placeholder="상대팀" className="bg-card border-border" />
+      {isCustom ? (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">팀 A 이름</label>
+            <Input value={teamAName} onChange={e => setTeamAName(e.target.value)} className="bg-card border-border" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">팀 B 이름</label>
+            <Input value={teamBName} onChange={e => setTeamBName(e.target.value)} className="bg-card border-border" />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">상대팀 이름</label>
+            <Input value={opponentName} onChange={e => setOpponentName(e.target.value)} placeholder="상대팀" className="bg-card border-border" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">상대팀 연령대</label>
+            <Select value={ageCategory} onValueChange={setAgeCategory}>
+              <SelectTrigger className="bg-card border-border"><SelectValue placeholder="연령대 선택" /></SelectTrigger>
+              <SelectContent>
+                {AGE_CATEGORIES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
@@ -178,6 +251,30 @@ const AdminMatchCreate = () => {
           ))}
         </div>
       </div>
+
+      {/* Custom match: team assignment */}
+      {isCustom && selectedPlayers.length > 0 && (
+        <div>
+          <label className="text-xs text-muted-foreground mb-2 block">팀 배정</label>
+          <div className="space-y-1.5">
+            {selectedPlayers.map(pid => {
+              const player = activePlayers.find(p => p.id === pid);
+              return (
+                <div key={pid} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
+                  <span className="text-xs font-medium text-foreground">{player?.name}</span>
+                  <Select value={playerTeams[pid] || "A"} onValueChange={v => setPlayerTeams(pt => ({ ...pt, [pid]: v as "A" | "B" }))}>
+                    <SelectTrigger className="h-7 w-24 text-xs bg-background border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">{teamAName}</SelectItem>
+                      <SelectItem value="B">{teamBName}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <Button onClick={handleCreate} disabled={saving} className="w-full gradient-pink text-primary-foreground font-bold">
         {saving ? "생성 중..." : "경기 생성"}

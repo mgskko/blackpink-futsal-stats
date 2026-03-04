@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Trophy } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
+import { getPlayerBadges, getWinFairyData } from "@/hooks/useAdvancedStats";
 import SplashScreen from "@/components/SplashScreen";
 
 const PlayerDetailPage = () => {
@@ -12,34 +13,25 @@ const PlayerDetailPage = () => {
 
   if (isLoading) return <SplashScreen />;
 
-  const player = players.find((p) => p.id === playerId);
-  if (!player) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">선수를 찾을 수 없습니다</div>;
-  }
+  const player = players.find(p => p.id === playerId);
+  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">선수를 찾을 수 없습니다</div>;
 
   const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, playerId);
   const bestAP = getPlayerBestAPMatch(matches, rosters, goalEvents, playerId);
   const assistGiven = getPlayerAssistGiven(goalEvents, playerId, 7);
   const assistReceived = getPlayerAssistReceived(goalEvents, playerId, 7);
+  const badges = getPlayerBadges(playerId, players, matches, teams, results, rosters, goalEvents);
+
+  // Win fairy for this player
+  const winFairyAll = getWinFairyData(players, matches, teams, results, rosters);
+  const myFairy = winFairyAll.find(d => d.playerId === playerId);
 
   const playerDuos = new Map<number, number>();
-  goalEvents.forEach((g) => {
-    if (g.goal_player_id === playerId && g.assist_player_id) {
-      playerDuos.set(g.assist_player_id, (playerDuos.get(g.assist_player_id) || 0) + 1);
-    }
-    if (g.assist_player_id === playerId && g.goal_player_id) {
-      playerDuos.set(g.goal_player_id, (playerDuos.get(g.goal_player_id) || 0) + 1);
-    }
+  goalEvents.forEach(g => {
+    if (g.goal_player_id === playerId && g.assist_player_id) playerDuos.set(g.assist_player_id, (playerDuos.get(g.assist_player_id) || 0) + 1);
+    if (g.assist_player_id === playerId && g.goal_player_id) playerDuos.set(g.goal_player_id, (playerDuos.get(g.goal_player_id) || 0) + 1);
   });
   const topDuos = [...playerDuos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
-
-  const labels: string[] = [];
-  if (stats.goals >= 20) labels.push("득점기계");
-  if (stats.assists >= 15) labels.push("어시왕");
-  if (stats.appearances >= 30) labels.push("철강왕");
-  if (stats.winRate >= 60) labels.push("승리요정");
-  if (stats.attackPoints >= 30) labels.push("핵심선수");
-  if (stats.goals >= 10 && stats.assists >= 10) labels.push("올라운더");
 
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
@@ -73,6 +65,7 @@ const PlayerDetailPage = () => {
         </div>
       </div>
 
+      {/* Profile Header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-6 box-glow">
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/50 bg-secondary">
@@ -84,17 +77,22 @@ const PlayerDetailPage = () => {
               가입일: {player.join_date}
               {player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
             </p>
-            {labels.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {labels.map((label) => (
-                  <span key={label} className="rounded-full gradient-pink px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground">{label}</span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {badges.map((badge, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+                <span>{badge.emoji}</span>
+                <span>{badge.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </motion.div>
 
+      {/* Stats Grid */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mx-4 mt-4 grid grid-cols-2 gap-3">
         {[
           { label: "골", value: stats.goals, glow: true },
@@ -111,6 +109,7 @@ const PlayerDetailPage = () => {
         ))}
       </motion.div>
 
+      {/* Win/Draw/Loss */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
         <h3 className="mb-3 font-display text-lg text-primary">전적</h3>
         <div className="flex justify-around">
@@ -120,6 +119,25 @@ const PlayerDetailPage = () => {
         </div>
       </motion.div>
 
+      {/* Win Fairy */}
+      {myFairy && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
+          <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
+            {myFairy.diff >= 15 ? "🧚" : myFairy.diff <= -15 ? "👻" : "📊"} 승리 요정 지수
+          </h3>
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              <div>출석 시 팀 승률: <span className="text-primary font-bold">{myFairy.presentWinRate}%</span> ({myFairy.presentMatches}경기)</div>
+              <div>결장 시 팀 승률: <span className="text-foreground">{myFairy.absentWinRate}%</span> ({myFairy.absentMatches}경기)</div>
+            </div>
+            <div className={`font-display text-2xl ${myFairy.diff > 0 ? "text-primary text-glow" : "text-muted-foreground"}`}>
+              {myFairy.diff > 0 ? "+" : ""}{myFairy.diff}%
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Best Match */}
       {bestAP && bestAP.ap > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4 rounded-lg border border-primary/30 bg-card p-4 box-glow">
           <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2"><Trophy size={18} /> BEST MATCH</h3>
@@ -143,6 +161,7 @@ const PlayerDetailPage = () => {
         </motion.div>
       )}
 
+      {/* Best Partners */}
       {topDuos.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 font-display text-lg text-primary">BEST PARTNERS</h3>
