@@ -1,14 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
-import { players, getPlayerStats } from "@/data/futsal";
+import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
 import PageHeader from "@/components/PageHeader";
+import SplashScreen from "@/components/SplashScreen";
 
 const PlayersPage = () => {
   const navigate = useNavigate();
+  const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+
+  if (isLoading) return <SplashScreen />;
+
   const sortedPlayers = [...players].sort((a, b) => {
-    const sa = getPlayerStats(a.id);
-    const sb = getPlayerStats(b.id);
+    const sa = getPlayerStats(players, matches, teams, results, rosters, goalEvents, a.id);
+    const sb = getPlayerStats(players, matches, teams, results, rosters, goalEvents, b.id);
     return sb.attackPoints - sa.attackPoints;
   });
 
@@ -17,7 +22,7 @@ const PlayersPage = () => {
       <PageHeader title="PLAYERS" subtitle={`총 ${players.length}명`} />
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
-          const stats = getPlayerStats(player.id);
+          const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, player.id);
           return (
             <motion.div
               key={player.id}
@@ -32,7 +37,7 @@ const PlayersPage = () => {
                   <User size={28} className="text-primary" />
                 </div>
                 <span className="font-medium text-foreground">{player.name}</span>
-                {player.isActive && (
+                {player.is_active && (
                   <span className="mt-1 text-[10px] text-primary">ACTIVE</span>
                 )}
                 <div className="mt-3 flex gap-3 text-xs">

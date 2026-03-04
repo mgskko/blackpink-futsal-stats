@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Users, BarChart3 } from "lucide-react";
+import { Trophy, Users, BarChart3, UserCircle } from "lucide-react";
 
 const tabs = [
   { path: "/", label: "경기", icon: Trophy },
   { path: "/players", label: "선수", icon: Users },
   { path: "/stats", label: "통계", icon: BarChart3 },
+  { path: "/my", label: "MY", icon: UserCircle },
 ];
 
 const BottomNav = () => {

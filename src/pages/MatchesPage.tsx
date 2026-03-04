@@ -1,14 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  matches,
-  venues,
-  getMatchResult,
-} from "@/data/futsal";
+import { useAllFutsalData, getMatchResult } from "@/hooks/useFutsalData";
 import PageHeader from "@/components/PageHeader";
+import SplashScreen from "@/components/SplashScreen";
 
 const MatchesPage = () => {
   const navigate = useNavigate();
+  const { matches, venues, teams, results, isLoading } = useAllFutsalData();
+
+  if (isLoading) return <SplashScreen />;
+
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
@@ -16,8 +17,8 @@ const MatchesPage = () => {
       <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
       <div className="space-y-3 px-4">
         {sortedMatches.map((match, i) => {
-          const venue = venues.find((v) => v.id === match.venueId);
-          const mr = getMatchResult(match.id);
+          const venue = venues.find((v) => v.id === match.venue_id);
+          const mr = getMatchResult(teams, results, match.id);
 
           return (
             <motion.div
@@ -39,7 +40,7 @@ const MatchesPage = () => {
                     <span className="text-sm font-medium text-foreground">
                       {mr?.ourTeam.name ?? "버니즈"}
                     </span>
-                    {mr?.ourResult.scoreFor !== undefined ? (
+                    {mr?.ourResult.score_for != null ? (
                       <div className="flex items-center gap-1">
                         <span className={`font-display text-2xl tracking-wider ${
                           mr.ourResult.result === "승"
@@ -48,7 +49,7 @@ const MatchesPage = () => {
                             ? "text-muted-foreground"
                             : "text-foreground"
                         }`}>
-                          {mr.ourResult.scoreFor}
+                          {mr.ourResult.score_for}
                         </span>
                         <span className="text-muted-foreground text-lg">:</span>
                         <span className={`font-display text-2xl tracking-wider ${
@@ -56,7 +57,7 @@ const MatchesPage = () => {
                             ? "text-primary text-glow"
                             : "text-muted-foreground"
                         }`}>
-                          {mr.ourResult.scoreAgainst}
+                          {mr.ourResult.score_against}
                         </span>
                       </div>
                     ) : (
@@ -80,9 +81,9 @@ const MatchesPage = () => {
                     {mr?.ourResult.result ?? "-"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {match.matchType}
+                    {match.match_type}
                   </span>
-                  {match.isCustom && (
+                  {match.is_custom && (
                     <span className="text-[10px] text-primary/70">자체전</span>
                   )}
                 </div>
