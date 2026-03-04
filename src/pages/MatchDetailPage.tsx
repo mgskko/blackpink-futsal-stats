@@ -6,6 +6,8 @@ import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMat
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
+import FormationBuilder from "@/components/match/FormationBuilder";
+import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
@@ -37,6 +39,7 @@ function formatTimestamp(ts: string): string {
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
 const MatchDetailPage = () => {
+  const { isAdmin } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const matchId = Number(id);
@@ -248,6 +251,17 @@ const MatchDetailPage = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Formation Builder */}
+      <div className="mx-4 mt-4">
+        <FormationBuilder
+          matchId={matchId}
+          players={players}
+          roster={roster}
+          matchTeams={matchTeams}
+          isAdmin={isAdmin}
+        />
+      </div>
 
       {/* Roster */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">

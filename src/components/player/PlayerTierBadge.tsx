@@ -12,13 +12,15 @@ export interface TierInfo {
   score: number;
 }
 
-const TIER_DEFS: Record<TierLevel, Omit<TierInfo, "score" | "level">> = {
+export const TIER_CONFIG: Record<TierLevel, Omit<TierInfo, "score" | "level">> = {
   worldclass: { label: "월드클래스", emoji: "🏆", colorClass: "text-yellow-400", bgClass: "bg-yellow-500/20", borderClass: "border-yellow-500/50" },
   pro:        { label: "프로", emoji: "💎", colorClass: "text-blue-400", bgClass: "bg-blue-500/20", borderClass: "border-blue-500/50" },
   semipro:    { label: "세미프로", emoji: "🥇", colorClass: "text-primary", bgClass: "bg-primary/20", borderClass: "border-primary/50" },
   amateur:    { label: "아마추어", emoji: "🥈", colorClass: "text-muted-foreground", bgClass: "bg-secondary", borderClass: "border-border" },
   casual:     { label: "동네축구인", emoji: "🥉", colorClass: "text-muted-foreground", bgClass: "bg-secondary/50", borderClass: "border-border" },
 };
+
+const TIER_DEFS = TIER_CONFIG;
 
 export function getPlayerTier(
   playerId: number,

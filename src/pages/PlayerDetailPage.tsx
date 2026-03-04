@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
@@ -9,7 +9,9 @@ import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PlayerFilterTabs, { getAvailableYears, filterMatchesByMode, type FilterMode } from "@/components/player/PlayerFilterTabs";
-import PlayerTierBadge, { getPlayerTier } from "@/components/player/PlayerTierBadge";
+import PlayerTierBadge, { getPlayerTier, TIER_CONFIG } from "@/components/player/PlayerTierBadge";
+import ActivityHeatmap from "@/components/player/ActivityHeatmap";
+import SeasonWrapped from "@/components/player/SeasonWrapped";
 
 const PlayerDetailPage = () => {
   const { id } = useParams();
@@ -19,6 +21,7 @@ const PlayerDetailPage = () => {
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
+  const [showWrapped, setShowWrapped] = useState(false);
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -278,6 +281,41 @@ const PlayerDetailPage = () => {
 
       <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
       <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
+
+      {/* Activity Heatmap */}
+      <ActivityHeatmap
+        playerId={playerId}
+        matches={matches}
+        rosters={rosters}
+        goalEvents={goalEvents}
+        momVotes={momVotes}
+        year={filterMode === "year" && selectedYear ? parseInt(selectedYear) : undefined}
+      />
+
+      {/* Season Wrapped Button */}
+      {filterMode === "year" && selectedYear && parseInt(selectedYear) < new Date().getFullYear() && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4">
+          <button
+            onClick={() => setShowWrapped(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 py-4 text-sm font-bold text-primary transition-all hover:bg-primary/10 hover:border-primary/60"
+          >
+            <Gift size={18} /> {selectedYear} 시즌 결산 카드 만들기
+          </button>
+        </motion.div>
+      )}
+
+      {/* Season Wrapped Modal */}
+      {showWrapped && filterMode === "year" && selectedYear && (
+        <SeasonWrapped
+          player={player}
+          year={selectedYear}
+          stats={stats}
+          scoutingReport={scoutingReport}
+          tierLabel={tier.label}
+          tierEmoji={tier.emoji}
+          onClose={() => setShowWrapped(false)}
+        />
+      )}
     </div>
   );
 };
