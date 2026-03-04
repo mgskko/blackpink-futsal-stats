@@ -252,6 +252,17 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
+      {/* Formation Builder */}
+      <div className="mx-4 mt-4">
+        <FormationBuilder
+          matchId={matchId}
+          players={players}
+          roster={roster}
+          matchTeams={matchTeams}
+          isAdmin={isAdmin}
+        />
+      </div>
+
       {/* Roster */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">
         <h2 className="mb-3 font-display text-lg tracking-wider text-primary">ROSTER</h2>
