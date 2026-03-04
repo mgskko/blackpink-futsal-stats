@@ -1,17 +1,24 @@
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
+import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import PlayerFilterTabs, { getAvailableYears, filterMatchesByMode, type FilterMode } from "@/components/player/PlayerFilterTabs";
+import PlayerTierBadge, { getPlayerTier } from "@/components/player/PlayerTierBadge";
 
 const PlayerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [selectedYear, setSelectedYear] = useState<string>("");
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -21,27 +28,52 @@ const PlayerDetailPage = () => {
     },
   });
 
+  const years = useMemo(() => getAvailableYears(matches), [matches]);
+
+  // Filter data based on mode
+  const filtered = useMemo(() => {
+    const fm = filterMatchesByMode(matches, filterMode, selectedYear);
+    const fmIds = new Set(fm.map(m => m.id));
+    return {
+      matches: fm,
+      matchIds: fmIds,
+      rosters: rosters.filter(r => fmIds.has(r.match_id)),
+      goalEvents: goalEvents.filter(g => fmIds.has(g.match_id)),
+      teams: teams.filter(t => fmIds.has(t.match_id)),
+      results: results.filter(r => fmIds.has(r.match_id)),
+    };
+  }, [matches, teams, results, rosters, goalEvents, filterMode, selectedYear]);
+
+  const handleFilterChange = (mode: FilterMode, year?: string) => {
+    setFilterMode(mode);
+    if (mode === "year") setSelectedYear(year || years[0] || "");
+    else setSelectedYear("");
+  };
+
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
   if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">선수를 찾을 수 없습니다</div>;
 
-  const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, playerId);
-  const bestAP = getPlayerBestAPMatch(matches, rosters, goalEvents, playerId);
-  const assistGiven = getPlayerAssistGiven(goalEvents, playerId, 7);
-  const assistReceived = getPlayerAssistReceived(goalEvents, playerId, 7);
-  const badges = getPlayerBadges(playerId, players, matches, teams, results, rosters, goalEvents, momVotes);
-  const varianceBadges = getVarianceBadge(playerId, matches, rosters, goalEvents);
+  const stats = getPlayerStats(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, playerId);
+  const bestAP = getPlayerBestAPMatch(filtered.matches, filtered.rosters, filtered.goalEvents, playerId);
+  const assistGiven = getPlayerAssistGiven(filtered.goalEvents, playerId, 7);
+  const assistReceived = getPlayerAssistReceived(filtered.goalEvents, playerId, 7);
+  const badges = getPlayerBadges(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
+  const varianceBadges = getVarianceBadge(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
   const allBadges = [...badges, ...varianceBadges];
 
-  const winFairyAll = getWinFairyData(players, matches, teams, results, rosters);
+  const winFairyAll = getWinFairyData(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters);
   const myFairy = winFairyAll.find(d => d.playerId === playerId);
 
-  const formGuide = getPlayerFormGuide(playerId, matches, rosters, goalEvents);
-  const scoutingReport = getDeepScoutingReport(playerId, players, matches, teams, results, rosters, goalEvents, momVotes);
+  const formGuide = getPlayerFormGuide(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
+  const scoutingReport = getDeepScoutingReport(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
+
+  // Tier uses ALL data (not filtered)
+  const tier = getPlayerTier(playerId, matches, rosters, goalEvents, momVotes);
 
   const playerDuos = new Map<number, number>();
-  goalEvents.forEach(g => {
+  filtered.goalEvents.forEach(g => {
     if (g.goal_player_id === playerId && g.assist_player_id) playerDuos.set(g.assist_player_id, (playerDuos.get(g.assist_player_id) || 0) + 1);
     if (g.assist_player_id === playerId && g.goal_player_id) playerDuos.set(g.goal_player_id, (playerDuos.get(g.goal_player_id) || 0) + 1);
   });
@@ -75,6 +107,8 @@ const PlayerDetailPage = () => {
     : scoutingReport.trend === "special" ? <Sparkles size={16} className="text-primary" />
     : <Minus size={16} className="text-muted-foreground" />;
 
+  const filterLabel = filterMode === "all" ? "종합" : filterMode === "year" ? `${selectedYear}시즌` : "자체전";
+
   return (
     <div className="pb-20">
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-lg">
@@ -84,6 +118,14 @@ const PlayerDetailPage = () => {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <PlayerFilterTabs
+        filterMode={filterMode}
+        selectedYear={selectedYear}
+        years={years}
+        onFilterChange={handleFilterChange}
+      />
+
       {/* Profile Header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-6 box-glow">
         <div className="flex items-center gap-4">
@@ -91,8 +133,9 @@ const PlayerDetailPage = () => {
             <User size={40} className="text-primary" />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+              <PlayerTierBadge tier={tier} size="md" />
               {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
               {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
             </div>
@@ -122,6 +165,13 @@ const PlayerDetailPage = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Filter indicator */}
+      {filterMode !== "all" && (
+        <div className="mx-4 mt-2 text-center text-[11px] text-primary font-bold">
+          📊 {filterLabel} 기준 데이터
+        </div>
+      )}
 
       {/* Deep Scouting Report */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
@@ -165,8 +215,8 @@ const PlayerDetailPage = () => {
         </div>
       </motion.div>
 
-      {/* Win Fairy */}
-      {myFairy && (
+      {/* Win Fairy - only show for non-custom */}
+      {myFairy && filterMode !== "custom" && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
             {myFairy.diff >= 15 ? "🧚" : myFairy.diff <= -15 ? "👻" : "📊"} 승리 요정 지수
