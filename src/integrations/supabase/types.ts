@@ -23,6 +23,7 @@ export type Database = {
           match_id: number
           quarter: number
           team_id: number
+          video_timestamp: string | null
         }
         Insert: {
           assist_player_id?: number | null
@@ -32,6 +33,7 @@ export type Database = {
           match_id: number
           quarter: number
           team_id: number
+          video_timestamp?: string | null
         }
         Update: {
           assist_player_id?: number | null
@@ -41,6 +43,7 @@ export type Database = {
           match_id?: number
           quarter?: number
           team_id?: number
+          video_timestamp?: string | null
         }
         Relationships: [
           {
@@ -123,6 +126,7 @@ export type Database = {
           is_custom: boolean
           match_type: string
           venue_id: number | null
+          youtube_link: string | null
         }
         Insert: {
           date: string
@@ -131,6 +135,7 @@ export type Database = {
           is_custom?: boolean
           match_type?: string
           venue_id?: number | null
+          youtube_link?: string | null
         }
         Update: {
           date?: string
@@ -139,6 +144,7 @@ export type Database = {
           is_custom?: boolean
           match_type?: string
           venue_id?: number | null
+          youtube_link?: string | null
         }
         Relationships: [
           {
@@ -334,22 +340,28 @@ export type Database = {
       }
       teams: {
         Row: {
+          age_category: string | null
           id: number
           is_ours: boolean
           match_id: number
           name: string
+          original_age_desc: string | null
         }
         Insert: {
+          age_category?: string | null
           id?: number
           is_ours?: boolean
           match_id: number
           name: string
+          original_age_desc?: string | null
         }
         Update: {
+          age_category?: string | null
           id?: number
           is_ours?: boolean
           match_id?: number
           name?: string
+          original_age_desc?: string | null
         }
         Relationships: [
           {
