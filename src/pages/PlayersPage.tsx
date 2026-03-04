@@ -37,10 +37,7 @@ const PlayersPage = () => {
                   <User size={28} className="text-primary" />
                 </div>
                 <span className="font-medium text-foreground">{player.name}</span>
-                {player.is_active && (
-                  <span className="mt-1 text-[10px] text-primary">ACTIVE</span>
-                )}
-                <div className="mt-3 flex gap-3 text-xs">
+                <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">
                   <div className="text-center">
                     <div className="font-display text-lg text-primary text-glow">{stats.goals}</div>
                     <div className="text-muted-foreground">골</div>
@@ -52,6 +49,10 @@ const PlayersPage = () => {
                   <div className="text-center">
                     <div className="font-display text-lg text-foreground">{stats.appearances}</div>
                     <div className="text-muted-foreground">출전</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-display text-lg text-primary">{stats.winRate}%</div>
+                    <div className="text-muted-foreground">승률</div>
                   </div>
                 </div>
               </div>

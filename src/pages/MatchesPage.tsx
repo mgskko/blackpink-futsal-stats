@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Users } from "lucide-react";
+import { Users, PenSquare } from "lucide-react";
 import { useAllFutsalData, getMatchResult } from "@/hooks/useFutsalData";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
