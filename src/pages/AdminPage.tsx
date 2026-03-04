@@ -9,6 +9,7 @@ import AdminMatchCreate from "@/components/admin/AdminMatchCreate";
 import AdminMatchResult from "@/components/admin/AdminMatchResult";
 import AdminAttendance from "@/components/admin/AdminAttendance";
 import AdminDues from "@/components/admin/AdminDues";
+import AdminManageRoles from "@/components/admin/AdminManageRoles";
 
 const AdminPage = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -29,16 +30,18 @@ const AdminPage = () => {
       <PageHeader title="ADMIN" subtitle="관리자 패널" />
       <div className="px-4">
         <Tabs defaultValue="attendance" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-card border border-border">
+          <TabsList className="grid w-full grid-cols-5 bg-card border border-border">
             <TabsTrigger value="attendance" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">참석</TabsTrigger>
             <TabsTrigger value="create" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">경기생성</TabsTrigger>
             <TabsTrigger value="result" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">결과기록</TabsTrigger>
             <TabsTrigger value="dues" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">회비</TabsTrigger>
+            <TabsTrigger value="roles" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">권한</TabsTrigger>
           </TabsList>
           <TabsContent value="attendance"><AdminAttendance /></TabsContent>
           <TabsContent value="create"><AdminMatchCreate /></TabsContent>
           <TabsContent value="result"><AdminMatchResult /></TabsContent>
           <TabsContent value="dues"><AdminDues /></TabsContent>
+          <TabsContent value="roles"><AdminManageRoles /></TabsContent>
         </Tabs>
       </div>
     </div>

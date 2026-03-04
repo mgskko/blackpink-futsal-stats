@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Users } from "lucide-react";
+import { Users, PenSquare } from "lucide-react";
 import { useAllFutsalData, getMatchResult } from "@/hooks/useFutsalData";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
@@ -10,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 const MatchesPage = () => {
   const navigate = useNavigate();
   const { matches, venues, teams, results, isLoading } = useAllFutsalData();
+  const { isAdmin } = useAuth();
   const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
 
   // Fetch attendance counts for upcoming matches
@@ -46,7 +48,18 @@ const MatchesPage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
+      <div className="flex items-center justify-between px-4">
+        <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <PenSquare size={14} />
+            경기 관리
+          </button>
+        )}
+      </div>
       <div className="space-y-3 px-4">
         {sortedMatches.map((match, i) => {
           const venue = venues.find((v) => v.id === match.venue_id);
