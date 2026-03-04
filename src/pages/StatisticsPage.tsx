@@ -49,12 +49,10 @@ function getFilteredPlayerStats(playerId: number, year?: string) {
 
   // W/L/D
   let wins = 0, losses = 0, draws = 0;
-  // Import results inline
-  const { results } = require("@/data/futsal");
   matchIds.forEach(matchId => {
     const teamIds = playerRosters.filter(r => r.matchId === matchId).map(r => r.teamId);
     teamIds.forEach(teamId => {
-      const result = results.find((r: any) => r.teamId === teamId && r.matchId === matchId);
+      const result = results.find((r) => r.teamId === teamId && r.matchId === matchId);
       if (result) {
         if (result.result === "승") wins++;
         else if (result.result === "패") losses++;
