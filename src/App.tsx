@@ -38,6 +38,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
+            <PWAInstallPrompt />
           </div>
         </BrowserRouter>
       </TooltipProvider>
