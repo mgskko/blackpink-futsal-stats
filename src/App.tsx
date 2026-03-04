@@ -11,6 +11,7 @@ import PlayersPage from "@/pages/PlayersPage";
 import PlayerDetailPage from "@/pages/PlayerDetailPage";
 import StatisticsPage from "@/pages/StatisticsPage";
 import MyPage from "@/pages/MyPage";
+import AdminPage from "@/pages/AdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
