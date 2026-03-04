@@ -323,13 +323,43 @@ export function getPlayerFormGuide(playerId: number, matches: Match[], rosters: 
   return { form: avgAP >= 2 ? "hot" : avgAP <= 0.4 ? "cold" : "normal", recentAP: ap, recentGames: recent5.length };
 }
 
-// ─── Deep Scouting Report (16 Patterns) ───
+// ─── Deep Scouting Report (16 Patterns — Weighted Scoring) ───
 export interface ScoutingReport {
   trend: "up" | "down" | "stable" | "special";
   comment: string;
   emoji: string;
   label: string;
 }
+
+interface PatternDef {
+  key: string;
+  trend: ScoutingReport["trend"];
+  emoji: string;
+  label: string;
+  comment: string;
+}
+
+const PATTERNS: PatternDef[] = [
+  { key: "rookie",      trend: "special", emoji: "🐣", label: "특급 루키",       comment: "이제 막 팀에 합류한 신입입니다. 앞으로의 활약을 기대합니다!" },
+  { key: "bomber",      trend: "up",      emoji: "🔥", label: "골 폭격기",       comment: "발끝이 아주 뜨겁습니다! 발만 갖다 대도 들어가는 득점 감각." },
+  { key: "playmaker",   trend: "up",      emoji: "🎯", label: "플레이메이커",    comment: "팀의 더 브라위너! 동료를 돕는 이타적인 플레이에 눈을 떴습니다." },
+  { key: "slow_start",  trend: "up",      emoji: "🚀", label: "슬로우 스타터",   comment: "시즌 초반의 끔찍한 부진을 씻고 완벽하게 부활했습니다." },
+  { key: "aging",       trend: "down",    emoji: "📉", label: "에이징 커브",     comment: "전반기의 폭격기는 어디 가고 침묵 중입니다. 에이징 커브가 의심됩니다." },
+  { key: "steady",      trend: "stable",  emoji: "🍚", label: "국밥형 상수",     comment: "비가 오나 눈이 오나 자기 몫은 해내는 든든한 국밥형 플레이어." },
+  { key: "zero",        trend: "down",    emoji: "🌧️", label: "영점 조절 실패",  comment: "경기장엔 늘 있지만 영점이 심하게 흔들립니다. 굿을 해야 합니다." },
+  { key: "pokemon",     trend: "special", emoji: "👻", label: "전설의 포켓몬",   comment: "실존 인물인지 의심받고 있습니다. 제발 얼굴 좀 비춰주세요!" },
+  { key: "spy",         trend: "down",    emoji: "🤦‍♂️", label: "상대팀의 스파이", comment: "최근 골망을 흔들었지만 불행히도 우리 팀 골대였습니다." },
+  { key: "totem",       trend: "up",      emoji: "🍀", label: "인간 승리 토템",  comment: "기록지에 보이지 않는 아우라. 경기장에 서 있는 것만으로 승리를 부르는 토템입니다." },
+  { key: "doom",        trend: "down",    emoji: "🧂", label: "패배 요정",       comment: "폼은 둘째치고 출전 날마다 팀이 고전합니다. 터가 안 맞을지도 모릅니다." },
+  { key: "greedy",      trend: "special", emoji: "🤑", label: "탐욕의 항아리",   comment: "패스(X) 버튼이 고장 난 것이 분명합니다. 오직 골대만 바라보는 상남자." },
+  { key: "clutch",      trend: "up",      emoji: "🦸‍♂️", label: "클러치 장인",    comment: "위태로울 때 빛나는 진정한 에이스. 벼랑 끝에서 팀을 구하는 해결사." },
+  { key: "padder",      trend: "stable",  emoji: "🧽", label: "스탯 세탁기",     comment: "승부가 기울면 날카로워집니다. 빈집 털기의 스페셜리스트!" },
+  { key: "unsung",      trend: "stable",  emoji: "🫀", label: "언성 히어로",     comment: "피치 위에서 가장 많은 땀을 흘리는 팀의 심장입니다." },
+  { key: "iron",        trend: "stable",  emoji: "🤖", label: "철강왕",          comment: "지치지 않는 체력과 출석률! 풋살장 지박령이 의심되는 진정한 철인." },
+];
+
+function clamp(v: number, min = 0, max = 100) { return Math.max(min, Math.min(max, v)); }
+function lerp(value: number, lo: number, hi: number) { if (hi === lo) return value >= hi ? 100 : 0; return clamp(((value - lo) / (hi - lo)) * 100); }
 
 export function getDeepScoutingReport(
   playerId: number,
@@ -343,64 +373,55 @@ export function getDeepScoutingReport(
 ): ScoutingReport {
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
-  const totalAppearances = sortedMatches.length;
+  const totalApp = sortedMatches.length;
 
-  // 16. 특급 루키 (highest priority for new players)
-  if (totalAppearances < 3) {
-    return { trend: "special", emoji: "🐣", label: "특급 루키", comment: "이제 막 팀에 합류한 신입입니다. 앞으로의 활약을 기대합니다!" };
+  // Hard override: rookie < 3 games
+  if (totalApp < 3) {
+    const p = PATTERNS.find(p => p.key === "rookie")!;
+    return { trend: p.trend, emoji: p.emoji, label: p.label, comment: p.comment };
   }
 
-  // Helper: compute AP for a set of match ids
-  const getAP = (mids: Set<number>) => {
-    const g = goalEvents.filter(e => mids.has(e.match_id) && e.goal_player_id === playerId && !e.is_own_goal).length;
-    const a = goalEvents.filter(e => mids.has(e.match_id) && e.assist_player_id === playerId).length;
-    const rg = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
-    const ra = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
-    return { goals: g + rg, assists: a + ra, ap: g + a + rg + ra };
+  // ── Helpers ──
+  const getGoalsForSet = (mids: Set<number>) => {
+    const ev = goalEvents.filter(e => mids.has(e.match_id) && e.goal_player_id === playerId && !e.is_own_goal).length;
+    const ro = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+    return ev + ro;
   };
-
-  const getGoals = (mids: Set<number>) => {
-    const g = goalEvents.filter(e => mids.has(e.match_id) && e.goal_player_id === playerId && !e.is_own_goal).length;
-    const rg = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
-    return g + rg;
+  const getAssistsForSet = (mids: Set<number>) => {
+    const ev = goalEvents.filter(e => mids.has(e.match_id) && e.assist_player_id === playerId).length;
+    const ro = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
+    return ev + ro;
   };
-
-  const getAssists = (mids: Set<number>) => {
-    const a = goalEvents.filter(e => mids.has(e.match_id) && e.assist_player_id === playerId).length;
-    const ra = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
-    return a + ra;
-  };
+  const getAPForSet = (mids: Set<number>) => getGoalsForSet(mids) + getAssistsForSet(mids);
 
   const allIds = new Set(sortedMatches.map(m => m.id));
-  const totalStats = getAP(allIds);
-  const totalGoals = totalStats.goals;
-  const totalAssists = totalStats.assists;
-  const goalsPerGame = totalGoals / totalAppearances;
-  const assistsPerGame = totalAssists / totalAppearances;
+  const totalGoals = getGoalsForSet(allIds);
+  const totalAssists = getAssistsForSet(allIds);
+  const totalAP = totalGoals + totalAssists;
+  const gpg = totalGoals / totalApp;
+  const apg = totalAssists / totalApp;
 
-  // Recent 5 stats
-  const recent5 = sortedMatches.slice(0, Math.min(5, sortedMatches.length));
+  // Recent 5
+  const recent5 = sortedMatches.slice(0, Math.min(5, totalApp));
   const r5Ids = new Set(recent5.map(m => m.id));
-  const r5Stats = getAP(r5Ids);
-  const r5GoalsPerGame = r5Stats.goals / recent5.length;
-  const r5AssistsPerGame = r5Stats.assists / recent5.length;
+  const r5Goals = getGoalsForSet(r5Ids);
+  const r5Assists = getAssistsForSet(r5Ids);
+  const r5GPG = r5Goals / recent5.length;
+  const r5APG = r5Assists / recent5.length;
 
-  // Half-season comparison
-  const half = Math.floor(sortedMatches.length / 2);
-  const firstHalfIds = new Set(sortedMatches.slice(half).map(m => m.id)); // older half
-  const secondHalfIds = new Set(sortedMatches.slice(0, half).map(m => m.id)); // recent half
-  const firstHalfAP = half > 0 ? getAP(firstHalfIds).ap / (sortedMatches.length - half) : 0;
-  const secondHalfAP = half > 0 ? getAP(secondHalfIds).ap / half : 0;
-  const apDiff = secondHalfAP - firstHalfAP;
+  // Half-season
+  const half = Math.floor(totalApp / 2);
+  const firstHalfIds = new Set(sortedMatches.slice(half).map(m => m.id)); // older
+  const secondHalfIds = new Set(sortedMatches.slice(0, half).map(m => m.id)); // recent
+  const fhLen = totalApp - half;
+  const shLen = half;
+  const firstHalfAPG = fhLen > 0 ? getAPForSet(firstHalfIds) / fhLen : 0;
+  const secondHalfAPG = shLen > 0 ? getAPForSet(secondHalfIds) / shLen : 0;
+  const apTrendDiff = secondHalfAPG - firstHalfAPG;
 
-  // 8. 상대팀의 스파이 - recent own goals
-  const recentOwnGoals = goalEvents.filter(e => r5Ids.has(e.match_id) && e.is_own_goal && e.goal_player_id === playerId).length;
-  if (recentOwnGoals >= 2) {
-    return { trend: "down", emoji: "🤦‍♂️", label: "상대팀의 스파이", comment: "최근 골망을 흔들었지만 불행히도 우리 팀 골대였습니다." };
-  }
-
-  // Win rate when present
+  // Attendance & Win Rate
   const nonCustom = matches.filter(m => !m.is_custom);
+  const totalNonCustom = nonCustom.length;
   const matchResultsMap = new Map<number, string>();
   nonCustom.forEach(m => {
     const mTeams = teams.filter(t => t.match_id === m.id);
@@ -409,104 +430,191 @@ export function getDeepScoutingReport(
     const r = results.find(r => r.team_id === ourTeam.id && r.match_id === m.id);
     if (r) matchResultsMap.set(m.id, r.result);
   });
-  const presentNonCustomIds = new Set(rosters.filter(r => r.player_id === playerId && matchResultsMap.has(r.match_id)).map(r => r.match_id));
+  const presentNCIds = new Set(rosters.filter(r => r.player_id === playerId && matchResultsMap.has(r.match_id)).map(r => r.match_id));
+  const attendanceRate = totalNonCustom > 0 ? (presentNCIds.size / totalNonCustom) * 100 : 50;
   let pWins = 0;
-  presentNonCustomIds.forEach(mid => { if (matchResultsMap.get(mid) === "승") pWins++; });
-  const presentWR = presentNonCustomIds.size > 0 ? (pWins / presentNonCustomIds.size) * 100 : 0;
+  presentNCIds.forEach(mid => { if (matchResultsMap.get(mid) === "승") pWins++; });
+  const presentWR = presentNCIds.size > 0 ? (pWins / presentNCIds.size) * 100 : 50;
   let aWins = 0, aTotal = 0;
-  [...matchResultsMap.keys()].forEach(mid => { if (!presentNonCustomIds.has(mid)) { aTotal++; if (matchResultsMap.get(mid) === "승") aWins++; } });
-  const absentWR = aTotal > 0 ? (aWins / aTotal) * 100 : 0;
+  [...matchResultsMap.keys()].forEach(mid => { if (!presentNCIds.has(mid)) { aTotal++; if (matchResultsMap.get(mid) === "승") aWins++; } });
+  const absentWR = aTotal > 0 ? (aWins / aTotal) * 100 : 50;
+  const wrDiff = presentWR - absentWR;
 
-  // 7. 전설의 포켓몬 - low attendance
-  const totalNonCustom = nonCustom.length;
-  const attendanceRate = totalNonCustom > 0 ? (presentNonCustomIds.size / totalNonCustom) * 100 : 0;
-  if (attendanceRate < 20 && totalNonCustom >= 10) {
-    return { trend: "special", emoji: "👻", label: "전설의 포켓몬", comment: "실존 인물인지 의심받고 있습니다. 제발 얼굴 좀 비춰주세요!" };
-  }
+  // Own goals (recent 5)
+  const r5OwnGoals = goalEvents.filter(e => r5Ids.has(e.match_id) && e.is_own_goal && e.goal_player_id === playerId).length;
 
-  // Clutch analysis: goals when score diff is 0-1 vs 3+
+  // Clutch / Padding analysis
   let clutchGoals = 0, paddingGoals = 0, totalScoredGoals = 0;
   goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).forEach(g => {
     totalScoredGoals++;
-    // Get running score at that point in the match for this quarter
-    const matchEvents = goalEvents.filter(e => e.match_id === g.match_id && e.quarter <= g.quarter);
+    const matchEvents = goalEvents.filter(e => e.match_id === g.match_id && (e.quarter < g.quarter || (e.quarter === g.quarter && e.id < g.id)));
     const mTeams = teams.filter(t => t.match_id === g.match_id);
     const ourTeam = mTeams.find(t => t.is_ours);
     if (!ourTeam) return;
+    const ourTeamIds = new Set(mTeams.filter(t => t.is_ours).map(t => t.id));
     let ourScore = 0, oppScore = 0;
     matchEvents.forEach(e => {
-      if (e.id === g.id) return; // before this goal
       if (e.is_own_goal) { oppScore++; }
-      else if (e.team_id === ourTeam.id || mTeams.filter(t => t.is_ours).some(t => t.id === e.team_id)) { ourScore++; }
+      else if (ourTeamIds.has(e.team_id)) { ourScore++; }
       else { oppScore++; }
     });
     const diff = ourScore - oppScore;
     if (diff >= 3) paddingGoals++;
     else if (Math.abs(diff) <= 1) clutchGoals++;
   });
+  const clutchRatio = totalScoredGoals > 0 ? clutchGoals / totalScoredGoals : 0;
+  const paddingRatio = totalScoredGoals > 0 ? paddingGoals / totalScoredGoals : 0;
 
-  // 11. 탐욕의 항아리 - high goals, near-zero assists
-  if (totalGoals >= 10 && totalAssists <= 1) {
-    return { trend: "special", emoji: "🤑", label: "탐욕의 항아리", comment: "패스(X) 버튼이 고장 난 것이 분명합니다. 오직 골대만 바라보는 상남자." };
-  }
+  // Greedy ratio: goals vs assists ratio
+  const greedyRatio = totalAP > 0 ? totalGoals / totalAP : 0.5; // 1 = only goals, 0 = only assists
 
-  // 1. 골 폭격기 - hot scorer recently
-  if (r5GoalsPerGame >= 2.5 && recent5.length >= 3) {
-    return { trend: "up", emoji: "🔥", label: "골 폭격기", comment: "발끝이 아주 뜨겁습니다! 발만 갖다 대도 들어가는 득점 감각." };
-  }
+  // Per-match goal variance (for "dice" style check)
+  const goalsPerMatch = sortedMatches.map(m => {
+    const mSet = new Set([m.id]);
+    return getGoalsForSet(mSet);
+  });
+  const gpgMean = goalsPerMatch.reduce((a, b) => a + b, 0) / goalsPerMatch.length;
+  const gpgStd = Math.sqrt(goalsPerMatch.reduce((s, g) => s + (g - gpgMean) ** 2, 0) / goalsPerMatch.length);
 
-  // 2. 플레이메이커 - high assists
-  if (r5AssistsPerGame >= 2.0 && recent5.length >= 3) {
-    return { trend: "up", emoji: "🎯", label: "플레이메이커", comment: "팀의 더 브라위너! 동료를 돕는 이타적인 플레이에 눈을 떴습니다." };
-  }
+  // MOM count for this player
+  const momCount = momVotes ? momVotes.filter(v => v.voted_player_id === playerId).length : 0;
 
-  // 12. 클러치 장인
-  if (totalScoredGoals >= 5 && clutchGoals / totalScoredGoals >= 0.5) {
-    return { trend: "up", emoji: "🦸‍♂️", label: "클러치 장인", comment: "위태로울 때 빛나는 진정한 에이스. 벼랑 끝에서 팀을 구하는 해결사." };
-  }
+  // ── Score each pattern ──
+  const scores = new Map<string, number>();
 
-  // 13. 스탯 세탁기
-  if (totalScoredGoals >= 5 && paddingGoals / totalScoredGoals >= 0.5) {
-    return { trend: "stable", emoji: "🧽", label: "스탯 세탁기", comment: "승부가 기울면 날카로워집니다. 빈집 털기의 스페셜리스트!" };
-  }
+  // 1. 골 폭격기: recent GPG high, weighted 70% recent + 30% overall
+  scores.set("bomber", (() => {
+    const recentScore = lerp(r5GPG, 1.0, 3.0);
+    const overallScore = lerp(gpg, 0.8, 2.5);
+    return recentScore * 0.7 + overallScore * 0.3;
+  })());
 
-  // 9. 인간 승리 토템
-  if (presentNonCustomIds.size >= 5 && presentWR - absentWR >= 20) {
-    return { trend: "up", emoji: "🍀", label: "인간 승리 토템", comment: "기록지에 보이지 않는 아우라. 경기장에 서 있는 것만으로 승리를 부르는 토템입니다." };
-  }
+  // 2. 플레이메이커: recent assist PG high
+  scores.set("playmaker", (() => {
+    const recentScore = lerp(r5APG, 1.0, 2.5);
+    const overallScore = lerp(apg, 0.6, 2.0);
+    const lowGoalBonus = greedyRatio < 0.4 ? 15 : 0; // more assists than goals = bonus
+    return recentScore * 0.7 + overallScore * 0.3 + lowGoalBonus;
+  })());
 
-  // 10. 패배 요정
-  if (presentNonCustomIds.size >= 5 && absentWR - presentWR >= 20) {
-    return { trend: "down", emoji: "🧂", label: "패배 요정", comment: "폼은 둘째치고 출전 날마다 팀이 고전합니다. 터가 안 맞을지도 모릅니다." };
-  }
+  // 3. 슬로우 스타터: first half bad, second half good
+  scores.set("slow_start", (() => {
+    if (half < 3) return 0;
+    const badFirst = lerp(0.5 - firstHalfAPG, 0, 0.5) * 0.4; // first half AP < 0.5
+    const goodRecent = lerp(apTrendDiff, 0.5, 2.0) * 0.6;
+    return clamp(badFirst + goodRecent);
+  })());
 
-  // 3. 슬로우 스타터 - bad first half, good second half
-  if (half >= 3 && apDiff > 1.0 && firstHalfAP < 0.5) {
-    return { trend: "up", emoji: "🚀", label: "슬로우 스타터", comment: "시즌 초반의 끔찍한 부진을 씻고 완벽하게 부활했습니다." };
-  }
+  // 4. 에이징 커브: first half good, recent bad
+  scores.set("aging", (() => {
+    if (half < 3) return 0;
+    const goodFirst = lerp(firstHalfAPG, 0.8, 2.0) * 0.4;
+    const decline = lerp(-apTrendDiff, 0.5, 2.0) * 0.6;
+    return clamp(goodFirst + decline);
+  })());
 
-  // 4. 에이징 커브 - good first half, bad second half
-  if (half >= 3 && apDiff < -1.0 && firstHalfAP > 1.0) {
-    return { trend: "down", emoji: "📉", label: "에이징 커브", comment: "전반기의 폭격기는 어디 가고 침묵 중입니다. 에이징 커브가 의심됩니다." };
-  }
+  // 5. 국밥형 상수: consistent, decent attendance, moderate stats
+  scores.set("steady", (() => {
+    const consistencyScore = lerp(1.5 - gpgStd, 0, 1.5); // low variance = good
+    const decentAP = gpg + apg >= 0.3 ? lerp(gpg + apg, 0.3, 1.5) * 0.3 : 0;
+    const attendScore = lerp(attendanceRate, 40, 70) * 0.2;
+    const noExtremeTrend = Math.abs(apTrendDiff) < 0.8 ? 20 : 0;
+    return consistencyScore * 0.5 + decentAP + attendScore + noExtremeTrend;
+  })());
 
-  // 6. 영점 조절 실패 - high attendance, low AP
-  if (totalAppearances >= 8 && goalsPerGame < 0.3 && assistsPerGame < 0.3) {
-    return { trend: "down", emoji: "🌧️", label: "영점 조절 실패", comment: "경기장엔 늘 있지만 영점이 심하게 흔들립니다. 굿을 해야 합니다." };
-  }
+  // 6. 영점 조절 실패: high attendance, very low production
+  scores.set("zero", (() => {
+    if (totalApp < 5) return 0;
+    const highAttend = lerp(attendanceRate, 40, 70) * 0.3;
+    const lowProd = lerp(0.5 - (gpg + apg), 0, 0.5) * 0.7;
+    return clamp(highAttend + lowProd);
+  })());
 
-  // 15. 철강왕 - high attendance
-  if (attendanceRate >= 70 && totalNonCustom >= 10) {
-    return { trend: "stable", emoji: "🤖", label: "철강왕", comment: "지치지 않는 체력과 출석률! 풋살장 지박령이 의심되는 진정한 철인." };
-  }
+  // 7. 전설의 포켓몬: extremely low attendance
+  scores.set("pokemon", (() => {
+    if (totalNonCustom < 8) return 0;
+    return lerp(25 - attendanceRate, 0, 25);
+  })());
 
-  // 14. 언성 히어로 - decent attendance, modest stats, not bad
-  if (attendanceRate >= 50 && goalsPerGame < 1 && totalAppearances >= 5) {
-    return { trend: "stable", emoji: "🫀", label: "언성 히어로", comment: "피치 위에서 가장 많은 땀을 흘리는 팀의 심장입니다." };
-  }
+  // 8. 상대팀의 스파이: recent own goals
+  scores.set("spy", (() => {
+    if (r5OwnGoals === 0) return 0;
+    return clamp(r5OwnGoals >= 2 ? 90 : r5OwnGoals >= 1 ? 50 : 0);
+  })());
 
-  // 5. 국밥형 상수 (default stable)
-  return { trend: "stable", emoji: "🍚", label: "국밥형 상수", comment: "비가 오나 눈이 오나 자기 몫은 해내는 든든한 국밥형 플레이어." };
+  // 9. 인간 승리 토템: big positive WR diff
+  scores.set("totem", (() => {
+    if (presentNCIds.size < 5) return 0;
+    return lerp(wrDiff, 10, 30);
+  })());
+
+  // 10. 패배 요정: big negative WR diff
+  scores.set("doom", (() => {
+    if (presentNCIds.size < 5) return 0;
+    return lerp(-wrDiff, 10, 30);
+  })());
+
+  // 11. 탐욕의 항아리: extremely high goal ratio, very low assists
+  scores.set("greedy", (() => {
+    if (totalGoals < 5) return 0;
+    const ratioScore = lerp(greedyRatio, 0.85, 1.0); // need 85%+ goals in AP
+    const lowAssistScore = totalAssists <= 1 ? 30 : totalAssists <= 3 ? 10 : 0;
+    return clamp(ratioScore * 0.7 + lowAssistScore);
+  })());
+
+  // 12. 클러치 장인: clutch goal ratio >= 50%, min 3 scored
+  scores.set("clutch", (() => {
+    if (totalScoredGoals < 3) return 0;
+    const ratioScore = lerp(clutchRatio, 0.35, 0.7);
+    const recentClutch = (() => {
+      let rc = 0;
+      goalEvents.filter(g => r5Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal).forEach(g => {
+        const matchEvents = goalEvents.filter(e => e.match_id === g.match_id && (e.quarter < g.quarter || (e.quarter === g.quarter && e.id < g.id)));
+        const mTeams = teams.filter(t => t.match_id === g.match_id);
+        const ourTeam = mTeams.find(t => t.is_ours);
+        if (!ourTeam) return;
+        const ourTeamIds = new Set(mTeams.filter(t => t.is_ours).map(t => t.id));
+        let os = 0, ops = 0;
+        matchEvents.forEach(e => { if (e.is_own_goal) ops++; else if (ourTeamIds.has(e.team_id)) os++; else ops++; });
+        if (Math.abs(os - ops) <= 1) rc++;
+      });
+      return rc;
+    })();
+    const recentBonus = lerp(recentClutch, 0, 3) * 0.3;
+    return ratioScore * 0.7 + recentBonus;
+  })());
+
+  // 13. 스탯 세탁기: padding goal ratio >= 60%, min 3 scored
+  scores.set("padder", (() => {
+    if (totalScoredGoals < 3) return 0;
+    return lerp(paddingRatio, 0.4, 0.8);
+  })());
+
+  // 14. 언성 히어로: decent attendance, low stats, MOM consideration
+  scores.set("unsung", (() => {
+    if (totalApp < 4) return 0;
+    const attendBonus = lerp(attendanceRate, 40, 70) * 0.3;
+    const modestStats = gpg < 1.0 && apg < 1.0 ? 30 : 0;
+    const momBonus = momCount >= 2 ? 20 : momCount >= 1 ? 10 : 0;
+    const lowFlash = totalGoals < totalApp * 0.8 ? 10 : 0;
+    return clamp(attendBonus + modestStats + momBonus + lowFlash);
+  })());
+
+  // 15. 철강왕: very high attendance
+  scores.set("iron", (() => {
+    if (totalNonCustom < 8) return 0;
+    return lerp(attendanceRate, 60, 90);
+  })());
+
+  // ── Find winner ──
+  let bestKey = "steady";
+  let bestScore = -1;
+  scores.forEach((score, key) => {
+    if (score > bestScore) { bestScore = score; bestKey = key; }
+  });
+
+  const pattern = PATTERNS.find(p => p.key === bestKey) || PATTERNS.find(p => p.key === "steady")!;
+  return { trend: pattern.trend, emoji: pattern.emoji, label: pattern.label, comment: pattern.comment };
 }
 
 // Keep old function for backward compat
