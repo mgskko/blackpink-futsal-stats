@@ -1,12 +1,44 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Users } from "lucide-react";
 import { useAllFutsalData, getMatchResult } from "@/hooks/useFutsalData";
+import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 
 const MatchesPage = () => {
   const navigate = useNavigate();
   const { matches, venues, teams, results, isLoading } = useAllFutsalData();
+  const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
+
+  // Fetch attendance counts for upcoming matches
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      const { data } = await supabase
+        .from("match_attendance")
+        .select("match_id, status")
+        .eq("status", "attending");
+      if (data) {
+        const counts: Record<number, number> = {};
+        data.forEach((r: any) => {
+          counts[r.match_id] = (counts[r.match_id] || 0) + 1;
+        });
+        setAttendanceCounts(counts);
+      }
+    };
+    fetchAttendance();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel("attendance-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "match_attendance" }, () => {
+        fetchAttendance();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   if (isLoading) return <SplashScreen />;
 
@@ -19,6 +51,7 @@ const MatchesPage = () => {
         {sortedMatches.map((match, i) => {
           const venue = venues.find((v) => v.id === match.venue_id);
           const mr = getMatchResult(teams, results, match.id);
+          const attendCount = attendanceCounts[match.id];
 
           return (
             <motion.div
@@ -35,6 +68,14 @@ const MatchesPage = () => {
                     <span>{match.date}</span>
                     <span className="text-primary/60">•</span>
                     <span>{venue?.name}</span>
+                    {attendCount != null && attendCount > 0 && (
+                      <>
+                        <span className="text-primary/60">•</span>
+                        <span className="flex items-center gap-1 text-primary font-medium">
+                          <Users size={10} /> {attendCount}명 참석
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="mt-2 flex items-center gap-3">
                     <span className="text-sm font-medium text-foreground">
