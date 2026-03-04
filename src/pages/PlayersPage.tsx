@@ -35,8 +35,19 @@ const PlayersPage = () => {
               className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:box-glow active:scale-[0.97]"
             >
               <div className="flex flex-col items-center text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary relative">
-                  <User size={28} className="text-primary" />
+                <div className="mb-3 relative">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary overflow-hidden">
+                    {player.profile_image_url ? (
+                      <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <User size={28} className="text-primary" />
+                    )}
+                  </div>
+                  {player.back_number !== null && player.back_number !== undefined && (
+                    <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-md">
+                      {player.back_number}
+                    </span>
+                  )}
                   {form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
                   {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
