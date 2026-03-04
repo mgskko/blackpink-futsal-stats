@@ -2,57 +2,45 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
-import {
-  players,
-  matches,
-  rosters,
-  results,
-  goalEvents,
-  getPlayerName,
-  getDeadlyDuos,
-  getQuarterGoalDistribution,
-} from "@/data/futsal";
+import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribution } from "@/hooks/useFutsalData";
+import type { Player, Match, Result, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import PageHeader from "@/components/PageHeader";
+import SplashScreen from "@/components/SplashScreen";
 
-// Get unique years from matches
-function getAvailableYears(): string[] {
+function getAvailableYears(matches: Match[]): string[] {
   const years = new Set(matches.map(m => m.date.slice(0, 4)));
   return [...years].sort((a, b) => b.localeCompare(a));
 }
 
-// Compute player stats filtered by year
-function getFilteredPlayerStats(playerId: number, year?: string) {
+function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], year?: string) {
   const filteredMatchIds = year
     ? new Set(matches.filter(m => m.date.startsWith(year)).map(m => m.id))
     : null;
 
   const playerRosters = rosters.filter(r =>
-    r.playerId === playerId && (!filteredMatchIds || filteredMatchIds.has(r.matchId))
+    r.player_id === playerId && (!filteredMatchIds || filteredMatchIds.has(r.match_id))
   );
 
-  const matchIds = [...new Set(playerRosters.map(r => r.matchId))];
+  const matchIds = [...new Set(playerRosters.map(r => r.match_id))];
   const appearances = matchIds.length;
 
-  // Goals from roster (non-detail matches)
   const rosterGoals = playerRosters.reduce((s, r) => s + (r.goals || 0), 0);
   const rosterAssists = playerRosters.reduce((s, r) => s + (r.assists || 0), 0);
 
-  // Goals from events (detail matches)
   const filteredEvents = filteredMatchIds
-    ? goalEvents.filter(g => filteredMatchIds.has(g.matchId))
+    ? goalEvents.filter(g => filteredMatchIds.has(g.match_id))
     : goalEvents;
-  const eventGoals = filteredEvents.filter(g => g.goalPlayerId === playerId && !g.isOwnGoal).length;
-  const eventAssists = filteredEvents.filter(g => g.assistPlayerId === playerId).length;
+  const eventGoals = filteredEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
+  const eventAssists = filteredEvents.filter(g => g.assist_player_id === playerId).length;
 
   const goals = rosterGoals + eventGoals;
   const assists = rosterAssists + eventAssists;
 
-  // W/L/D
   let wins = 0, losses = 0, draws = 0;
   matchIds.forEach(matchId => {
-    const teamIds = playerRosters.filter(r => r.matchId === matchId).map(r => r.teamId);
+    const teamIds = playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id);
     teamIds.forEach(teamId => {
-      const result = results.find((r) => r.teamId === teamId && r.matchId === matchId);
+      const result = results.find((r) => r.team_id === teamId && r.match_id === matchId);
       if (result) {
         if (result.result === "승") wins++;
         else if (result.result === "패") losses++;
@@ -69,12 +57,16 @@ function getFilteredPlayerStats(playerId: number, year?: string) {
 
 const StatisticsPage = () => {
   const navigate = useNavigate();
-  const years = getAvailableYears();
+  const { players, matches, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
+
+  if (isLoading) return <SplashScreen />;
+
+  const years = getAvailableYears(matches);
 
   const allStats = players.map((p) => ({
     ...p,
-    ...getFilteredPlayerStats(p.id, selectedYear),
+    ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedYear),
   }));
 
   const topGoals = [...allStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
@@ -90,12 +82,10 @@ const StatisticsPage = () => {
     도움: p.assists,
   }));
 
-  const quarterData = getQuarterGoalDistribution();
-  const duos = getDeadlyDuos(10);
+  const quarterData = getQuarterGoalDistribution(goalEvents);
+  const duos = getDeadlyDuos(goalEvents, 10);
 
-  const LeaderboardTable = ({
-    title, data, valueKey,
-  }: {
+  const LeaderboardTable = ({ title, data, valueKey }: {
     title: string;
     data: typeof topGoals;
     valueKey: "goals" | "assists" | "attackPoints" | "appearances";
@@ -104,25 +94,15 @@ const StatisticsPage = () => {
       <h3 className="mb-3 font-display text-xl tracking-wider text-primary">{title}</h3>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         {data.map((p, i) => (
-          <div
-            key={p.id}
-            onClick={() => navigate(`/player/${p.id}`)}
-            className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${
-              i < data.length - 1 ? "border-b border-border" : ""
-            }`}
-          >
+          <div key={p.id} onClick={() => navigate(`/player/${p.id}`)}
+            className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < data.length - 1 ? "border-b border-border" : ""}`}>
             <div className="flex items-center gap-3">
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                i === 0 ? "gradient-pink text-primary-foreground"
-                  : i === 1 ? "bg-primary/20 text-primary"
-                  : i === 2 ? "bg-primary/10 text-primary/80"
-                  : "bg-secondary text-muted-foreground"
+                i === 0 ? "gradient-pink text-primary-foreground" : i === 1 ? "bg-primary/20 text-primary" : i === 2 ? "bg-primary/10 text-primary/80" : "bg-secondary text-muted-foreground"
               }`}>{i + 1}</span>
               <span className="text-sm font-medium text-foreground">{p.name}</span>
             </div>
-            <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>
-              {p[valueKey]}
-            </span>
+            <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{p[valueKey]}</span>
           </div>
         ))}
       </div>
@@ -133,29 +113,22 @@ const StatisticsPage = () => {
     <div className="pb-20">
       <PageHeader title="STATISTICS" subtitle="버니즈 통계" />
 
-      {/* Year Filter */}
       <div className="px-4 mb-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
-          <button
-            onClick={() => setSelectedYear(undefined)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
-              !selectedYear ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
-            }`}
-          >전체</button>
+          <button onClick={() => setSelectedYear(undefined)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${!selectedYear ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+            전체
+          </button>
           {years.map(y => (
-            <button
-              key={y}
-              onClick={() => setSelectedYear(y)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
-                selectedYear === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
-              }`}
-            >{y}</button>
+            <button key={y} onClick={() => setSelectedYear(y)}
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedYear === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+              {y}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="px-4">
-        {/* TOP 5 Attack Points Chart */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h3 className="mb-3 font-display text-xl tracking-wider text-primary">TOP 5 공격포인트</h3>
           <div className="rounded-lg border border-border bg-card p-4">
@@ -176,7 +149,6 @@ const StatisticsPage = () => {
           </div>
         </motion.div>
 
-        {/* Quarter Goal Distribution */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6">
           <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점 추이</h3>
           <div className="rounded-lg border border-border bg-card p-4">
@@ -192,7 +164,6 @@ const StatisticsPage = () => {
           </div>
         </motion.div>
 
-        {/* Deadly Duos (10) */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-6">
           <h3 className="mb-3 font-display text-xl tracking-wider text-primary">💀 DEADLY DUOS</h3>
           <div className="space-y-2">
@@ -201,11 +172,11 @@ const StatisticsPage = () => {
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>#{i + 1}</span>
                   <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p1}`)}>
-                    {getPlayerName(duo.p1)}
+                    {getPlayerName(players, duo.p1)}
                   </span>
                   <span className="text-primary">×</span>
                   <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p2}`)}>
-                    {getPlayerName(duo.p2)}
+                    {getPlayerName(players, duo.p2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -217,7 +188,6 @@ const StatisticsPage = () => {
           </div>
         </motion.div>
 
-        {/* Leaderboards */}
         <LeaderboardTable title="⚽ 누적 골" data={topGoals} valueKey="goals" />
         <LeaderboardTable title="🅰️ 누적 어시스트" data={topAssists} valueKey="assists" />
         <LeaderboardTable title="📊 공격포인트" data={topAP10} valueKey="attackPoints" />
