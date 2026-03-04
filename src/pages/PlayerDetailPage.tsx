@@ -1,15 +1,25 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy } from "lucide-react";
+import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
-import { getPlayerBadges, getWinFairyData } from "@/hooks/useAdvancedStats";
+import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import SplashScreen from "@/components/SplashScreen";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const PlayerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+
+  const { data: momVotes } = useQuery({
+    queryKey: ["mom_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
 
   if (isLoading) return <SplashScreen />;
 
@@ -20,11 +30,15 @@ const PlayerDetailPage = () => {
   const bestAP = getPlayerBestAPMatch(matches, rosters, goalEvents, playerId);
   const assistGiven = getPlayerAssistGiven(goalEvents, playerId, 7);
   const assistReceived = getPlayerAssistReceived(goalEvents, playerId, 7);
-  const badges = getPlayerBadges(playerId, players, matches, teams, results, rosters, goalEvents);
+  const badges = getPlayerBadges(playerId, players, matches, teams, results, rosters, goalEvents, momVotes);
+  const varianceBadges = getVarianceBadge(playerId, matches, rosters, goalEvents);
+  const allBadges = [...badges, ...varianceBadges];
 
-  // Win fairy for this player
   const winFairyAll = getWinFairyData(players, matches, teams, results, rosters);
   const myFairy = winFairyAll.find(d => d.playerId === playerId);
+
+  const formGuide = getPlayerFormGuide(playerId, matches, rosters, goalEvents);
+  const scoutingReport = getScoutingReport(playerId, matches, rosters, goalEvents);
 
   const playerDuos = new Map<number, number>();
   goalEvents.forEach(g => {
@@ -71,25 +85,48 @@ const PlayerDetailPage = () => {
           <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/50 bg-secondary">
             <User size={40} className="text-primary" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+              {/* Form indicator */}
+              {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+              {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
+            </div>
             <p className="text-xs text-muted-foreground">
               가입일: {player.join_date}
               {player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
             </p>
+            {formGuide.recentGames > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                최근 {formGuide.recentGames}경기 AP: <span className={formGuide.form === "hot" ? "text-primary font-bold" : formGuide.form === "cold" ? "text-destructive" : "text-foreground"}>{formGuide.recentAP}</span>
+              </p>
+            )}
           </div>
         </div>
         {/* Badges */}
-        {badges.length > 0 && (
+        {allBadges.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {badges.map((badge, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+            {allBadges.map((badge, i) => (
+              <span key={i} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                badge.emoji === "🚨" ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : badge.emoji === "🛡️" ? "border-green-500/40 bg-green-500/10 text-green-400"
+                : "border-primary/40 bg-primary/10 text-primary"
+              }`}>
                 <span>{badge.emoji}</span>
                 <span>{badge.label}</span>
               </span>
             ))}
           </div>
         )}
+      </motion.div>
+
+      {/* Scouting Report */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
+        <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
+          {scoutingReport.trend === "up" ? <TrendingUp size={16} className="text-primary" /> : scoutingReport.trend === "down" ? <TrendingDown size={16} className="text-destructive" /> : <Minus size={16} className="text-muted-foreground" />}
+          스카우팅 리포트
+        </h3>
+        <p className="text-xs text-muted-foreground">{scoutingReport.comment}</p>
       </motion.div>
 
       {/* Stats Grid */}

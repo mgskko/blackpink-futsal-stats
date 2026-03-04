@@ -156,6 +156,45 @@ export type Database = {
           },
         ]
       }
+      mom_votes: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: number
+          voted_player_id: number
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: number
+          voted_player_id: number
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: number
+          voted_player_id?: number
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mom_votes_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mom_votes_voted_player_id_fkey"
+            columns: ["voted_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_dues: {
         Row: {
           id: string

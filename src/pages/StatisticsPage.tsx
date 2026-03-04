@@ -4,10 +4,12 @@ import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribution } from "@/hooks/useFutsalData";
 import type { Player, Match, Result, Roster, GoalEvent } from "@/hooks/useFutsalData";
-import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking } from "@/hooks/useAdvancedStats";
+import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
-import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield } from "lucide-react";
+import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 function getAvailableYears(matches: Match[]): string[] {
   const years = new Set(matches.map(m => m.date.slice(0, 4)));
@@ -45,6 +47,14 @@ const StatisticsPage = () => {
   const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"player" | "team" | "fun">("player");
 
+  const { data: momVotes } = useQuery({
+    queryKey: ["mom_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
+
   if (isLoading) return <SplashScreen />;
 
   const years = getAvailableYears(matches);
@@ -60,7 +70,6 @@ const StatisticsPage = () => {
   const quarterData = getQuarterGoalDistribution(goalEvents);
   const duos = getDeadlyDuos(goalEvents, 10);
 
-  // Advanced stats
   const opponentRecords = getOpponentRecords(matches, teams, results);
   const venueRecords = getVenueRecords(matches, teams, results, venues);
   const ageRecords = getAgeCategoryRecords(matches, teams, results);
@@ -68,6 +77,8 @@ const StatisticsPage = () => {
   const lastQSpecialists = getLastQuarterSpecialists(players, matches, goalEvents);
   const duoSynergy = getDuoSynergyWinRate(players, matches, teams, results, rosters);
   const ownGoals = getOwnGoalRanking(players, goalEvents);
+  const hallOfFame = getHallOfFame(players, matches, rosters, goalEvents);
+  const momRanking = getMOMRanking(players, momVotes || []);
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 
@@ -89,7 +100,7 @@ const StatisticsPage = () => {
     </div>
   );
 
-  const RecordTable = ({ title, icon, data }: { title: string; icon: React.ReactNode; data: { name: string; wins: number; draws: number; losses: number; matches: number; winRate: number; goalsFor?: number; goalsAgainst?: number }[] }) => (
+  const RecordTable = ({ title, icon, data }: { title: string; icon: React.ReactNode; data: { name: string; wins: number; draws: number; losses: number; matches: number; winRate: number }[] }) => (
     <div className="mb-6">
       <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">{icon} {title}</h3>
       <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
@@ -146,13 +157,21 @@ const StatisticsPage = () => {
       {/* Tab switcher */}
       <div className="px-4 mb-6">
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
-          {([["player", "👤 개인"], ["team", "⚔️ 팀 전적"], ["fun", "🎮 꿀잼"]] as const).map(([key, label]) => (
+          {([["player", "👤 개인"], ["team", "⚔️ 팀 전적"], ["fun", "📊 각종 기록"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Compare button */}
+      <div className="px-4 mb-4">
+        <button onClick={() => navigate("/compare")}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20">
+          <Swords size={16} /> 1:1 라이벌 비교
+        </button>
       </div>
 
       <div className="px-4">
@@ -215,6 +234,25 @@ const StatisticsPage = () => {
             <LeaderboardTable title="🅰️ 누적 어시스트" data={topAssists} valueKey="assists" />
             <LeaderboardTable title="📊 공격포인트" data={topAP10} valueKey="attackPoints" />
             <LeaderboardTable title="🏟️ 참석 횟수" data={topAppearances} valueKey="appearances" />
+
+            {/* MOM Ranking */}
+            {momRanking.length > 0 && (
+              <div className="mb-6">
+                <h3 className="mb-3 font-display text-xl tracking-wider text-primary">⭐ MOM 랭킹</h3>
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  {momRanking.slice(0, 10).map((d, i) => (
+                    <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)}
+                      className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < momRanking.length - 1 ? "border-b border-border" : ""}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                        <span className="text-sm font-medium text-foreground">{d.name}</span>
+                      </div>
+                      <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.count}회</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -251,6 +289,31 @@ const StatisticsPage = () => {
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Hall of Fame */}
+            {hallOfFame.length > 0 && (
+              <div className="mb-6">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> 명예의 전당</h3>
+                <div className="space-y-2">
+                  {hallOfFame.slice(0, 15).map((e, i) => (
+                    <div key={`${e.playerId}-${e.matchId}-${e.type}`} onClick={() => navigate(`/match/${e.matchId}`)}
+                      className="cursor-pointer rounded-lg border border-primary/30 bg-card p-3 transition-colors hover:bg-secondary box-glow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{e.type === "hattrick" ? "🎩" : "🎯"}</span>
+                          <span className="cursor-pointer text-sm font-bold text-foreground hover:text-primary" onClick={(ev) => { ev.stopPropagation(); navigate(`/player/${e.playerId}`); }}>{e.name}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{e.date}</span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {e.type === "hattrick" ? `⚽ ${e.goals}골` : `🅰️ ${e.assists}어시`}
+                        {e.type === "hattrick" ? " 해트트릭!" : " 플레이메이커!"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Win Fairy */}
             <div className="mb-6">
               <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🧚 승리 요정 판독기</h3>

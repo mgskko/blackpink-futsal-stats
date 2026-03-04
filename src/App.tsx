@@ -10,6 +10,7 @@ import MatchDetailPage from "@/pages/MatchDetailPage";
 import PlayersPage from "@/pages/PlayersPage";
 import PlayerDetailPage from "@/pages/PlayerDetailPage";
 import StatisticsPage from "@/pages/StatisticsPage";
+import ComparisonPage from "@/pages/ComparisonPage";
 import MyPage from "@/pages/MyPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/players" element={<PlayersPage />} />
               <Route path="/player/:id" element={<PlayerDetailPage />} />
               <Route path="/stats" element={<StatisticsPage />} />
+              <Route path="/compare" element={<ComparisonPage />} />
               <Route path="/my" element={<MyPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
