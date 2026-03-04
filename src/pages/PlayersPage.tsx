@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
+import { getPlayerFormGuide } from "@/hooks/useAdvancedStats";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 
@@ -23,6 +24,7 @@ const PlayersPage = () => {
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
           const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, player.id);
+          const form = getPlayerFormGuide(player.id, matches, rosters, goalEvents);
           return (
             <motion.div
               key={player.id}
@@ -33,8 +35,10 @@ const PlayersPage = () => {
               className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:box-glow active:scale-[0.97]"
             >
               <div className="flex flex-col items-center text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary relative">
                   <User size={28} className="text-primary" />
+                  {form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
+                  {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
                 <span className="font-medium text-foreground">{player.name}</span>
                 <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">

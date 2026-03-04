@@ -5,6 +5,7 @@ import { ArrowLeft, Youtube, Check, X, HelpCircle, Users } from "lucide-react";
 import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMatchGoalEvents, getPlayerName } from "@/hooks/useFutsalData";
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
+import MOMVoting from "@/components/MOMVoting";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
@@ -12,7 +13,6 @@ function extractYoutubeId(url: string): string | null {
 }
 
 function parseTimestampToSeconds(ts: string): number | null {
-  // Supports "1:09:08", "12:08", "1시간 9분 8초", etc.
   let m = ts.match(/(\d+):(\d+):(\d+)/);
   if (m) return parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseInt(m[3]);
   m = ts.match(/(\d+):(\d+)/);
@@ -28,10 +28,10 @@ function formatTimestamp(ts: string): string {
   const secs = parseTimestampToSeconds(ts);
   if (secs === null) return ts;
   const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
+  const mn = Math.floor((secs % 3600) / 60);
   const s = secs % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
+  if (h > 0) return `${h}:${String(mn).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${mn}:${String(s).padStart(2, "0")}`;
 }
 
 type AttendanceStatus = "attending" | "absent" | "undecided";
@@ -60,9 +60,7 @@ const MatchDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const match = matches.find((m) => m.id === matchId);
-  if (!match) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">경기를 찾을 수 없습니다</div>;
-  }
+  if (!match) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">경기를 찾을 수 없습니다</div>;
 
   const venue = venues.find((v) => v.id === match.venue_id);
   const mr = getMatchResult(teams, results, matchId);
@@ -71,14 +69,12 @@ const MatchDetailPage = () => {
   const matchGoalEvents = getMatchGoalEvents(goalEvents, matchId);
   const quarters = [...new Set(matchGoalEvents.map((g) => g.quarter))].sort((a, b) => a - b);
   const opponentTeam = matchTeams.find(t => !t.is_ours);
-
   const youtubeId = match.youtube_link ? extractYoutubeId(match.youtube_link) : null;
 
   const seekTo = (timestamp: string) => {
     const secs = parseTimestampToSeconds(timestamp);
     if (secs === null || !iframeRef.current) return;
-    const src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&start=${secs}`;
-    iframeRef.current.src = src;
+    iframeRef.current.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&start=${secs}`;
   };
 
   const getPlayerMatchStats = () => {
@@ -87,32 +83,25 @@ const MatchDetailPage = () => {
       matchGoalEvents.forEach(g => {
         if (g.goal_player_id && !g.is_own_goal) {
           const s = statsMap.get(g.goal_player_id) || { goals: 0, assists: 0, teamId: g.team_id };
-          s.goals++;
-          statsMap.set(g.goal_player_id, s);
+          s.goals++; statsMap.set(g.goal_player_id, s);
         }
         if (g.assist_player_id) {
           const s = statsMap.get(g.assist_player_id) || { goals: 0, assists: 0, teamId: g.team_id };
-          s.assists++;
-          statsMap.set(g.assist_player_id, s);
+          s.assists++; statsMap.set(g.assist_player_id, s);
         }
       });
       roster.filter(r => matchTeams.some(t => t.is_ours && t.id === r.team_id)).forEach(r => {
-        if (!statsMap.has(r.player_id)) {
-          statsMap.set(r.player_id, { goals: 0, assists: 0, teamId: r.team_id });
-        }
+        if (!statsMap.has(r.player_id)) statsMap.set(r.player_id, { goals: 0, assists: 0, teamId: r.team_id });
       });
     } else {
       roster.filter(r => matchTeams.some(t => t.is_ours && t.id === r.team_id)).forEach(r => {
         statsMap.set(r.player_id, { goals: r.goals || 0, assists: r.assists || 0, teamId: r.team_id });
       });
     }
-    return [...statsMap.entries()]
-      .map(([playerId, s]) => ({ playerId, ...s, ap: s.goals + s.assists }))
-      .sort((a, b) => b.ap - a.ap || b.goals - a.goals);
+    return [...statsMap.entries()].map(([playerId, s]) => ({ playerId, ...s, ap: s.goals + s.assists })).sort((a, b) => b.ap - a.ap || b.goals - a.goals);
   };
 
   const playerMatchStats = getPlayerMatchStats();
-
   const attendingPlayers = players.filter(p => attendance.get(p.id) === "attending");
   const absentPlayers = players.filter(p => attendance.get(p.id) === "absent");
   const undecidedPlayers = players.filter(p => attendance.get(p.id) === "undecided");
@@ -135,16 +124,12 @@ const MatchDetailPage = () => {
         <div className="flex items-center justify-center gap-6">
           <div className="text-center">
             <div className="text-sm font-medium text-foreground">{mr?.ourTeam.name ?? "버니즈"}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.ourResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>
-              {mr?.ourResult.score_for ?? "-"}
-            </div>
+            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.ourResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>{mr?.ourResult.score_for ?? "-"}</div>
           </div>
           <div className="text-2xl text-muted-foreground">:</div>
           <div className="text-center">
             <div className="text-sm font-medium text-foreground">{mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.opponentResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>
-              {mr?.ourResult.score_against ?? "-"}
-            </div>
+            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.opponentResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>{mr?.ourResult.score_against ?? "-"}</div>
           </div>
         </div>
         <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted-foreground">
@@ -160,29 +145,17 @@ const MatchDetailPage = () => {
         )}
         {mr && (
           <div className="mt-3 flex justify-center">
-            <span className={`rounded-full px-4 py-1 text-sm font-bold ${
-              mr.ourResult.result === "승" ? "gradient-pink text-primary-foreground"
-                : mr.ourResult.result === "패" ? "bg-muted text-muted-foreground"
-                : "border border-primary/40 text-primary"
-            }`}>{mr.ourResult.result}</span>
+            <span className={`rounded-full px-4 py-1 text-sm font-bold ${mr.ourResult.result === "승" ? "gradient-pink text-primary-foreground" : mr.ourResult.result === "패" ? "bg-muted text-muted-foreground" : "border border-primary/40 text-primary"}`}>{mr.ourResult.result}</span>
           </div>
         )}
       </motion.div>
 
-      {/* YouTube Embed */}
+      {/* YouTube */}
       {youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary">
-            <Youtube size={18} /> MATCH VIDEO
-          </h2>
+          <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Youtube size={18} /> MATCH VIDEO</h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border">
-            <iframe
-              ref={iframeRef}
-              src={`https://www.youtube.com/embed/${youtubeId}`}
-              className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            <iframe ref={iframeRef} src={`https://www.youtube.com/embed/${youtubeId}`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
           </div>
         </motion.div>
       )}
@@ -199,38 +172,21 @@ const MatchDetailPage = () => {
                   {matchGoalEvents.filter((g) => g.quarter === q).map((g) => (
                     <div key={g.id} className="flex items-center gap-2 text-sm">
                       {g.video_timestamp && youtubeId && (
-                        <button
-                          onClick={() => seekTo(g.video_timestamp!)}
-                          className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary hover:bg-primary/30 transition-colors"
-                        >
-                          ▶ {formatTimestamp(g.video_timestamp)}
-                        </button>
+                        <button onClick={() => seekTo(g.video_timestamp!)} className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary hover:bg-primary/30 transition-colors">▶ {formatTimestamp(g.video_timestamp)}</button>
                       )}
-                      {g.is_own_goal ? (
-                        <span className="text-destructive">⚽ 자책골</span>
-                      ) : (
+                      {g.is_own_goal ? <span className="text-destructive">⚽ 자책골</span> : (
                         <>
                           <span className="text-primary">⚽</span>
-                          <span className="cursor-pointer font-medium text-foreground hover:text-primary"
-                            onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>
-                            {g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}
-                          </span>
+                          <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}</span>
                           {g.assist_player_id && (
                             <>
                               <span className="text-muted-foreground">←</span>
-                              <span className="cursor-pointer text-muted-foreground hover:text-primary"
-                                onClick={() => navigate(`/player/${g.assist_player_id}`)}>
-                                {getPlayerName(players, g.assist_player_id)}
-                              </span>
+                              <span className="cursor-pointer text-muted-foreground hover:text-primary" onClick={() => navigate(`/player/${g.assist_player_id}`)}>{getPlayerName(players, g.assist_player_id)}</span>
                             </>
                           )}
                         </>
                       )}
-                      {match.is_custom && (
-                        <span className="ml-auto text-[10px] text-muted-foreground">
-                          {matchTeams.find(t => t.id === g.team_id)?.name}
-                        </span>
-                      )}
+                      {match.is_custom && <span className="ml-auto text-[10px] text-muted-foreground">{matchTeams.find(t => t.id === g.team_id)?.name}</span>}
                     </div>
                   ))}
                 </div>
@@ -243,12 +199,8 @@ const MatchDetailPage = () => {
       {/* Match Summary */}
       {playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
-          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">
-            {match.has_detail_log ? "종합 기록" : "MATCH SUMMARY"}
-          </h2>
-          {!match.has_detail_log && (
-            <p className="mb-3 text-xs text-muted-foreground">쿼터별 상세 기록이 없는 경기입니다. (개인별 합산 기록만 표시)</p>
-          )}
+          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? "종합 기록" : "MATCH SUMMARY"}</h2>
+          {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">쿼터별 상세 기록이 없는 경기입니다.</p>}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             {playerMatchStats.map((p, i) => (
               <div key={p.playerId} onClick={() => navigate(`/player/${p.playerId}`)}
@@ -265,53 +217,32 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
+      {/* MOM Voting */}
+      <div className="mx-4 mt-4">
+        <MOMVoting matchId={matchId} />
+      </div>
+
       {/* Attendance */}
       {hasAttendanceData && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mx-4 mt-4">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary">
-            <Users size={18} /> ATTENDANCE
-          </h2>
+          <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Users size={18} /> ATTENDANCE</h2>
           <div className="space-y-2">
             {attendingPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-green-400">
-                  <Check size={12} /> 참석 ({attendingPlayers.length}명)
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {attendingPlayers.map(p => (
-                    <span key={p.id} className="rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-0.5 text-xs text-green-400">
-                      {p.name}
-                    </span>
-                  ))}
-                </div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-green-400"><Check size={12} /> 참석 ({attendingPlayers.length}명)</div>
+                <div className="flex flex-wrap gap-1.5">{attendingPlayers.map(p => <span key={p.id} className="rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-0.5 text-xs text-green-400">{p.name}</span>)}</div>
               </div>
             )}
             {absentPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-red-400">
-                  <X size={12} /> 불참 ({absentPlayers.length}명)
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {absentPlayers.map(p => (
-                    <span key={p.id} className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">
-                      {p.name}
-                    </span>
-                  ))}
-                </div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-red-400"><X size={12} /> 불참 ({absentPlayers.length}명)</div>
+                <div className="flex flex-wrap gap-1.5">{absentPlayers.map(p => <span key={p.id} className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">{p.name}</span>)}</div>
               </div>
             )}
             {undecidedPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-yellow-400">
-                  <HelpCircle size={12} /> 미정 ({undecidedPlayers.length}명)
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {undecidedPlayers.map(p => (
-                    <span key={p.id} className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2.5 py-0.5 text-xs text-yellow-400">
-                      {p.name}
-                    </span>
-                  ))}
-                </div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-yellow-400"><HelpCircle size={12} /> 미정 ({undecidedPlayers.length}명)</div>
+                <div className="flex flex-wrap gap-1.5">{undecidedPlayers.map(p => <span key={p.id} className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2.5 py-0.5 text-xs text-yellow-400">{p.name}</span>)}</div>
               </div>
             )}
           </div>
@@ -325,9 +256,7 @@ const MatchDetailPage = () => {
           const teamRoster = roster.filter((r) => r.team_id === team.id);
           return (
             <div key={team.id} className="mb-3">
-              {matchTeams.filter(t => t.is_ours).length > 1 && (
-                <div className="mb-2 text-xs font-bold text-primary">{team.name}</div>
-              )}
+              {matchTeams.filter(t => t.is_ours).length > 1 && <div className="mb-2 text-xs font-bold text-primary">{team.name}</div>}
               <div className="flex flex-wrap gap-2">
                 {teamRoster.map((r) => (
                   <span key={r.id} onClick={() => navigate(`/player/${r.player_id}`)}

@@ -112,9 +112,8 @@ export interface WinFairyData {
 }
 
 export function getWinFairyData(players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[]): WinFairyData[] {
-  // Only non-custom matches
   const nonCustom = matches.filter(m => !m.is_custom);
-  const matchResults = new Map<number, string>(); // matchId -> "승" | "패" | "무"
+  const matchResults = new Map<number, string>();
   nonCustom.forEach(m => {
     const mTeams = teams.filter(t => t.match_id === m.id);
     const ourTeam = mTeams.find(t => t.is_ours);
@@ -152,7 +151,6 @@ export interface LastQuarterData {
 }
 
 export function getLastQuarterSpecialists(players: Player[], matches: Match[], goalEvents: GoalEvent[]): LastQuarterData[] {
-  // For each match, find the max quarter
   const matchMaxQ = new Map<number, number>();
   goalEvents.forEach(g => {
     const cur = matchMaxQ.get(g.match_id) || 0;
@@ -213,8 +211,8 @@ export function getDuoSynergyWinRate(players: Player[], matches: Match[], teams:
         const key = `${a}-${b}`;
         const duo = duoMap.get(key) || {
           p1: a, p2: b,
-          name1: activePlayers.find(p => p.id === a)?.name || `#${a}`,
-          name2: activePlayers.find(p => p.id === b)?.name || `#${b}`,
+          name1: activePlayers.find(p => p.id === a)?.name || players.find(p => p.id === a)?.name || `#${a}`,
+          name2: activePlayers.find(p => p.id === b)?.name || players.find(p => p.id === b)?.name || `#${b}`,
           together: 0, wins: 0, winRate: 0
         };
         duo.together++;
@@ -260,10 +258,41 @@ export interface PlayerBadge {
 }
 
 export function getPlayerBadges(
-  playerId: number, players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[]
+  playerId: number, players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], momVotes?: { match_id: number; voted_player_id: number }[]
 ): PlayerBadge[] {
   const badges: PlayerBadge[] = [];
   const years = [...new Set(matches.map(m => m.date.slice(0, 4)))].sort();
+
+  // All-time stats for all players
+  const allTimeStats = new Map<number, { goals: number; assists: number; ap: number; appearances: number }>();
+  players.forEach(p => {
+    const pRosters = rosters.filter(r => r.player_id === p.id);
+    const rosterGoals = pRosters.reduce((s, r) => s + (r.goals || 0), 0);
+    const rosterAssists = pRosters.reduce((s, r) => s + (r.assists || 0), 0);
+    const eventGoals = goalEvents.filter(g => g.goal_player_id === p.id && !g.is_own_goal).length;
+    const eventAssists = goalEvents.filter(g => g.assist_player_id === p.id).length;
+    const goals = rosterGoals + eventGoals;
+    const assists = rosterAssists + eventAssists;
+    const appearances = [...new Set(pRosters.map(r => r.match_id))].length;
+    allTimeStats.set(p.id, { goals, assists, ap: goals + assists, appearances });
+  });
+
+  // All-time badges
+  const allStatsArr = [...allTimeStats.entries()].map(([id, s]) => ({ id, ...s }));
+  const topAllGoal = allStatsArr.filter(s => s.goals > 0).sort((a, b) => b.goals - a.goals)[0];
+  const topAllAssist = allStatsArr.filter(s => s.assists > 0).sort((a, b) => b.assists - a.assists)[0];
+  const topAllAP = allStatsArr.filter(s => s.ap > 0).sort((a, b) => b.ap - a.ap)[0];
+  if (topAllGoal && topAllGoal.id === playerId) badges.push({ label: "종합 득점왕", emoji: "👑" });
+  if (topAllAssist && topAllAssist.id === playerId) badges.push({ label: "종합 도움왕", emoji: "🏅" });
+  if (topAllAP && topAllAP.id === playerId) badges.push({ label: "종합 공포왕", emoji: "💎" });
+
+  // MOM cumulative badge
+  if (momVotes && momVotes.length > 0) {
+    const momCounts = new Map<number, number>();
+    momVotes.forEach(v => momCounts.set(v.voted_player_id, (momCounts.get(v.voted_player_id) || 0) + 1));
+    const topMOM = [...momCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (topMOM && topMOM[0] === playerId) badges.push({ label: "누적 MOM 1위", emoji: "🌟" });
+  }
 
   for (const year of years) {
     const yearMatches = matches.filter(m => m.date.startsWith(year));
@@ -271,7 +300,6 @@ export function getPlayerBadges(
     const yearEvents = goalEvents.filter(g => yearMatchIds.has(g.match_id));
     const yearRosters = rosters.filter(r => yearMatchIds.has(r.match_id));
 
-    // Calculate goals/assists for all players this year
     const playerStats = new Map<number, { goals: number; assists: number; ap: number; appearances: number }>();
     players.forEach(p => {
       const pRosters = yearRosters.filter(r => r.player_id === p.id);
@@ -310,7 +338,6 @@ export function getPlayerBadges(
     customRosters.forEach(r => {
       if (r.goals) customGoals.set(r.player_id, (customGoals.get(r.player_id) || 0) + r.goals);
     });
-    // AP for custom
     customEvents.forEach(g => {
       if (g.goal_player_id && !g.is_own_goal) customAP.set(g.goal_player_id, (customAP.get(g.goal_player_id) || 0) + 1);
       if (g.assist_player_id) customAP.set(g.assist_player_id, (customAP.get(g.assist_player_id) || 0) + 1);
@@ -350,4 +377,173 @@ export function getPlayerBadges(
   if (pTotal >= 5 && absentWR - presentWR >= 15) badges.push({ label: "패배 요정", emoji: "👻" });
 
   return badges;
+}
+
+// ─── Form Guide (최근 5경기 폼) ───
+export function getPlayerFormGuide(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): { form: "hot" | "cold" | "normal"; recentAP: number; recentGames: number } {
+  const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
+  const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
+  const recent5 = sortedMatches.slice(0, 5);
+  if (recent5.length === 0) return { form: "normal", recentAP: 0, recentGames: 0 };
+
+  const r5Ids = new Set(recent5.map(m => m.id));
+  const goals = goalEvents.filter(g => r5Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal).length;
+  const assists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId).length;
+  const rGoals = rosters.filter(r => r5Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+  const rAssists = rosters.filter(r => r5Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
+  const ap = goals + assists + rGoals + rAssists;
+  const avgAP = ap / recent5.length;
+
+  return { form: avgAP >= 2 ? "hot" : avgAP <= 0.4 ? "cold" : "normal", recentAP: ap, recentGames: recent5.length };
+}
+
+// ─── Scouting Report (에이징 커브) ───
+export function getScoutingReport(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): { trend: "up" | "down" | "stable"; comment: string } {
+  const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
+  const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => a.date.localeCompare(b.date));
+  if (sortedMatches.length < 6) return { trend: "stable", comment: "아직 데이터가 부족합니다." };
+
+  const half = Math.floor(sortedMatches.length / 2);
+  const firstHalf = new Set(sortedMatches.slice(0, half).map(m => m.id));
+  const secondHalf = new Set(sortedMatches.slice(half).map(m => m.id));
+
+  const getAP = (mids: Set<number>) => {
+    const g = goalEvents.filter(e => mids.has(e.match_id) && e.goal_player_id === playerId && !e.is_own_goal).length;
+    const a = goalEvents.filter(e => mids.has(e.match_id) && e.assist_player_id === playerId).length;
+    const rg = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+    const ra = rosters.filter(r => mids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
+    return g + a + rg + ra;
+  };
+
+  const firstAP = getAP(firstHalf) / half;
+  const secondAP = getAP(secondHalf) / (sortedMatches.length - half);
+  const diff = secondAP - firstAP;
+
+  if (diff > 0.5) return { trend: "up", comment: "최근 폼이 절정입니다! 득점 감각에 물이 올랐습니다. 🔥" };
+  if (diff < -0.5) return { trend: "down", comment: "상반기의 폼을 잃어버렸습니다. 에이징 커브가 의심됩니다. 📉" };
+  return { trend: "stable", comment: "기복 없는 국밥형 플레이어. 팀의 든든한 기둥입니다. 🍚" };
+}
+
+// ─── Variance Badge (주사위형 선수) ───
+export function getVarianceBadge(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): PlayerBadge[] {
+  const badges: PlayerBadge[] = [];
+  const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
+  const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
+
+  if (sortedMatches.length >= 5) {
+    // Goals per match variance
+    const goalsPerMatch = sortedMatches.map(m => {
+      const g = goalEvents.filter(e => e.match_id === m.id && e.goal_player_id === playerId && !e.is_own_goal).length;
+      const rg = rosters.filter(r => r.match_id === m.id && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+      return g + rg;
+    });
+    const mean = goalsPerMatch.reduce((a, b) => a + b, 0) / goalsPerMatch.length;
+    const variance = goalsPerMatch.reduce((s, g) => s + (g - mean) ** 2, 0) / goalsPerMatch.length;
+    const stdDev = Math.sqrt(variance);
+    if (stdDev > 1.5 && mean > 0.5) badges.push({ label: "주사위형 선수", emoji: "🎲" });
+  }
+
+  // 방출 위기: 최근 3경기 연속 출석, AP 0
+  const recent3 = sortedMatches.slice(0, 3);
+  if (recent3.length === 3) {
+    const r3Ids = new Set(recent3.map(m => m.id));
+    const g = goalEvents.filter(e => r3Ids.has(e.match_id) && e.goal_player_id === playerId && !e.is_own_goal).length;
+    const a = goalEvents.filter(e => r3Ids.has(e.match_id) && e.assist_player_id === playerId).length;
+    const rg = rosters.filter(r => r3Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+    const ra = rosters.filter(r => r3Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
+    if (g + a + rg + ra === 0) badges.push({ label: "폼 저하 및 방출 위기", emoji: "🚨" });
+  }
+
+  // 까방권: 최근 3경기 내 해트트릭 or MOM
+  if (recent3.length > 0) {
+    const r3Ids = new Set(recent3.map(m => m.id));
+    for (const mid of r3Ids) {
+      const g = goalEvents.filter(e => e.match_id === mid && e.goal_player_id === playerId && !e.is_own_goal).length;
+      const rg = rosters.filter(r => r.match_id === mid && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
+      if (g + rg >= 3) {
+        badges.push({ label: "까방권 보유", emoji: "🛡️" });
+        break;
+      }
+    }
+  }
+
+  return badges;
+}
+
+// ─── Hat-trick / Playmaker Board ───
+export interface HallOfFameEntry {
+  playerId: number;
+  name: string;
+  matchId: number;
+  date: string;
+  goals: number;
+  assists: number;
+  type: "hattrick" | "playmaker";
+}
+
+export function getHallOfFame(players: Player[], matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): HallOfFameEntry[] {
+  const entries: HallOfFameEntry[] = [];
+  const matchIds = [...new Set(goalEvents.map(g => g.match_id))];
+
+  for (const mid of matchIds) {
+    const match = matches.find(m => m.id === mid);
+    if (!match) continue;
+
+    // Count goals per player in this match
+    const goalsMap = new Map<number, number>();
+    const assistsMap = new Map<number, number>();
+    goalEvents.filter(g => g.match_id === mid).forEach(g => {
+      if (g.goal_player_id && !g.is_own_goal) goalsMap.set(g.goal_player_id, (goalsMap.get(g.goal_player_id) || 0) + 1);
+      if (g.assist_player_id) assistsMap.set(g.assist_player_id, (assistsMap.get(g.assist_player_id) || 0) + 1);
+    });
+
+    // Also count from roster
+    rosters.filter(r => r.match_id === mid).forEach(r => {
+      if (r.goals) goalsMap.set(r.player_id, (goalsMap.get(r.player_id) || 0) + r.goals);
+      if (r.assists) assistsMap.set(r.player_id, (assistsMap.get(r.player_id) || 0) + r.assists);
+    });
+
+    goalsMap.forEach((goals, pid) => {
+      if (goals >= 3) {
+        const p = players.find(p => p.id === pid);
+        entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: mid, date: match.date, goals, assists: assistsMap.get(pid) || 0, type: "hattrick" });
+      }
+    });
+
+    assistsMap.forEach((assists, pid) => {
+      if (assists >= 3) {
+        const p = players.find(p => p.id === pid);
+        // Avoid duplicates if already in hattrick
+        if (!entries.find(e => e.playerId === pid && e.matchId === mid && e.type === "hattrick")) {
+          entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: mid, date: match.date, goals: goalsMap.get(pid) || 0, assists, type: "playmaker" });
+        }
+      }
+    });
+  }
+
+  return entries.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// ─── MOM Count ───
+export function getMOMRanking(players: Player[], momVotes: { match_id: number; voted_player_id: number }[]): { playerId: number; name: string; count: number }[] {
+  const map = new Map<number, number>();
+  // For each match, find the player with most votes
+  const matchVotes = new Map<number, Map<number, number>>();
+  momVotes.forEach(v => {
+    if (!matchVotes.has(v.match_id)) matchVotes.set(v.match_id, new Map());
+    const mv = matchVotes.get(v.match_id)!;
+    mv.set(v.voted_player_id, (mv.get(v.voted_player_id) || 0) + 1);
+  });
+
+  matchVotes.forEach((votes) => {
+    const sorted = [...votes.entries()].sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+      const winnerId = sorted[0][0];
+      map.set(winnerId, (map.get(winnerId) || 0) + 1);
+    }
+  });
+
+  return [...map.entries()]
+    .map(([pid, count]) => ({ playerId: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count }))
+    .sort((a, b) => b.count - a.count);
 }
