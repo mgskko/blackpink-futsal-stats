@@ -27,7 +27,7 @@ export type Database = {
         Insert: {
           assist_player_id?: number | null
           goal_player_id?: number | null
-          id: number
+          id?: number
           is_own_goal?: boolean
           match_id: number
           quarter: number
@@ -73,6 +73,48 @@ export type Database = {
           },
         ]
       }
+      match_attendance: {
+        Row: {
+          id: string
+          match_id: number
+          player_id: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          match_id: number
+          player_id: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          match_id?: number
+          player_id?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_attendance_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_attendance_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           date: string
@@ -85,7 +127,7 @@ export type Database = {
         Insert: {
           date: string
           has_detail_log?: boolean
-          id: number
+          id?: number
           is_custom?: boolean
           match_type?: string
           venue_id?: number | null
@@ -104,6 +146,41 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_dues: {
+        Row: {
+          id: string
+          is_paid: boolean
+          player_id: number
+          updated_at: string
+          updated_by: string | null
+          year_month: string
+        }
+        Insert: {
+          id?: string
+          is_paid?: boolean
+          player_id: number
+          updated_at?: string
+          updated_by?: string | null
+          year_month: string
+        }
+        Update: {
+          id?: string
+          is_paid?: boolean
+          player_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_dues_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
         ]
@@ -174,7 +251,7 @@ export type Database = {
           team_id: number
         }
         Insert: {
-          id: number
+          id?: number
           match_id: number
           result: string
           score_against?: number | null
@@ -218,7 +295,7 @@ export type Database = {
         Insert: {
           assists?: number | null
           goals?: number | null
-          id: number
+          id?: number
           match_id: number
           player_id: number
           team_id: number
@@ -263,7 +340,7 @@ export type Database = {
           name: string
         }
         Insert: {
-          id: number
+          id?: number
           is_ours?: boolean
           match_id: number
           name: string

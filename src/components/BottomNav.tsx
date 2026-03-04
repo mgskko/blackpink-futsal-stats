@@ -1,16 +1,19 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Users, BarChart3, UserCircle } from "lucide-react";
-
-const tabs = [
-  { path: "/", label: "경기", icon: Trophy },
-  { path: "/players", label: "선수", icon: Users },
-  { path: "/stats", label: "통계", icon: BarChart3 },
-  { path: "/my", label: "MY", icon: UserCircle },
-];
+import { Trophy, Users, BarChart3, UserCircle, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+
+  const tabs = [
+    { path: "/", label: "경기", icon: Trophy },
+    { path: "/players", label: "선수", icon: Users },
+    { path: "/stats", label: "통계", icon: BarChart3 },
+    { path: "/my", label: "MY", icon: UserCircle },
+    ...(isAdmin ? [{ path: "/admin", label: "관리", icon: Shield }] : []),
+  ];
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
