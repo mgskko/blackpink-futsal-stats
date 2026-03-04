@@ -124,16 +124,16 @@ const PlayerDetailPage = () => {
       </motion.div>
 
       {/* Deep Scouting Report */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4 rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
+        <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">
           {trendIcon}
           수석코치 AI 스카우팅 리포트
         </h3>
-        <div className="flex items-start gap-3">
-          <span className="text-3xl">{scoutingReport.emoji}</span>
-          <div className="flex-1">
-            <div className="text-sm font-bold text-foreground mb-1">{scoutingReport.label}</div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
+        <div className="flex items-start gap-4 rounded-lg bg-secondary/30 border border-primary/20 p-4">
+          <span className="text-4xl drop-shadow-lg">{scoutingReport.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-bold text-primary text-glow mb-1.5">{scoutingReport.label}</div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
           </div>
         </div>
       </motion.div>
