@@ -10,7 +10,7 @@ export interface Roster { id: number; match_id: number; team_id: number; player_
 export interface GoalEvent { id: number; match_id: number; team_id: number; quarter: number; goal_player_id: number | null; assist_player_id: number | null; is_own_goal: boolean; }
 
 async function fetchAll<T>(table: string): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select("*");
+  const { data, error } = await (supabase as any).from(table).select("*");
   if (error) throw error;
   return (data ?? []) as T[];
 }
