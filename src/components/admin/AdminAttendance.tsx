@@ -2,25 +2,17 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Check, X, HelpCircle } from "lucide-react";
 
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
-interface AttendanceRecord {
-  match_id: number;
-  player_id: number;
-  status: AttendanceStatus;
-}
-
 const AdminAttendance = () => {
   const { matches, players, venues } = useAllFutsalData();
   const queryClient = useQueryClient();
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
-  const [saving, setSaving] = useState(false);
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const activePlayers = players.filter(p => p.is_active);
@@ -59,6 +51,17 @@ const AdminAttendance = () => {
 
   const attendingCount = [...attendance.values()].filter(s => s === "attending").length;
   const absentCount = [...attendance.values()].filter(s => s === "absent").length;
+
+  // Sort: attending first, then absent, then undecided, then unset
+  const sortedPlayers = [...activePlayers].sort((a, b) => {
+    const order: Record<string, number> = { attending: 0, absent: 1, undecided: 2 };
+    const sa = attendance.get(a.id);
+    const sb = attendance.get(b.id);
+    const oa = sa ? order[sa] : 3;
+    const ob = sb ? order[sb] : 3;
+    if (oa !== ob) return oa - ob;
+    return a.name.localeCompare(b.name);
+  });
 
   const statusButton = (playerId: number, status: AttendanceStatus, icon: React.ReactNode, label: string, activeClass: string) => {
     const current = attendance.get(playerId) ?? "undecided";
@@ -113,7 +116,7 @@ const AdminAttendance = () => {
           </div>
 
           <div className="space-y-2">
-            {activePlayers.map(player => (
+            {sortedPlayers.map(player => (
               <div
                 key={player.id}
                 className="flex items-center justify-between rounded-lg border border-border bg-card p-3"

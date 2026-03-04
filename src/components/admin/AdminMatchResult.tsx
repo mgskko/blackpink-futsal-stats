@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData, getPlayerName } from "@/hooks/useFutsalData";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -17,7 +17,7 @@ interface GoalEntry {
 }
 
 const AdminMatchResult = () => {
-  const { matches, venues, teams, players, rosters, results } = useAllFutsalData();
+  const { matches, venues, teams, players, rosters } = useAllFutsalData();
   const queryClient = useQueryClient();
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [goalEntries, setGoalEntries] = useState<GoalEntry[]>([]);
@@ -27,14 +27,14 @@ const AdminMatchResult = () => {
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
   const matchTeams = matchId ? teams.filter(t => t.match_id === matchId) : [];
   const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
-  const ourTeam = matchTeams.find(t => t.is_ours && t.name === "버니즈") || matchTeams.find(t => t.is_ours);
+  const ourTeams = matchTeams.filter(t => t.is_ours);
   const rosterPlayerIds = [...new Set(matchRoster.map(r => r.player_id))];
   const rosterPlayers = players.filter(p => rosterPlayerIds.includes(p.id));
 
   const addGoalEntry = () => {
     setGoalEntries(prev => [
       ...prev,
-      { quarter: 1, goalPlayerId: "", assistPlayerId: "", teamId: ourTeam?.id ?? 0, isOwnGoal: false },
+      { quarter: 1, goalPlayerId: "", assistPlayerId: "", teamId: ourTeams[0]?.id ?? 0, isOwnGoal: false },
     ]);
   };
 
@@ -50,7 +50,6 @@ const AdminMatchResult = () => {
     if (!matchId) return;
     setSaving(true);
     try {
-      // Calculate scores
       const scoreMap: Record<number, number> = {};
       matchTeams.forEach(t => { scoreMap[t.id] = 0; });
 
@@ -58,21 +57,19 @@ const AdminMatchResult = () => {
         if (entry.teamId) scoreMap[entry.teamId] = (scoreMap[entry.teamId] || 0) + 1;
       }
 
-      // Insert goal events
       if (goalEntries.length > 0) {
         const inserts = goalEntries.map(e => ({
           match_id: matchId,
           team_id: e.teamId,
           quarter: e.quarter,
           goal_player_id: e.goalPlayerId ? Number(e.goalPlayerId) : null,
-          assist_player_id: e.assistPlayerId ? Number(e.assistPlayerId) : null,
+          assist_player_id: e.assistPlayerId && e.assistPlayerId !== "none" ? Number(e.assistPlayerId) : null,
           is_own_goal: e.isOwnGoal,
         }));
         const { error } = await supabase.from("goal_events").insert(inserts);
         if (error) throw error;
       }
 
-      // Update results
       for (const team of matchTeams) {
         const opponentTeam = matchTeams.find(t => t.id !== team.id);
         const scoreFor = scoreMap[team.id] || 0;
@@ -86,7 +83,6 @@ const AdminMatchResult = () => {
           .eq("team_id", team.id);
       }
 
-      // Mark match as having detail log
       await supabase.from("matches").update({ has_detail_log: true }).eq("id", matchId);
 
       queryClient.invalidateQueries({ queryKey: ["goal_events"] });
@@ -142,7 +138,7 @@ const AdminMatchResult = () => {
                   <Select value={String(entry.quarter)} onValueChange={v => updateGoalEntry(i, "quarter", Number(v))}>
                     <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[1, 2, 3, 4].map(q => <SelectItem key={q} value={String(q)}>{q}Q</SelectItem>)}
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(q => <SelectItem key={q} value={String(q)}>{q}Q</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -156,25 +152,37 @@ const AdminMatchResult = () => {
                   </Select>
                 </div>
               </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground">득점자</label>
-                <Select value={entry.goalPlayerId} onValueChange={v => updateGoalEntry(i, "goalPlayerId", v)}>
-                  <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
-                  <SelectContent>
-                    {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={entry.isOwnGoal}
+                  onCheckedChange={(c) => updateGoalEntry(i, "isOwnGoal", c === true)}
+                  className="border-primary"
+                />
+                <label className="text-xs text-muted-foreground">자책골</label>
               </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground">도움</label>
-                <Select value={entry.assistPlayerId} onValueChange={v => updateGoalEntry(i, "assistPlayerId", v)}>
-                  <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">없음</SelectItem>
-                    {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!entry.isOwnGoal && (
+                <>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">득점자</label>
+                    <Select value={entry.goalPlayerId} onValueChange={v => updateGoalEntry(i, "goalPlayerId", v)}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectContent>
+                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">도움</label>
+                    <Select value={entry.assistPlayerId} onValueChange={v => updateGoalEntry(i, "assistPlayerId", v)}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">없음</SelectItem>
+                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
           ))}
 
