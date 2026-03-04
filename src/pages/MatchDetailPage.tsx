@@ -102,59 +102,119 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
-      {/* Goal Timeline */}
-      {goalEvents.length > 0 && (
+      {/* Goal Timeline or Summary */}
+      {match.hasDetailLog ? (
+        goalEvents.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mx-4 mt-4"
+          >
+            <h2 className="mb-3 font-display text-lg tracking-wider text-primary">GOAL TIMELINE</h2>
+            <div className="space-y-1">
+              {quarters.map((q) => (
+                <div key={q} className="rounded-lg border border-border bg-card p-3">
+                  <div className="mb-2 text-xs font-bold text-primary">{q}Q</div>
+                  <div className="space-y-1.5">
+                    {goalEvents
+                      .filter((g) => g.quarter === q)
+                      .map((g) => (
+                        <div key={g.id} className="flex items-center gap-2 text-sm">
+                          {g.isOwnGoal ? (
+                            <span className="text-destructive">⚽ 자책골</span>
+                          ) : (
+                            <>
+                              <span className="text-primary">⚽</span>
+                              <span
+                                className="cursor-pointer font-medium text-foreground hover:text-primary"
+                                onClick={() => g.goalPlayerId && navigate(`/player/${g.goalPlayerId}`)}
+                              >
+                                {g.goalPlayerId ? getPlayerName(g.goalPlayerId) : "???"}
+                              </span>
+                              {g.assistPlayerId && (
+                                <>
+                                  <span className="text-muted-foreground">←</span>
+                                  <span
+                                    className="cursor-pointer text-muted-foreground hover:text-primary"
+                                    onClick={() => navigate(`/player/${g.assistPlayerId}`)}
+                                  >
+                                    {getPlayerName(g.assistPlayerId)}
+                                  </span>
+                                </>
+                              )}
+                            </>
+                          )}
+                          {match.isCustom && (
+                            <span className="ml-auto text-[10px] text-muted-foreground">
+                              {matchTeams.find(t => t.id === g.teamId)?.name}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )
+      ) : (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="mx-4 mt-4"
         >
-          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">GOAL TIMELINE</h2>
-          <div className="space-y-1">
-            {quarters.map((q) => (
-              <div key={q} className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 text-xs font-bold text-primary">{q}Q</div>
-                <div className="space-y-1.5">
-                  {goalEvents
-                    .filter((g) => g.quarter === q)
-                    .map((g) => (
-                      <div key={g.id} className="flex items-center gap-2 text-sm">
-                        {g.isOwnGoal ? (
-                          <span className="text-destructive">⚽ 자책골</span>
-                        ) : (
-                          <>
-                            <span className="text-primary">⚽</span>
-                            <span
-                              className="cursor-pointer font-medium text-foreground hover:text-primary"
-                              onClick={() => g.goalPlayerId && navigate(`/player/${g.goalPlayerId}`)}
-                            >
-                              {g.goalPlayerId ? getPlayerName(g.goalPlayerId) : "???"}
+          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">MATCH SUMMARY</h2>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="mb-4 text-xs text-muted-foreground">
+              쿼터별 상세 기록이 없는 경기입니다. (개인별 합산 기록만 표시)
+            </p>
+            {matchTeams
+              .filter((t) => t.isOurs)
+              .map((team) => {
+                const teamRoster = roster.filter((r) => r.teamId === team.id);
+                const hasAnyStats = teamRoster.some(r => r.goals || r.assists);
+                return (
+                  <div key={team.id} className="mb-3">
+                    {matchTeams.filter(t => t.isOurs).length > 1 && (
+                      <div className="mb-2 text-xs font-bold text-primary">{team.name}</div>
+                    )}
+                    {hasAnyStats ? (
+                      <div className="space-y-1.5">
+                        {teamRoster.map((r) => (
+                          <div
+                            key={r.id}
+                            onClick={() => navigate(`/player/${r.playerId}`)}
+                            className="flex cursor-pointer items-center justify-between rounded-md bg-secondary/50 px-3 py-2 transition-colors hover:bg-secondary"
+                          >
+                            <span className="text-sm font-medium text-foreground">
+                              {getPlayerName(r.playerId)}
                             </span>
-                            {g.assistPlayerId && (
-                              <>
-                                <span className="text-muted-foreground">←</span>
-                                <span
-                                  className="cursor-pointer text-muted-foreground hover:text-primary"
-                                  onClick={() => navigate(`/player/${g.assistPlayerId}`)}
-                                >
-                                  {getPlayerName(g.assistPlayerId)}
+                            <div className="flex items-center gap-3">
+                              {r.goals ? (
+                                <span className="text-sm text-primary">
+                                  ⚽ {r.goals}
                                 </span>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {/* Show team name for custom matches */}
-                        {match.isCustom && (
-                          <span className="ml-auto text-[10px] text-muted-foreground">
-                            {matchTeams.find(t => t.id === g.teamId)?.name}
-                          </span>
-                        )}
+                              ) : null}
+                              {r.assists ? (
+                                <span className="text-sm text-muted-foreground">
+                                  🅰️ {r.assists}
+                                </span>
+                              ) : null}
+                              {!r.goals && !r.assists && (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                </div>
-              </div>
-            ))}
+                    ) : (
+                      <p className="text-xs text-muted-foreground">개인 기록 없음</p>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </motion.div>
       )}
