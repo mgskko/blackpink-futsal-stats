@@ -6,6 +6,8 @@ import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMat
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
+import FormationBuilder from "@/components/match/FormationBuilder";
+import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
