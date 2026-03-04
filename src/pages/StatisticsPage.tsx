@@ -12,6 +12,7 @@ import {
   getDeadlyDuos,
   getQuarterGoalDistribution,
 } from "@/data/futsal";
+import PageHeader from "@/components/PageHeader";
 
 // Get unique years from matches
 function getAvailableYears(): string[] {
