@@ -11,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 const MatchesPage = () => {
   const navigate = useNavigate();
   const { matches, venues, teams, results, isLoading } = useAllFutsalData();
+  const { isAdmin } = useAuth();
   const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
 
   // Fetch attendance counts for upcoming matches
