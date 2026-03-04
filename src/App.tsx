@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/player/:id" element={<PlayerDetailPage />} />
               <Route path="/stats" element={<StatisticsPage />} />
               <Route path="/my" element={<MyPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />

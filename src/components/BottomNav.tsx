@@ -15,10 +15,6 @@ const BottomNav = () => {
     ...(isAdmin ? [{ path: "/admin", label: "관리", icon: Shield }] : []),
   ];
 
-const BottomNav = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
