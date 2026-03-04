@@ -39,6 +39,7 @@ function formatTimestamp(ts: string): string {
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
 const MatchDetailPage = () => {
+  const { isAdmin } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const matchId = Number(id);

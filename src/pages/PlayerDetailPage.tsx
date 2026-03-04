@@ -311,8 +311,8 @@ const PlayerDetailPage = () => {
           year={selectedYear}
           stats={stats}
           scoutingReport={scoutingReport}
-          tierLabel={TIER_CONFIG[tier].label}
-          tierEmoji={TIER_CONFIG[tier].emoji}
+          tierLabel={tier.label}
+          tierEmoji={tier.emoji}
           onClose={() => setShowWrapped(false)}
         />
       )}
