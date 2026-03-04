@@ -63,8 +63,6 @@ const StatisticsPage = () => {
     },
   });
 
-  if (isLoading) return <SplashScreen />;
-
   const years = getAvailableYears(matches);
   const isCustomFilter = selectedFilter === "custom";
 
@@ -80,6 +78,8 @@ const StatisticsPage = () => {
   const filteredRosters = useMemo(() => rosters.filter(r => filteredMatchIds.has(r.match_id)), [rosters, filteredMatchIds]);
   const filteredTeams = useMemo(() => teams.filter(t => filteredMatchIds.has(t.match_id)), [teams, filteredMatchIds]);
   const filteredResults = useMemo(() => results.filter(r => filteredMatchIds.has(r.match_id)), [results, filteredMatchIds]);
+
+  if (isLoading) return <SplashScreen />;
 
   const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
 
