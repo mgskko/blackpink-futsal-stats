@@ -281,6 +281,41 @@ const PlayerDetailPage = () => {
 
       <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
       <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
+
+      {/* Activity Heatmap */}
+      <ActivityHeatmap
+        playerId={playerId}
+        matches={matches}
+        rosters={rosters}
+        goalEvents={goalEvents}
+        momVotes={momVotes}
+        year={filterMode === "year" && selectedYear ? parseInt(selectedYear) : undefined}
+      />
+
+      {/* Season Wrapped Button */}
+      {filterMode === "year" && selectedYear && parseInt(selectedYear) < new Date().getFullYear() && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4">
+          <button
+            onClick={() => setShowWrapped(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 py-4 text-sm font-bold text-primary transition-all hover:bg-primary/10 hover:border-primary/60"
+          >
+            <Gift size={18} /> {selectedYear} 시즌 결산 카드 만들기
+          </button>
+        </motion.div>
+      )}
+
+      {/* Season Wrapped Modal */}
+      {showWrapped && filterMode === "year" && selectedYear && (
+        <SeasonWrapped
+          player={player}
+          year={selectedYear}
+          stats={stats}
+          scoutingReport={scoutingReport}
+          tierLabel={TIER_CONFIG[tier].label}
+          tierEmoji={TIER_CONFIG[tier].emoji}
+          onClose={() => setShowWrapped(false)}
+        />
+      )}
     </div>
   );
 };
