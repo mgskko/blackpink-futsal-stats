@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/BottomNav";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import MatchesPage from "@/pages/MatchesPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
 import PlayersPage from "@/pages/PlayersPage";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
+            <PWAInstallPrompt />
           </div>
         </BrowserRouter>
       </TooltipProvider>
