@@ -48,7 +48,18 @@ const MatchesPage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
+      <div className="flex items-center justify-between px-4">
+        <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <PenSquare size={14} />
+            경기 관리
+          </button>
+        )}
+      </div>
       <div className="space-y-3 px-4">
         {sortedMatches.map((match, i) => {
           const venue = venues.find((v) => v.id === match.venue_id);
