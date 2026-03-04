@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
@@ -11,19 +11,27 @@ import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swor
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+type FilterType = "all" | "custom" | string; // string = year
+
 function getAvailableYears(matches: Match[]): string[] {
   const years = new Set(matches.map(m => m.date.slice(0, 4)));
   return [...years].sort((a, b) => b.localeCompare(a));
 }
 
-function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], year?: string) {
-  const filteredMatchIds = year ? new Set(matches.filter(m => m.date.startsWith(year)).map(m => m.id)) : null;
+function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], filter: FilterType) {
+  let filteredMatchIds: Set<number> | null = null;
+  if (filter === "custom") {
+    filteredMatchIds = new Set(matches.filter(m => m.is_custom).map(m => m.id));
+  } else if (filter !== "all") {
+    filteredMatchIds = new Set(matches.filter(m => m.date.startsWith(filter)).map(m => m.id));
+  }
+
   const playerRosters = rosters.filter(r => r.player_id === playerId && (!filteredMatchIds || filteredMatchIds.has(r.match_id)));
   const matchIds = [...new Set(playerRosters.map(r => r.match_id))];
   const appearances = matchIds.length;
   const rosterGoals = playerRosters.reduce((s, r) => s + (r.goals || 0), 0);
   const rosterAssists = playerRosters.reduce((s, r) => s + (r.assists || 0), 0);
-  const filteredEvents = filteredMatchIds ? goalEvents.filter(g => filteredMatchIds.has(g.match_id)) : goalEvents;
+  const filteredEvents = filteredMatchIds ? goalEvents.filter(g => filteredMatchIds!.has(g.match_id)) : goalEvents;
   const eventGoals = filteredEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
   const eventAssists = filteredEvents.filter(g => g.assist_player_id === playerId).length;
   const goals = rosterGoals + eventGoals;
@@ -44,7 +52,7 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
 const StatisticsPage = () => {
   const navigate = useNavigate();
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
-  const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [activeTab, setActiveTab] = useState<"player" | "team" | "fun">("player");
 
   const { data: momVotes } = useQuery({
@@ -58,7 +66,22 @@ const StatisticsPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const years = getAvailableYears(matches);
-  const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedYear) }));
+  const isCustomFilter = selectedFilter === "custom";
+
+  // Filter matches for charts/widgets
+  const filteredMatches = useMemo(() => {
+    if (selectedFilter === "custom") return matches.filter(m => m.is_custom);
+    if (selectedFilter !== "all") return matches.filter(m => m.date.startsWith(selectedFilter));
+    return matches;
+  }, [matches, selectedFilter]);
+
+  const filteredMatchIds = useMemo(() => new Set(filteredMatches.map(m => m.id)), [filteredMatches]);
+  const filteredGoalEvents = useMemo(() => goalEvents.filter(g => filteredMatchIds.has(g.match_id)), [goalEvents, filteredMatchIds]);
+  const filteredRosters = useMemo(() => rosters.filter(r => filteredMatchIds.has(r.match_id)), [rosters, filteredMatchIds]);
+  const filteredTeams = useMemo(() => teams.filter(t => filteredMatchIds.has(t.match_id)), [teams, filteredMatchIds]);
+  const filteredResults = useMemo(() => results.filter(r => filteredMatchIds.has(r.match_id)), [results, filteredMatchIds]);
+
+  const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
 
   const topGoals = [...allStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
   const topAssists = [...allStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
@@ -67,17 +90,17 @@ const StatisticsPage = () => {
   const topAppearances = [...allStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
 
   const apChartData = topAttackPoints.map(p => ({ name: p.name, 공격포인트: p.attackPoints, 골: p.goals, 도움: p.assists }));
-  const quarterData = getQuarterGoalDistribution(goalEvents);
-  const duos = getDeadlyDuos(goalEvents, 10);
+  const quarterData = getQuarterGoalDistribution(filteredGoalEvents);
+  const duos = getDeadlyDuos(filteredGoalEvents, 10);
 
-  const opponentRecords = getOpponentRecords(matches, teams, results);
-  const venueRecords = getVenueRecords(matches, teams, results, venues);
-  const ageRecords = getAgeCategoryRecords(matches, teams, results);
-  const winFairy = getWinFairyData(players, matches, teams, results, rosters);
-  const lastQSpecialists = getLastQuarterSpecialists(players, matches, goalEvents);
-  const duoSynergy = getDuoSynergyWinRate(players, matches, teams, results, rosters);
-  const ownGoals = getOwnGoalRanking(players, goalEvents);
-  const hallOfFame = getHallOfFame(players, matches, rosters, goalEvents);
+  const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
+  const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
+  const ageRecords = getAgeCategoryRecords(filteredMatches, filteredTeams, filteredResults);
+  const winFairy = getWinFairyData(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const lastQSpecialists = getLastQuarterSpecialists(players, filteredMatches, filteredGoalEvents);
+  const duoSynergy = getDuoSynergyWinRate(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const ownGoals = getOwnGoalRanking(players, filteredGoalEvents);
+  const hallOfFame = getHallOfFame(players, filteredMatches, filteredRosters, filteredGoalEvents);
   const momRanking = getMOMRanking(players, momVotes || []);
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
@@ -138,27 +161,35 @@ const StatisticsPage = () => {
     <div className="pb-20">
       <PageHeader title="STATISTICS" subtitle="버니즈 통계" />
 
-      {/* Year filter */}
+      {/* Filter: All / Years / Custom */}
       <div className="px-4 mb-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
-          <button onClick={() => setSelectedYear(undefined)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${!selectedYear ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+          <button onClick={() => setSelectedFilter("all")}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "all" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
             전체
           </button>
           {years.map(y => (
-            <button key={y} onClick={() => setSelectedYear(y)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedYear === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+            <button key={y} onClick={() => setSelectedFilter(y)}
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
               {y}
             </button>
           ))}
+          <button onClick={() => setSelectedFilter("custom")}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "custom" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>
+            ⚔️ 자체전
+          </button>
         </div>
       </div>
 
       {/* Tab switcher */}
       <div className="px-4 mb-6">
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
-          {([["player", "👤 개인"], ["team", "⚔️ 팀 전적"], ["fun", "📊 각종 기록"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setActiveTab(key)}
+          {([
+            ["player", "👤 개인"] as const,
+            ...(!isCustomFilter ? [["team", "⚔️ 팀 전적"] as const] : []),
+            ["fun", "📊 각종 기록"] as const,
+          ]).map(([key, label]) => (
+            <button key={key} onClick={() => setActiveTab(key as any)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
             </button>
@@ -256,7 +287,7 @@ const StatisticsPage = () => {
           </motion.div>
         )}
 
-        {activeTab === "team" && (
+        {activeTab === "team" && !isCustomFilter && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <RecordTable title="상대팀별 전적" icon={<Shield size={18} />} data={opponentRecords} />
             <RecordTable title="구장별 전적" icon={<MapPin size={18} />} data={venueRecords} />
@@ -314,32 +345,34 @@ const StatisticsPage = () => {
               </div>
             )}
 
-            {/* Win Fairy */}
-            <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🧚 승리 요정 판독기</h3>
-              <div className="space-y-2">
-                {winFairy.slice(0, 10).map((d, i) => (
-                  <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)}
-                    className={`cursor-pointer rounded-lg border bg-card p-3 transition-colors hover:bg-secondary ${i === 0 ? "border-primary/50 box-glow" : i >= winFairy.length - 3 ? "border-destructive/30" : "border-border"}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{d.diff >= 15 ? "🧚" : d.diff <= -15 ? "👻" : "🤔"}</span>
-                        <span className="text-sm font-medium text-foreground">{d.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className={`font-display text-lg ${d.diff > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                          {d.diff > 0 ? "+" : ""}{d.diff}%
+            {/* Win Fairy - hide for custom */}
+            {!isCustomFilter && (
+              <div className="mb-6">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🧚 승리 요정 판독기</h3>
+                <div className="space-y-2">
+                  {winFairy.slice(0, 10).map((d, i) => (
+                    <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)}
+                      className={`cursor-pointer rounded-lg border bg-card p-3 transition-colors hover:bg-secondary ${i === 0 ? "border-primary/50 box-glow" : i >= winFairy.length - 3 ? "border-destructive/30" : "border-border"}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{d.diff >= 15 ? "🧚" : d.diff <= -15 ? "👻" : "🤔"}</span>
+                          <span className="text-sm font-medium text-foreground">{d.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-display text-lg ${d.diff > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                            {d.diff > 0 ? "+" : ""}{d.diff}%
+                          </div>
                         </div>
                       </div>
+                      <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
+                        <span>출석 시 승률 <span className="text-primary">{d.presentWinRate}%</span> ({d.presentMatches}경기)</span>
+                        <span>결장 시 승률 {d.absentWinRate}% ({d.absentMatches}경기)</span>
+                      </div>
                     </div>
-                    <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
-                      <span>출석 시 승률 <span className="text-primary">{d.presentWinRate}%</span> ({d.presentMatches}경기)</span>
-                      <span>결장 시 승률 {d.absentWinRate}% ({d.absentMatches}경기)</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Last Quarter Specialist */}
             <div className="mb-6">
@@ -359,47 +392,51 @@ const StatisticsPage = () => {
               </div>
             </div>
 
-            {/* Duo Synergy */}
-            <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Users size={18} /> 환상의 짝꿍 TOP 3</h3>
-              <p className="mb-2 text-xs text-muted-foreground">5경기 이상 함께 출전한 듀오 기준</p>
-              <div className="space-y-2">
-                {duoSynergy.best.map((d, i) => (
-                  <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border bg-card p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">✨</span>
-                        <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
-                        <span className="text-primary">×</span>
-                        <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+            {/* Duo Synergy - hide for custom */}
+            {!isCustomFilter && (
+              <>
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Users size={18} /> 환상의 짝꿍 TOP 3</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">5경기 이상 함께 출전한 듀오 기준</p>
+                  <div className="space-y-2">
+                    {duoSynergy.best.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border bg-card p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">✨</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
+                            <span className="text-primary">×</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                          </div>
+                          <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.winRate}%</span>
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
                       </div>
-                      <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.winRate}%</span>
-                    </div>
-                    <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive"><Ghost size={18} /> 파멸의 듀오 TOP 3</h3>
-              <div className="space-y-2">
-                {duoSynergy.worst.map((d, i) => (
-                  <div key={`${d.p1}-${d.p2}`} className="rounded-lg border border-destructive/30 bg-card p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">💀</span>
-                        <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
-                        <span className="text-destructive">×</span>
-                        <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive"><Ghost size={18} /> 파멸의 듀오 TOP 3</h3>
+                  <div className="space-y-2">
+                    {duoSynergy.worst.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className="rounded-lg border border-destructive/30 bg-card p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💀</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
+                            <span className="text-destructive">×</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                          </div>
+                          <span className="font-display text-lg text-destructive">{d.winRate}%</span>
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
                       </div>
-                      <span className="font-display text-lg text-destructive">{d.winRate}%</span>
-                    </div>
-                    <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
             {/* Own Goal Ranking */}
             {ownGoals.length > 0 && (
