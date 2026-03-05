@@ -3,12 +3,14 @@ import { motion } from "framer-motion";
 import { User } from "lucide-react";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
 import { getPlayerFormGuide } from "@/hooks/useAdvancedStats";
+import { useOnFirePlayers } from "@/hooks/useOnFirePlayers";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 
 const PlayersPage = () => {
   const navigate = useNavigate();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const onFireIds = useOnFirePlayers(matches);
 
   if (isLoading) return <SplashScreen />;
 
