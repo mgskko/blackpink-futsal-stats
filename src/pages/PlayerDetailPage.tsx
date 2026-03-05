@@ -176,7 +176,11 @@ const PlayerDetailPage = () => {
             {/* Profile image */}
             <div className="relative flex-shrink-0">
               <div className={`h-24 w-24 overflow-hidden rounded-2xl border-2 bg-secondary shadow-lg ${
-                onFireIds.has(playerId) ? "on-fire-ring shadow-orange-500/30" : "border-primary/50 shadow-primary/20"
+                fireTier === "golden" ? "golden-fire-ring shadow-yellow-500/30"
+                : fireTier === "red" ? "on-fire-ring shadow-orange-500/30"
+                : fireTier === "blue" ? "blue-fire-ring shadow-blue-500/30"
+                : "border-primary/50 shadow-primary/20"
+              }`}>
               }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
