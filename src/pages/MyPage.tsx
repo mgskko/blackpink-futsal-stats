@@ -119,6 +119,9 @@ const MyPage = () => {
 
   // Dashboard
   const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, linkedPlayer.id);
+  const badges = getPlayerBadges(linkedPlayer.id, players, matches, teams, results, rosters, goalEvents, momVotes);
+  const varianceBadges = getVarianceBadge(linkedPlayer.id, matches, rosters, goalEvents);
+  const allBadges = [...badges, ...varianceBadges];
   const bestMatch = getPlayerBestAPMatch(matches, rosters, goalEvents, linkedPlayer.id);
   const bestMatchResult = bestMatch ? (() => {
     const mt = teams.filter(t => t.match_id === bestMatch.matchId);
