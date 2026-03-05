@@ -95,4 +95,31 @@
     height: 2px;
     background: linear-gradient(90deg, transparent, hsl(330 100% 71%), transparent);
   }
+
+  /* On Fire ring animation */
+  @keyframes fire-ring {
+    0%, 100% {
+      box-shadow: 0 0 8px 2px hsl(25 100% 50% / 0.6), 0 0 16px 4px hsl(40 100% 50% / 0.3), 0 0 24px 6px hsl(15 100% 45% / 0.15);
+    }
+    33% {
+      box-shadow: 0 0 10px 3px hsl(35 100% 55% / 0.7), 0 0 20px 5px hsl(20 100% 50% / 0.35), 0 0 28px 7px hsl(10 100% 40% / 0.2);
+    }
+    66% {
+      box-shadow: 0 0 6px 2px hsl(15 100% 45% / 0.5), 0 0 14px 4px hsl(30 100% 55% / 0.3), 0 0 22px 6px hsl(45 100% 50% / 0.15);
+    }
+  }
+
+  .on-fire-ring {
+    animation: fire-ring 1.5s ease-in-out infinite;
+    border-color: hsl(25 100% 50% / 0.8) !important;
+  }
+
+  @keyframes sparkle-float {
+    0%, 100% { opacity: 1; transform: translateY(0) scale(1); }
+    50% { opacity: 0.6; transform: translateY(-4px) scale(1.2); }
+  }
+
+  .sparkle-anim {
+    animation: sparkle-float 1.2s ease-in-out infinite;
+  }
 }
