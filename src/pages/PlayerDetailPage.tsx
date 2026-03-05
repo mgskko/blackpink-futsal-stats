@@ -163,13 +163,12 @@ const PlayerDetailPage = () => {
           )}
 
           {/* Fire particles for on-fire players */}
-          {onFireIds.has(playerId) && (
+          {fireTier !== "none" && (
             <>
-              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>🔥</span>
+              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>
               <span className="fire-particle fire-particle-2" style={{ top: '30px', left: '15px' }}>✨</span>
-              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>🔥</span>
+              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>{fireTier === "golden" ? "⭐" : fireTier === "red" ? "🔥" : "💎"}</span>
               <span className="fire-particle fire-particle-2" style={{ bottom: '10px', left: '30px' }}>✨</span>
-              <span className="fire-particle fire-particle-1" style={{ top: '50%', right: '10px' }}>🔥</span>
             </>
           )}
 
