@@ -134,37 +134,6 @@ const PlayerDetailPage = () => {
 
   // Player duos
   const playerDuos = new Map<number, number>();
-    const playerMatchIds = [...new Set(filtered.rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
-    return filtered.matches
-      .filter(m => playerMatchIds.includes(m.id))
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .map(m => {
-        const mr = getMatchResult(teams, results, m.id);
-        const mTeams = teams.filter(t => t.match_id === m.id);
-        const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
-        // Player stats for this match
-        let g = 0, a = 0;
-        if (m.has_detail_log) {
-          g = goalEvents.filter(e => e.match_id === m.id && e.goal_player_id === playerId && !e.is_own_goal).length;
-          a = goalEvents.filter(e => e.match_id === m.id && e.assist_player_id === playerId).length;
-        } else {
-          const r = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
-          g = r?.goals || 0;
-          a = r?.assists || 0;
-        }
-        return { match: m, matchResult: mr, opponentName: oppTeam?.name || (m.is_custom ? "자체전" : "???"), goals: g, assists: a };
-      });
-  }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
-
-  // Opponent records for this player (맛집/천적)
-  const playerOpponentRecords = useMemo(() => {
-    if (filterMode === "custom") return [];
-    const playerMatchIds = new Set(filtered.rosters.filter(r => r.player_id === playerId).map(r => r.match_id));
-    const playerMatches = filtered.matches.filter(m => playerMatchIds.has(m.id) && !m.is_custom);
-    const playerTeams = filtered.teams.filter(t => playerMatches.some(m => m.id === t.match_id));
-    const playerResults = filtered.results.filter(r => playerMatches.some(m => m.id === r.match_id));
-    return getOpponentRecords(playerMatches, playerTeams, playerResults);
-  }, [filtered, playerId, filterMode]);
 
   const bestOpponent = playerOpponentRecords.filter(r => r.matches >= 2).sort((a, b) => {
     const aGoals = a.goalsFor; const bGoals = b.goalsFor;
