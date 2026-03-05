@@ -137,13 +137,13 @@ const MatchesPage = () => {
                         <span className={`font-display text-2xl tracking-wider ${
                           status === "win" ? "text-blue-400" : status === "loss" ? "text-red-400" : "text-muted-foreground"
                         }`}>
-                          {mr?.ourResult.score_for}
+                          {mr?.ourResult.score_for ?? "-"}
                         </span>
                         <span className="text-muted-foreground text-lg">:</span>
                         <span className={`font-display text-2xl tracking-wider ${
                           status === "loss" ? "text-red-400" : "text-muted-foreground"
                         }`}>
-                          {mr?.ourResult.score_against}
+                          {mr?.ourResult.score_against ?? "-"}
                         </span>
                       </div>
                     )}
