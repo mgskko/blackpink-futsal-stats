@@ -5,7 +5,7 @@ import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gif
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
-import { useOnFirePlayers } from "@/hooks/useOnFirePlayers";
+import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
