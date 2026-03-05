@@ -4,11 +4,14 @@ import { motion } from "framer-motion";
 import { LogOut, User, Link as LinkIcon, Trophy, Target, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerName } from "@/hooks/useFutsalData";
+import { getPlayerBadges, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/PageHeader";
+import NicknameEditor from "@/components/my/NicknameEditor";
 import burneesLogo from "@/assets/burnees-logo.png";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const MyPage = () => {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
