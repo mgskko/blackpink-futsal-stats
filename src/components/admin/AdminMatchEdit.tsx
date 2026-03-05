@@ -26,6 +26,11 @@ const AdminMatchEdit = () => {
   const [editGoalIsOwnGoal, setEditGoalIsOwnGoal] = useState(false);
   const [editGoalPlayerId, setEditGoalPlayerId] = useState("");
   const [editGoalAssistId, setEditGoalAssistId] = useState("");
+  const [editGoalTimestamp, setEditGoalTimestamp] = useState("");
+
+  // YouTube link editing
+  const [editYoutubeLink, setEditYoutubeLink] = useState("");
+  const [editingYoutube, setEditingYoutube] = useState(false);
 
   // Guest goal
   const [showGuestGoal, setShowGuestGoal] = useState(false);
