@@ -118,6 +118,7 @@ const AdminMatchEdit = () => {
     setEditGoalIsOwnGoal(g.is_own_goal);
     setEditGoalPlayerId(g.goal_player_id ? String(g.goal_player_id) : "");
     setEditGoalAssistId(g.assist_player_id ? String(g.assist_player_id) : "");
+    setEditGoalTimestamp(g.video_timestamp || "");
   };
 
   const handleSaveGoalEdit = async () => {
