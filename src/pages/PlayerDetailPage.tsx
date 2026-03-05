@@ -19,6 +19,7 @@ const PlayerDetailPage = () => {
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const onFireIds = useOnFirePlayers(matches);
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
