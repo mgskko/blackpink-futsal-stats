@@ -252,4 +252,9 @@
   }
   .fire-particle-1 { animation: fire-particle-1 2.5s ease-in-out infinite; }
   .fire-particle-2 { animation: fire-particle-2 3s ease-in-out infinite 0.5s; }
+
+  /* CONCACAF Mode background */
+  .concacaf-bg {
+    background: linear-gradient(180deg, hsl(160 30% 8%) 0%, hsl(210 30% 6%) 50%, hsl(0 0% 5%) 100%) !important;
+  }
 }
