@@ -118,6 +118,38 @@ export type Database = {
           },
         ]
       }
+      match_predictions: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: number
+          prediction: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: number
+          prediction: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: number
+          prediction?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_predictions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           date: string
