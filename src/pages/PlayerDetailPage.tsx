@@ -181,7 +181,6 @@ const PlayerDetailPage = () => {
                 : fireTier === "blue" ? "blue-fire-ring shadow-blue-500/30"
                 : "border-primary/50 shadow-primary/20"
               }`}>
-              }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                 ) : (
