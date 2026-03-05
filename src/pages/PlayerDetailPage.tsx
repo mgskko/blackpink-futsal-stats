@@ -136,15 +136,23 @@ const PlayerDetailPage = () => {
       {/* Profile Header - Stat Card Style */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
-          onFireIds.has(playerId)
+          fireTier === "golden"
+            ? "golden-fire-card border-yellow-500/50"
+            : fireTier === "red"
             ? "on-fire-card border-orange-500/50"
+            : fireTier === "blue"
+            ? "blue-fire-card border-blue-400/50"
             : "border-primary/30 bg-card box-glow"
         }`}
       >
         {/* Hero section with gradient background */}
         <div className={`relative p-6 ${
-          onFireIds.has(playerId)
+          fireTier === "golden"
+            ? "bg-gradient-to-br from-yellow-900/30 via-transparent to-amber-900/20"
+            : fireTier === "red"
             ? "bg-gradient-to-br from-orange-900/30 via-transparent to-red-900/20"
+            : fireTier === "blue"
+            ? "bg-gradient-to-br from-blue-900/30 via-transparent to-cyan-900/20"
             : "bg-gradient-to-br from-primary/20 via-card to-card"
         }`}>
           {/* Back number watermark */}
