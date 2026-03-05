@@ -127,15 +127,29 @@ const AdminMatchCreate = () => {
         }
       }
 
-      // Create empty results
+      // Create results
       for (const team of createdTeams) {
-        await supabase.from("results").insert({
-          match_id: match.id,
-          team_id: team.id,
-          result: "무",
-          score_for: 0,
-          score_against: 0,
-        });
+        const isOurs = team.is_ours;
+        if (overrideScore) {
+          const sf = isOurs ? scoreFor : scoreAgainst;
+          const sa = isOurs ? scoreAgainst : scoreFor;
+          const result = sf > sa ? "승" : sf < sa ? "패" : "무";
+          await supabase.from("results").insert({
+            match_id: match.id,
+            team_id: team.id,
+            result,
+            score_for: sf,
+            score_against: sa,
+          });
+        } else {
+          await supabase.from("results").insert({
+            match_id: match.id,
+            team_id: team.id,
+            result: "무",
+            score_for: 0,
+            score_against: 0,
+          });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["matches"] });
