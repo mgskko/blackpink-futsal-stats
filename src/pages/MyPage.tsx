@@ -207,6 +207,17 @@ const MyPage = () => {
           </motion.div>
         )}
 
+        {/* Nickname & Title Editor */}
+        <NicknameEditor
+          currentNickname={profile?.nickname}
+          currentTitle={profile?.equipped_title}
+          badges={allBadges}
+          onUpdate={() => {
+            refreshProfile();
+            queryClient.invalidateQueries({ queryKey: ["all_profiles"] });
+          }}
+        />
+
         {/* View Full Profile */}
         <Button
           onClick={() => navigate(`/player/${linkedPlayer.id}`)}
