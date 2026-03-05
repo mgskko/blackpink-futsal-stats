@@ -189,6 +189,7 @@ const StatisticsPage = () => {
             ["player", "👤 개인"] as const,
             ...(!isCustomFilter ? [["team", "⚔️ 팀 전적"] as const] : []),
             ["fun", "📊 각종 기록"] as const,
+            ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key as any)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
