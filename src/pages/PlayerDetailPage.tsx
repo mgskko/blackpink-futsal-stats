@@ -132,15 +132,37 @@ const PlayerDetailPage = () => {
       />
 
       {/* Profile Header - Stat Card Style */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card overflow-hidden box-glow">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
+          onFireIds.has(playerId)
+            ? "on-fire-card border-orange-500/50"
+            : "border-primary/30 bg-card box-glow"
+        }`}
+      >
         {/* Hero section with gradient background */}
-        <div className="relative bg-gradient-to-br from-primary/20 via-card to-card p-6">
+        <div className={`relative p-6 ${
+          onFireIds.has(playerId)
+            ? "bg-gradient-to-br from-orange-900/30 via-transparent to-red-900/20"
+            : "bg-gradient-to-br from-primary/20 via-card to-card"
+        }`}>
           {/* Back number watermark */}
           {player.back_number !== null && player.back_number !== undefined && (
             <div className="absolute top-2 right-4 font-display text-[80px] leading-none text-primary/10 select-none pointer-events-none">
               {player.back_number}
             </div>
           )}
+
+          {/* Fire particles for on-fire players */}
+          {onFireIds.has(playerId) && (
+            <>
+              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>🔥</span>
+              <span className="fire-particle fire-particle-2" style={{ top: '30px', left: '15px' }}>✨</span>
+              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>🔥</span>
+              <span className="fire-particle fire-particle-2" style={{ bottom: '10px', left: '30px' }}>✨</span>
+              <span className="fire-particle fire-particle-1" style={{ top: '50%', right: '10px' }}>🔥</span>
+            </>
+          )}
+
           <div className="flex items-center gap-5 relative z-10">
             {/* Profile image */}
             <div className="relative flex-shrink-0">
@@ -171,6 +193,11 @@ const PlayerDetailPage = () => {
                 {formGuide.form === "hot" && !onFireIds.has(playerId) && <span className="text-lg" title="최근 폼 상승">🔥</span>}
                 {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
               </div>
+              {onFireIds.has(playerId) && (
+                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-bold text-orange-400 sparkle-anim">
+                  🔥 ON FIRE — 5연속 출석!
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 가입일: {player.join_date}
                 {player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}

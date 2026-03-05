@@ -10,6 +10,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import TotoStatsTab from "@/components/stats/TotoStatsTab";
 
 type FilterType = "all" | "custom" | string; // string = year
 
@@ -53,7 +54,7 @@ const StatisticsPage = () => {
   const navigate = useNavigate();
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
-  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun">("player");
+  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "toto">("player");
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -188,6 +189,7 @@ const StatisticsPage = () => {
             ["player", "👤 개인"] as const,
             ...(!isCustomFilter ? [["team", "⚔️ 팀 전적"] as const] : []),
             ["fun", "📊 각종 기록"] as const,
+            ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key as any)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -457,6 +459,10 @@ const StatisticsPage = () => {
               </div>
             )}
           </motion.div>
+        )}
+
+        {activeTab === "toto" && (
+          <TotoStatsTab matches={matches} teams={teams} results={results} />
         )}
       </div>
     </div>
