@@ -130,6 +130,7 @@ const AdminMatchEdit = () => {
         is_own_goal: editGoalIsOwnGoal,
         goal_player_id: editGoalIsOwnGoal ? null : (editGoalPlayerId ? Number(editGoalPlayerId) : null),
         assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId ? Number(editGoalAssistId) : null),
+        video_timestamp: editGoalTimestamp || null,
       }).eq("id", editingGoalId);
       if (error) throw error;
       invalidateAll();
