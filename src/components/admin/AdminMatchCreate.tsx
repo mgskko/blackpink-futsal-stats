@@ -247,6 +247,27 @@ const AdminMatchCreate = () => {
         </div>
       )}
 
+      {/* Score Override */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={overrideScore} onCheckedChange={(c) => setOverrideScore(c === true)} className="border-primary" />
+          <label className="text-sm text-foreground font-medium">스코어 직접 입력 (득점자 모를 때)</label>
+        </div>
+        {overrideScore && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-muted-foreground">{isCustom ? teamAName : "버니즈"}</label>
+              <Input type="number" min={0} value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+            </div>
+            <span className="text-muted-foreground font-bold mt-3">:</span>
+            <div className="flex-1">
+              <label className="text-[10px] text-muted-foreground">{isCustom ? teamBName : opponentName || "상대팀"}</label>
+              <Input type="number" min={0} value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-muted-foreground">출전 선수 선택</label>
