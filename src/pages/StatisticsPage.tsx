@@ -10,6 +10,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import TotoStatsTab from "@/components/stats/TotoStatsTab";
 
 type FilterType = "all" | "custom" | string; // string = year
 
