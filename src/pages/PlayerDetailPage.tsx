@@ -201,14 +201,19 @@ const PlayerDetailPage = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
-                {onFireIds.has(playerId) && <span className="text-lg sparkle-anim" title="5연속 출석! On Fire!">🔥</span>}
+                {fireTier !== "none" && <span className="text-lg sparkle-anim">{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>}
                 <PlayerTierBadge tier={tier} size="md" />
-                {formGuide.form === "hot" && !onFireIds.has(playerId) && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+                {formGuide.form === "hot" && fireTier === "none" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
                 {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
               </div>
-              {onFireIds.has(playerId) && (
-                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-bold text-orange-400 sparkle-anim">
-                  🔥 ON FIRE — 5연속 출석!
+              {fireTier !== "none" && (
+                <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
+                  fireTier === "golden" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                  : fireTier === "red" ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
+                  : "border-blue-400/40 bg-blue-400/10 text-blue-400"
+                }`}>
+                  {fireTier === "golden" ? "👑 LEGENDARY — " : fireTier === "red" ? "🔥 ON FIRE — " : "💎 HEATING UP — "}
+                  {fireInfo?.streak}연속 출석!
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
