@@ -70,12 +70,15 @@ const AdminMatchEdit = () => {
     setShowGuestGoal(false);
     setShowAddRoster(false);
     setShowMOM(false);
+    setEditingYoutube(false);
     const mid = Number(v);
     const mTeams = teams.filter(t => t.match_id === mid);
     const ot = mTeams.find(t => t.is_ours);
     const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
     setScoreFor(or2?.score_for || 0);
     setScoreAgainst(or2?.score_against || 0);
+    const m = matches.find(m => m.id === mid);
+    setEditYoutubeLink(m?.youtube_link || "");
   };
 
   const handleSaveScore = async () => {
