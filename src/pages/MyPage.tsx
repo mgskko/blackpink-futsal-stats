@@ -17,7 +17,16 @@ const MyPage = () => {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [linking, setLinking] = useState(false);
+
+  const { data: momVotes } = useQuery({
+    queryKey: ["mom_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
 
   if (loading || isLoading) {
     return (
