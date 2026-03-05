@@ -235,13 +235,6 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Match Prediction (for scheduled matches) */}
-      {!mr && (
-        <div className="mx-4 mt-4">
-          <MatchPrediction matchId={matchId} />
-        </div>
-      )}
-
       {/* MOM Voting */}
       <div className="mx-4 mt-4">
         <MOMVoting matchId={matchId} />

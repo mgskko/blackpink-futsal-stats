@@ -405,6 +405,10 @@ const AdminMatchEdit = () => {
                           </div>
                         </div>
                       )}
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">타임스탬프 (예: 1:12:08)</label>
+                        <Input value={editGoalTimestamp} onChange={e => setEditGoalTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
+                      </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleSaveGoalEdit} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground flex-1"><Save size={12} /> 저장</Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingGoalId(null)} className="h-7 text-xs border-border">취소</Button>

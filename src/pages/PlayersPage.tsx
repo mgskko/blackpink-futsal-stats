@@ -34,7 +34,11 @@ const PlayersPage = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
-              className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:box-glow active:scale-[0.97]"
+              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${
+                onFireIds.has(player.id)
+                  ? "on-fire-card border-orange-500/50"
+                  : "border-border bg-card hover:border-primary/40 hover:box-glow"
+              }`}
             >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
