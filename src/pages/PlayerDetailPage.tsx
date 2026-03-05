@@ -144,7 +144,9 @@ const PlayerDetailPage = () => {
           <div className="flex items-center gap-5 relative z-10">
             {/* Profile image */}
             <div className="relative flex-shrink-0">
-              <div className="h-24 w-24 overflow-hidden rounded-2xl border-2 border-primary/50 bg-secondary shadow-lg shadow-primary/20">
+              <div className={`h-24 w-24 overflow-hidden rounded-2xl border-2 bg-secondary shadow-lg ${
+                onFireIds.has(playerId) ? "on-fire-ring shadow-orange-500/30" : "border-primary/50 shadow-primary/20"
+              }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                 ) : (
