@@ -166,8 +166,9 @@ const PlayerDetailPage = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+                {onFireIds.has(playerId) && <span className="text-lg sparkle-anim" title="5연속 출석! On Fire!">🔥</span>}
                 <PlayerTierBadge tier={tier} size="md" />
-                {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+                {formGuide.form === "hot" && !onFireIds.has(playerId) && <span className="text-lg" title="최근 폼 상승">🔥</span>}
                 {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
