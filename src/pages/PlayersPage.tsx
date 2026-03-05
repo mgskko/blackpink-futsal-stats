@@ -38,7 +38,9 @@ const PlayersPage = () => {
             >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary overflow-hidden">
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${
+                    onFireIds.has(player.id) ? "on-fire-ring" : "border-primary/30"
+                  }`}>
                     {player.profile_image_url ? (
                       <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                     ) : (
@@ -50,7 +52,8 @@ const PlayersPage = () => {
                       {player.back_number}
                     </span>
                   )}
-                  {form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
+                  {onFireIds.has(player.id) && <span className="absolute -top-1 -right-1 text-sm sparkle-anim">🔥</span>}
+                  {!onFireIds.has(player.id) && form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
                   {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
                 <span className="font-medium text-foreground">{player.name}</span>
