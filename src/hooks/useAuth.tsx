@@ -7,6 +7,8 @@ interface Profile {
   player_id: number | null;
   display_name: string | null;
   avatar_url: string | null;
+  nickname: string | null;
+  equipped_title: string | null;
 }
 
 interface AuthContextType {
