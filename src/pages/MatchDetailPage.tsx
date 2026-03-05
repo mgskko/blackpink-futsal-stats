@@ -8,6 +8,7 @@ import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
+import MatchComments from "@/components/match/MatchComments";
 import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
