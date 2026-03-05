@@ -134,6 +134,11 @@ const PlayerDetailPage = () => {
 
   // Player duos
   const playerDuos = new Map<number, number>();
+  filtered.goalEvents.forEach(g => {
+    if (g.goal_player_id === playerId && g.assist_player_id) playerDuos.set(g.assist_player_id, (playerDuos.get(g.assist_player_id) || 0) + 1);
+    if (g.assist_player_id === playerId && g.goal_player_id) playerDuos.set(g.goal_player_id, (playerDuos.get(g.goal_player_id) || 0) + 1);
+  });
+  const topDuos = [...playerDuos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
 
   const bestOpponent = playerOpponentRecords.filter(r => r.matches >= 2).sort((a, b) => {
     const aGoals = a.goalsFor; const bGoals = b.goalsFor;
