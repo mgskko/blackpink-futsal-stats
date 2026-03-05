@@ -4,17 +4,29 @@ import { motion } from "framer-motion";
 import { LogOut, User, Link as LinkIcon, Trophy, Target, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerName } from "@/hooks/useFutsalData";
+import { getPlayerBadges, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/PageHeader";
+import NicknameEditor from "@/components/my/NicknameEditor";
 import burneesLogo from "@/assets/burnees-logo.png";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const MyPage = () => {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [linking, setLinking] = useState(false);
+
+  const { data: momVotes } = useQuery({
+    queryKey: ["mom_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
 
   if (loading || isLoading) {
     return (
@@ -107,6 +119,9 @@ const MyPage = () => {
 
   // Dashboard
   const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, linkedPlayer.id);
+  const badges = getPlayerBadges(linkedPlayer.id, players, matches, teams, results, rosters, goalEvents, momVotes);
+  const varianceBadges = getVarianceBadge(linkedPlayer.id, matches, rosters, goalEvents);
+  const allBadges = [...badges, ...varianceBadges];
   const bestMatch = getPlayerBestAPMatch(matches, rosters, goalEvents, linkedPlayer.id);
   const bestMatchResult = bestMatch ? (() => {
     const mt = teams.filter(t => t.match_id === bestMatch.matchId);
@@ -191,6 +206,17 @@ const MyPage = () => {
             <p className="text-lg font-bold text-primary">{bestMatch.goals}골 {bestMatch.assists}어시 ({bestMatch.ap} AP)</p>
           </motion.div>
         )}
+
+        {/* Nickname & Title Editor */}
+        <NicknameEditor
+          currentNickname={profile?.nickname}
+          currentTitle={profile?.equipped_title}
+          badges={allBadges}
+          onUpdate={() => {
+            refreshProfile();
+            queryClient.invalidateQueries({ queryKey: ["all_profiles"] });
+          }}
+        />
 
         {/* View Full Profile */}
         <Button

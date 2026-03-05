@@ -96,19 +96,44 @@
     background: linear-gradient(90deg, transparent, hsl(330 100% 71%), transparent);
   }
 
-  /* On Fire ring animation */
-  @keyframes fire-ring {
-    0%, 100% {
-      box-shadow: 0 0 8px 2px hsl(25 100% 50% / 0.6), 0 0 16px 4px hsl(40 100% 50% / 0.3), 0 0 24px 6px hsl(15 100% 45% / 0.15);
-    }
-    33% {
-      box-shadow: 0 0 10px 3px hsl(35 100% 55% / 0.7), 0 0 20px 5px hsl(20 100% 50% / 0.35), 0 0 28px 7px hsl(10 100% 40% / 0.2);
-    }
-    66% {
-      box-shadow: 0 0 6px 2px hsl(15 100% 45% / 0.5), 0 0 14px 4px hsl(30 100% 55% / 0.3), 0 0 22px 6px hsl(45 100% 50% / 0.15);
-    }
+  /* === FIRE TIER: BLUE (3+ streak) === */
+  @keyframes blue-fire-ring {
+    0%, 100% { box-shadow: 0 0 8px 2px hsl(210 100% 60% / 0.5), 0 0 16px 4px hsl(200 100% 50% / 0.2); }
+    50% { box-shadow: 0 0 12px 3px hsl(220 100% 65% / 0.6), 0 0 20px 5px hsl(200 100% 55% / 0.3); }
   }
+  .blue-fire-ring {
+    animation: blue-fire-ring 2s ease-in-out infinite;
+    border-color: hsl(210 100% 60% / 0.7) !important;
+  }
+  .blue-fire-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(210 40% 12%) 40%, hsl(220 50% 10%) 100%) !important;
+    overflow: visible;
+    box-shadow: 0 0 12px hsl(210 100% 60% / 0.2), 0 0 24px hsl(200 100% 50% / 0.1);
+  }
+  .blue-fire-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(90deg, hsl(200 100% 50%), hsl(220 100% 65%), hsl(200 100% 50%));
+    background-size: 200% 100%;
+    animation: fire-border-rotate 4s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .blue-fire-card > * { position: relative; z-index: 1; }
 
+  /* === FIRE TIER: RED (5+ streak) === */
+  @keyframes fire-ring {
+    0%, 100% { box-shadow: 0 0 8px 2px hsl(25 100% 50% / 0.6), 0 0 16px 4px hsl(40 100% 50% / 0.3), 0 0 24px 6px hsl(15 100% 45% / 0.15); }
+    33% { box-shadow: 0 0 10px 3px hsl(35 100% 55% / 0.7), 0 0 20px 5px hsl(20 100% 50% / 0.35), 0 0 28px 7px hsl(10 100% 40% / 0.2); }
+    66% { box-shadow: 0 0 6px 2px hsl(15 100% 45% / 0.5), 0 0 14px 4px hsl(30 100% 55% / 0.3), 0 0 22px 6px hsl(45 100% 50% / 0.15); }
+  }
   .on-fire-ring {
     animation: fire-ring 1.5s ease-in-out infinite;
     border-color: hsl(25 100% 50% / 0.8) !important;
@@ -118,67 +143,40 @@
     0%, 100% { opacity: 1; transform: translateY(0) scale(1); }
     50% { opacity: 0.6; transform: translateY(-4px) scale(1.2); }
   }
+  .sparkle-anim { animation: sparkle-float 1.2s ease-in-out infinite; }
 
-  .sparkle-anim {
-    animation: sparkle-float 1.2s ease-in-out infinite;
-  }
-
-  /* On Fire Special Rare Card */
   @keyframes fire-border-rotate {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
-
   @keyframes fire-particle-1 {
     0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.5); }
     20% { opacity: 1; transform: translate(8px, -12px) scale(1); }
     80% { opacity: 0.3; transform: translate(-4px, -28px) scale(0.7); }
   }
-
   @keyframes fire-particle-2 {
     0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.6); }
     30% { opacity: 1; transform: translate(-6px, -16px) scale(1.1); }
     90% { opacity: 0.2; transform: translate(6px, -32px) scale(0.5); }
   }
-
   @keyframes fire-shimmer {
-    0% { opacity: 0.3; }
-    50% { opacity: 0.6; }
-    100% { opacity: 0.3; }
+    0% { opacity: 0.3; } 50% { opacity: 0.6; } 100% { opacity: 0.3; }
   }
 
   .on-fire-card {
     position: relative;
-    background: linear-gradient(
-      135deg,
-      hsl(0 0% 7%) 0%,
-      hsl(25 60% 12%) 30%,
-      hsl(15 80% 10%) 60%,
-      hsl(35 50% 8%) 100%
-    ) !important;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(25 60% 12%) 30%, hsl(15 80% 10%) 60%, hsl(35 50% 8%) 100%) !important;
     overflow: visible;
-    box-shadow:
-      0 0 15px hsl(25 100% 50% / 0.25),
-      0 0 30px hsl(15 100% 45% / 0.15),
-      0 0 60px hsl(35 100% 50% / 0.08),
-      inset 0 1px 0 hsl(40 100% 60% / 0.1);
+    box-shadow: 0 0 15px hsl(25 100% 50% / 0.25), 0 0 30px hsl(15 100% 45% / 0.15), 0 0 60px hsl(35 100% 50% / 0.08), inset 0 1px 0 hsl(40 100% 60% / 0.1);
   }
-
   .on-fire-card::before {
     content: '';
     position: absolute;
     inset: -2px;
     border-radius: inherit;
     padding: 2px;
-    background: linear-gradient(
-      90deg,
-      hsl(25 100% 50%),
-      hsl(40 100% 55%),
-      hsl(15 100% 45%),
-      hsl(35 100% 50%),
-      hsl(25 100% 50%)
-    );
+    background: linear-gradient(90deg, hsl(25 100% 50%), hsl(40 100% 55%), hsl(15 100% 45%), hsl(35 100% 50%), hsl(25 100% 50%));
     background-size: 300% 100%;
     animation: fire-border-rotate 3s linear infinite;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -187,27 +185,64 @@
     z-index: 0;
     pointer-events: none;
   }
-
   .on-fire-card::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(
-      180deg,
-      transparent 40%,
-      hsl(25 100% 50% / 0.05) 70%,
-      hsl(15 100% 45% / 0.1) 100%
-    );
+    background: linear-gradient(180deg, transparent 40%, hsl(25 100% 50% / 0.05) 70%, hsl(15 100% 45% / 0.1) 100%);
     animation: fire-shimmer 2s ease-in-out infinite;
     pointer-events: none;
     z-index: 0;
   }
+  .on-fire-card > * { position: relative; z-index: 1; }
 
-  .on-fire-card > * {
-    position: relative;
-    z-index: 1;
+  /* === FIRE TIER: GOLDEN (10+ streak) === */
+  @keyframes golden-pulse {
+    0%, 100% { box-shadow: 0 0 15px 4px hsl(45 100% 55% / 0.6), 0 0 30px 8px hsl(40 100% 50% / 0.3), 0 0 50px 12px hsl(50 100% 60% / 0.15); }
+    50% { box-shadow: 0 0 20px 6px hsl(50 100% 60% / 0.8), 0 0 40px 10px hsl(45 100% 55% / 0.4), 0 0 60px 15px hsl(40 100% 50% / 0.2); }
   }
+  .golden-fire-ring {
+    animation: golden-pulse 1.5s ease-in-out infinite;
+    border-color: hsl(45 100% 55% / 0.9) !important;
+  }
+  @keyframes golden-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .golden-fire-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(45 50% 12%) 30%, hsl(40 60% 10%) 60%, hsl(50 40% 8%) 100%) !important;
+    overflow: visible;
+    box-shadow: 0 0 20px hsl(45 100% 55% / 0.3), 0 0 40px hsl(40 100% 50% / 0.2), 0 0 80px hsl(50 100% 60% / 0.1);
+  }
+  .golden-fire-card::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 3px;
+    background: linear-gradient(90deg, hsl(45 100% 55%), hsl(50 100% 70%), hsl(40 100% 50%), hsl(45 100% 60%), hsl(50 100% 70%), hsl(45 100% 55%));
+    background-size: 400% 100%;
+    animation: fire-border-rotate 2s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .golden-fire-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent 30%, hsl(45 100% 70% / 0.08) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: golden-shimmer 3s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .golden-fire-card > * { position: relative; z-index: 1; }
 
   .fire-particle {
     position: absolute;
@@ -215,7 +250,6 @@
     z-index: 2;
     font-size: 10px;
   }
-
   .fire-particle-1 { animation: fire-particle-1 2.5s ease-in-out infinite; }
   .fire-particle-2 { animation: fire-particle-2 3s ease-in-out infinite 0.5s; }
 }

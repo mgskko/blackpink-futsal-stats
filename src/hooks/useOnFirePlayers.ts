@@ -1,46 +1,49 @@
 import { useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import type { Match } from "@/hooks/useFutsalData";
+import type { Match, Roster } from "@/hooks/useFutsalData";
 
-export function useOnFirePlayers(matches: Match[]) {
-  const { data: allAttendance } = useQuery({
-    queryKey: ["all_attendance_fire"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("match_attendance")
-        .select("match_id, player_id, status");
-      return (data ?? []) as { match_id: number; player_id: number; status: string }[];
-    },
-  });
+export type FireTier = "none" | "blue" | "red" | "golden";
 
-  const onFirePlayerIds = useMemo(() => {
-    if (!allAttendance || matches.length === 0) return new Set<number>();
+export interface FireInfo {
+  tier: FireTier;
+  streak: number;
+}
 
-    // Sort matches by date descending
+export function getFireTier(streak: number): FireTier {
+  if (streak >= 10) return "golden";
+  if (streak >= 5) return "red";
+  if (streak >= 3) return "blue";
+  return "none";
+}
+
+export function useOnFirePlayers(matches: Match[], rosters?: Roster[]) {
+  const fireMap = useMemo(() => {
+    const map = new Map<number, FireInfo>();
+    if (!rosters || matches.length === 0) return map;
+
+    // Sort matches by date descending (most recent first)
     const sorted = [...matches].sort((a, b) => b.date.localeCompare(a.date));
-    // Take the most recent 5 matches
-    const recent5 = sorted.slice(0, 5);
-    if (recent5.length < 5) return new Set<number>();
 
-    const recent5Ids = new Set(recent5.map(m => m.id));
+    // Get all unique player IDs from rosters
+    const allPlayerIds = new Set(rosters.map(r => r.player_id));
 
-    // Group attendance by player
-    const playerAttendance = new Map<number, Set<number>>();
-    allAttendance.forEach(a => {
-      if (a.status === "attending" && recent5Ids.has(a.match_id)) {
-        if (!playerAttendance.has(a.player_id)) playerAttendance.set(a.player_id, new Set());
-        playerAttendance.get(a.player_id)!.add(a.match_id);
+    allPlayerIds.forEach(playerId => {
+      let streak = 0;
+      for (const match of sorted) {
+        const inRoster = rosters.some(r => r.match_id === match.id && r.player_id === playerId);
+        if (inRoster) {
+          streak++;
+        } else {
+          break; // streak broken
+        }
+      }
+      const tier = getFireTier(streak);
+      if (tier !== "none") {
+        map.set(playerId, { tier, streak });
       }
     });
 
-    const fireSet = new Set<number>();
-    playerAttendance.forEach((matchIds, playerId) => {
-      if (matchIds.size >= 5) fireSet.add(playerId);
-    });
+    return map;
+  }, [matches, rosters]);
 
-    return fireSet;
-  }, [allAttendance, matches]);
-
-  return onFirePlayerIds;
+  return fireMap;
 }

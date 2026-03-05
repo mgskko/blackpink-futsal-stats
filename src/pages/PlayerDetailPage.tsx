@@ -5,7 +5,7 @@ import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gif
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
-import { useOnFirePlayers } from "@/hooks/useOnFirePlayers";
+import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +19,9 @@ const PlayerDetailPage = () => {
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
-  const onFireIds = useOnFirePlayers(matches);
+  const fireMap = useOnFirePlayers(matches, rosters);
+  const fireInfo = fireMap.get(playerId);
+  const fireTier: FireTier = fireInfo?.tier || "none";
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -134,15 +136,23 @@ const PlayerDetailPage = () => {
       {/* Profile Header - Stat Card Style */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
-          onFireIds.has(playerId)
+          fireTier === "golden"
+            ? "golden-fire-card border-yellow-500/50"
+            : fireTier === "red"
             ? "on-fire-card border-orange-500/50"
+            : fireTier === "blue"
+            ? "blue-fire-card border-blue-400/50"
             : "border-primary/30 bg-card box-glow"
         }`}
       >
         {/* Hero section with gradient background */}
         <div className={`relative p-6 ${
-          onFireIds.has(playerId)
+          fireTier === "golden"
+            ? "bg-gradient-to-br from-yellow-900/30 via-transparent to-amber-900/20"
+            : fireTier === "red"
             ? "bg-gradient-to-br from-orange-900/30 via-transparent to-red-900/20"
+            : fireTier === "blue"
+            ? "bg-gradient-to-br from-blue-900/30 via-transparent to-cyan-900/20"
             : "bg-gradient-to-br from-primary/20 via-card to-card"
         }`}>
           {/* Back number watermark */}
@@ -153,13 +163,12 @@ const PlayerDetailPage = () => {
           )}
 
           {/* Fire particles for on-fire players */}
-          {onFireIds.has(playerId) && (
+          {fireTier !== "none" && (
             <>
-              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>🔥</span>
+              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>
               <span className="fire-particle fire-particle-2" style={{ top: '30px', left: '15px' }}>✨</span>
-              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>🔥</span>
+              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>{fireTier === "golden" ? "⭐" : fireTier === "red" ? "🔥" : "💎"}</span>
               <span className="fire-particle fire-particle-2" style={{ bottom: '10px', left: '30px' }}>✨</span>
-              <span className="fire-particle fire-particle-1" style={{ top: '50%', right: '10px' }}>🔥</span>
             </>
           )}
 
@@ -167,7 +176,10 @@ const PlayerDetailPage = () => {
             {/* Profile image */}
             <div className="relative flex-shrink-0">
               <div className={`h-24 w-24 overflow-hidden rounded-2xl border-2 bg-secondary shadow-lg ${
-                onFireIds.has(playerId) ? "on-fire-ring shadow-orange-500/30" : "border-primary/50 shadow-primary/20"
+                fireTier === "golden" ? "golden-fire-ring shadow-yellow-500/30"
+                : fireTier === "red" ? "on-fire-ring shadow-orange-500/30"
+                : fireTier === "blue" ? "blue-fire-ring shadow-blue-500/30"
+                : "border-primary/50 shadow-primary/20"
               }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
@@ -188,14 +200,19 @@ const PlayerDetailPage = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
-                {onFireIds.has(playerId) && <span className="text-lg sparkle-anim" title="5연속 출석! On Fire!">🔥</span>}
+                {fireTier !== "none" && <span className="text-lg sparkle-anim">{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>}
                 <PlayerTierBadge tier={tier} size="md" />
-                {formGuide.form === "hot" && !onFireIds.has(playerId) && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+                {formGuide.form === "hot" && fireTier === "none" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
                 {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
               </div>
-              {onFireIds.has(playerId) && (
-                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-bold text-orange-400 sparkle-anim">
-                  🔥 ON FIRE — 5연속 출석!
+              {fireTier !== "none" && (
+                <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
+                  fireTier === "golden" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                  : fireTier === "red" ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
+                  : "border-blue-400/40 bg-blue-400/10 text-blue-400"
+                }`}>
+                  {fireTier === "golden" ? "👑 LEGENDARY — " : fireTier === "red" ? "🔥 ON FIRE — " : "💎 HEATING UP — "}
+                  {fireInfo?.streak}연속 출석!
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
