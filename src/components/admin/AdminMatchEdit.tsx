@@ -253,6 +253,32 @@ const AdminMatchEdit = () => {
 
       {matchId && (
         <>
+          {/* YouTube Link Edit */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
+              {!editingYoutube ? (
+                <Button size="sm" variant="outline" onClick={() => setEditingYoutube(true)} className="h-7 text-xs border-primary/30 text-primary"><Edit size={12} /> 수정</Button>
+              ) : (
+                <Button size="sm" onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await supabase.from("matches").update({ youtube_link: editYoutubeLink || null }).eq("id", matchId!);
+                    invalidateAll();
+                    toast({ title: "유튜브 링크가 수정되었습니다 ✅" });
+                    setEditingYoutube(false);
+                  } catch (err: any) { toast({ title: "오류", description: err.message, variant: "destructive" }); }
+                  finally { setSaving(false); }
+                }} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground"><Save size={12} /> 저장</Button>
+              )}
+            </div>
+            {editingYoutube ? (
+              <Input value={editYoutubeLink} onChange={e => setEditYoutubeLink(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="h-8 text-xs bg-background border-border" />
+            ) : (
+              <p className="text-xs text-muted-foreground truncate">{editYoutubeLink || "없음"}</p>
+            )}
+          </div>
+
           {/* Score Edit */}
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
