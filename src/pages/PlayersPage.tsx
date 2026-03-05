@@ -34,7 +34,11 @@ const PlayersPage = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
-              className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:box-glow active:scale-[0.97]"
+              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${
+                onFireIds.has(player.id)
+                  ? "on-fire-card border-orange-500/50"
+                  : "border-border bg-card hover:border-primary/40 hover:box-glow"
+              }`}
             >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
@@ -60,6 +64,14 @@ const PlayersPage = () => {
                   {player.name}
                   {onFireIds.has(player.id) && <span className="ml-1 sparkle-anim inline-block">✨</span>}
                 </span>
+                {/* Fire particles for on-fire cards */}
+                {onFireIds.has(player.id) && (
+                  <>
+                    <span className="fire-particle fire-particle-1" style={{ bottom: '8px', right: '12px' }}>🔥</span>
+                    <span className="fire-particle fire-particle-2" style={{ bottom: '8px', left: '12px' }}>✨</span>
+                    <span className="fire-particle fire-particle-1" style={{ top: '50%', right: '4px' }}>🔥</span>
+                  </>
+                )}
                 <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">
                   <div className="text-center">
                     <div className="font-display text-lg text-primary text-glow">{stats.goals}</div>

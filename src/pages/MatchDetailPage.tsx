@@ -74,6 +74,8 @@ const MatchDetailPage = () => {
   const quarters = [...new Set(matchGoalEvents.map((g) => g.quarter))].sort((a, b) => a - b);
   const opponentTeam = matchTeams.find(t => !t.is_ours);
   const youtubeId = match.youtube_link ? extractYoutubeId(match.youtube_link) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const isScheduled = match.date > today || (!mr || mr.ourResult.score_for === null);
 
   const seekTo = (timestamp: string) => {
     const secs = parseTimestampToSeconds(timestamp);
@@ -123,6 +125,13 @@ const MatchDetailPage = () => {
         </div>
       </div>
 
+      {/* Match Prediction (for scheduled matches) - TOP POSITION */}
+      {isScheduled && (
+        <div className="mx-4 mt-4">
+          <MatchPrediction matchId={matchId} />
+        </div>
+      )}
+
       {/* Score Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-center gap-6">
@@ -152,7 +161,7 @@ const MatchDetailPage = () => {
             <span className={`rounded-full px-4 py-1 text-sm font-bold ${mr.ourResult.result === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : mr.ourResult.result === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{mr.ourResult.result}</span>
           </div>
         )}
-        {!mr && (
+        {isScheduled && (
           <div className="mt-3 flex justify-center">
             <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">예정</span>
           </div>
@@ -224,13 +233,6 @@ const MatchDetailPage = () => {
             ))}
           </div>
         </motion.div>
-      )}
-
-      {/* Match Prediction (for scheduled matches) */}
-      {!mr && (
-        <div className="mx-4 mt-4">
-          <MatchPrediction matchId={matchId} />
-        </div>
       )}
 
       {/* MOM Voting */}

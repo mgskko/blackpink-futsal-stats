@@ -26,6 +26,11 @@ const AdminMatchEdit = () => {
   const [editGoalIsOwnGoal, setEditGoalIsOwnGoal] = useState(false);
   const [editGoalPlayerId, setEditGoalPlayerId] = useState("");
   const [editGoalAssistId, setEditGoalAssistId] = useState("");
+  const [editGoalTimestamp, setEditGoalTimestamp] = useState("");
+
+  // YouTube link editing
+  const [editYoutubeLink, setEditYoutubeLink] = useState("");
+  const [editingYoutube, setEditingYoutube] = useState(false);
 
   // Guest goal
   const [showGuestGoal, setShowGuestGoal] = useState(false);
@@ -65,12 +70,15 @@ const AdminMatchEdit = () => {
     setShowGuestGoal(false);
     setShowAddRoster(false);
     setShowMOM(false);
+    setEditingYoutube(false);
     const mid = Number(v);
     const mTeams = teams.filter(t => t.match_id === mid);
     const ot = mTeams.find(t => t.is_ours);
     const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
     setScoreFor(or2?.score_for || 0);
     setScoreAgainst(or2?.score_against || 0);
+    const m = matches.find(m => m.id === mid);
+    setEditYoutubeLink(m?.youtube_link || "");
   };
 
   const handleSaveScore = async () => {
@@ -110,6 +118,7 @@ const AdminMatchEdit = () => {
     setEditGoalIsOwnGoal(g.is_own_goal);
     setEditGoalPlayerId(g.goal_player_id ? String(g.goal_player_id) : "");
     setEditGoalAssistId(g.assist_player_id ? String(g.assist_player_id) : "");
+    setEditGoalTimestamp(g.video_timestamp || "");
   };
 
   const handleSaveGoalEdit = async () => {
@@ -121,6 +130,7 @@ const AdminMatchEdit = () => {
         is_own_goal: editGoalIsOwnGoal,
         goal_player_id: editGoalIsOwnGoal ? null : (editGoalPlayerId ? Number(editGoalPlayerId) : null),
         assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId ? Number(editGoalAssistId) : null),
+        video_timestamp: editGoalTimestamp || null,
       }).eq("id", editingGoalId);
       if (error) throw error;
       invalidateAll();
@@ -243,6 +253,32 @@ const AdminMatchEdit = () => {
 
       {matchId && (
         <>
+          {/* YouTube Link Edit */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
+              {!editingYoutube ? (
+                <Button size="sm" variant="outline" onClick={() => setEditingYoutube(true)} className="h-7 text-xs border-primary/30 text-primary"><Edit size={12} /> 수정</Button>
+              ) : (
+                <Button size="sm" onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await supabase.from("matches").update({ youtube_link: editYoutubeLink || null }).eq("id", matchId!);
+                    invalidateAll();
+                    toast({ title: "유튜브 링크가 수정되었습니다 ✅" });
+                    setEditingYoutube(false);
+                  } catch (err: any) { toast({ title: "오류", description: err.message, variant: "destructive" }); }
+                  finally { setSaving(false); }
+                }} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground"><Save size={12} /> 저장</Button>
+              )}
+            </div>
+            {editingYoutube ? (
+              <Input value={editYoutubeLink} onChange={e => setEditYoutubeLink(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="h-8 text-xs bg-background border-border" />
+            ) : (
+              <p className="text-xs text-muted-foreground truncate">{editYoutubeLink || "없음"}</p>
+            )}
+          </div>
+
           {/* Score Edit */}
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
@@ -369,6 +405,10 @@ const AdminMatchEdit = () => {
                           </div>
                         </div>
                       )}
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">타임스탬프 (예: 1:12:08)</label>
+                        <Input value={editGoalTimestamp} onChange={e => setEditGoalTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
+                      </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleSaveGoalEdit} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground flex-1"><Save size={12} /> 저장</Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingGoalId(null)} className="h-7 text-xs border-border">취소</Button>

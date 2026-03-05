@@ -44,6 +44,8 @@ const MatchesPage = () => {
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
 
   const getMatchStatus = (match: typeof matches[0]) => {
+    // Future matches are always "scheduled"
+    if (match.date > today) return "scheduled";
     const mr = getMatchResult(teams, results, match.id);
     if (!mr || mr.ourResult.score_for === null) return "scheduled";
     return mr.ourResult.result === "승" ? "win" : mr.ourResult.result === "패" ? "loss" : "draw";
