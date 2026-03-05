@@ -47,7 +47,9 @@ const MatchesPage = () => {
     // Future matches are always "scheduled"
     if (match.date > today) return "scheduled";
     const mr = getMatchResult(teams, results, match.id);
-    if (!mr || mr.ourResult.score_for === null) return "scheduled";
+    // Past match with no result record at all → scheduled
+    if (!mr) return "scheduled";
+    // Past match with a result record → show the result even if score is null
     return mr.ourResult.result === "승" ? "win" : mr.ourResult.result === "패" ? "loss" : "draw";
   };
 
@@ -135,13 +137,13 @@ const MatchesPage = () => {
                         <span className={`font-display text-2xl tracking-wider ${
                           status === "win" ? "text-blue-400" : status === "loss" ? "text-red-400" : "text-muted-foreground"
                         }`}>
-                          {mr?.ourResult.score_for}
+                          {mr?.ourResult.score_for ?? "-"}
                         </span>
                         <span className="text-muted-foreground text-lg">:</span>
                         <span className={`font-display text-2xl tracking-wider ${
                           status === "loss" ? "text-red-400" : "text-muted-foreground"
                         }`}>
-                          {mr?.ourResult.score_against}
+                          {mr?.ourResult.score_against ?? "-"}
                         </span>
                       </div>
                     )}

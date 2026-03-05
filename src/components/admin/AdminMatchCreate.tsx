@@ -30,6 +30,9 @@ const AdminMatchCreate = () => {
   const [playerTeams, setPlayerTeams] = useState<Record<number, "A" | "B">>({});
   const [saving, setSaving] = useState(false);
   const [youtubeLink, setYoutubeLink] = useState("");
+  const [overrideScore, setOverrideScore] = useState(false);
+  const [scoreFor, setScoreFor] = useState(0);
+  const [scoreAgainst, setScoreAgainst] = useState(0);
 
   const activePlayers = players.filter(p => p.is_active);
 
@@ -124,15 +127,29 @@ const AdminMatchCreate = () => {
         }
       }
 
-      // Create empty results
+      // Create results
       for (const team of createdTeams) {
-        await supabase.from("results").insert({
-          match_id: match.id,
-          team_id: team.id,
-          result: "무",
-          score_for: 0,
-          score_against: 0,
-        });
+        const isOurs = team.is_ours;
+        if (overrideScore) {
+          const sf = isOurs ? scoreFor : scoreAgainst;
+          const sa = isOurs ? scoreAgainst : scoreFor;
+          const result = sf > sa ? "승" : sf < sa ? "패" : "무";
+          await supabase.from("results").insert({
+            match_id: match.id,
+            team_id: team.id,
+            result,
+            score_for: sf,
+            score_against: sa,
+          });
+        } else {
+          await supabase.from("results").insert({
+            match_id: match.id,
+            team_id: team.id,
+            result: "무",
+            score_for: 0,
+            score_against: 0,
+          });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["matches"] });
@@ -229,6 +246,27 @@ const AdminMatchCreate = () => {
           </div>
         </div>
       )}
+
+      {/* Score Override */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={overrideScore} onCheckedChange={(c) => setOverrideScore(c === true)} className="border-primary" />
+          <label className="text-sm text-foreground font-medium">스코어 직접 입력 (득점자 모를 때)</label>
+        </div>
+        {overrideScore && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-muted-foreground">{isCustom ? teamAName : "버니즈"}</label>
+              <Input type="number" min={0} value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+            </div>
+            <span className="text-muted-foreground font-bold mt-3">:</span>
+            <div className="flex-1">
+              <label className="text-[10px] text-muted-foreground">{isCustom ? teamBName : opponentName || "상대팀"}</label>
+              <Input type="number" min={0} value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+            </div>
+          </div>
+        )}
+      </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
