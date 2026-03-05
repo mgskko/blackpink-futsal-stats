@@ -299,6 +299,11 @@ const MatchDetailPage = () => {
           );
         })}
       </motion.div>
+
+      {/* Match Comments */}
+      <div className="mx-4 mt-4">
+        <MatchComments matchId={matchId} />
+      </div>
     </div>
   );
 };
