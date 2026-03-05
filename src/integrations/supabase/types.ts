@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          emoji: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          emoji: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "match_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_events: {
         Row: {
           assist_player_id: number | null
@@ -114,6 +146,47 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          is_system: boolean
+          match_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_system?: boolean
+          match_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_system?: boolean
+          match_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_comments_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
             referencedColumns: ["id"]
           },
         ]
@@ -294,7 +367,9 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          equipped_title: string | null
           id: string
+          nickname: string | null
           player_id: number | null
           updated_at: string
         }
@@ -302,7 +377,9 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          equipped_title?: string | null
           id: string
+          nickname?: string | null
           player_id?: number | null
           updated_at?: string
         }
@@ -310,7 +387,9 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          equipped_title?: string | null
           id?: string
+          nickname?: string | null
           player_id?: number | null
           updated_at?: string
         }
