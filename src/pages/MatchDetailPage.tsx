@@ -74,6 +74,8 @@ const MatchDetailPage = () => {
   const quarters = [...new Set(matchGoalEvents.map((g) => g.quarter))].sort((a, b) => a - b);
   const opponentTeam = matchTeams.find(t => !t.is_ours);
   const youtubeId = match.youtube_link ? extractYoutubeId(match.youtube_link) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const isScheduled = match.date > today || (!mr || mr.ourResult.score_for === null);
 
   const seekTo = (timestamp: string) => {
     const secs = parseTimestampToSeconds(timestamp);
