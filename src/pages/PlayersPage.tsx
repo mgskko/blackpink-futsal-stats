@@ -3,12 +3,14 @@ import { motion } from "framer-motion";
 import { User } from "lucide-react";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
 import { getPlayerFormGuide } from "@/hooks/useAdvancedStats";
+import { useOnFirePlayers } from "@/hooks/useOnFirePlayers";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 
 const PlayersPage = () => {
   const navigate = useNavigate();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const onFireIds = useOnFirePlayers(matches);
 
   if (isLoading) return <SplashScreen />;
 
@@ -36,7 +38,9 @@ const PlayersPage = () => {
             >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-secondary overflow-hidden">
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${
+                    onFireIds.has(player.id) ? "on-fire-ring" : "border-primary/30"
+                  }`}>
                     {player.profile_image_url ? (
                       <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                     ) : (
@@ -48,10 +52,14 @@ const PlayersPage = () => {
                       {player.back_number}
                     </span>
                   )}
-                  {form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
+                  {onFireIds.has(player.id) && <span className="absolute -top-1 -right-1 text-sm sparkle-anim">🔥</span>}
+                  {!onFireIds.has(player.id) && form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
                   {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
-                <span className="font-medium text-foreground">{player.name}</span>
+                <span className="font-medium text-foreground">
+                  {player.name}
+                  {onFireIds.has(player.id) && <span className="ml-1 sparkle-anim inline-block">✨</span>}
+                </span>
                 <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">
                   <div className="text-center">
                     <div className="font-display text-lg text-primary text-glow">{stats.goals}</div>

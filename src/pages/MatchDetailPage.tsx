@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
+import MatchPrediction from "@/components/match/MatchPrediction";
 import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
@@ -148,7 +149,12 @@ const MatchDetailPage = () => {
         )}
         {mr && (
           <div className="mt-3 flex justify-center">
-            <span className={`rounded-full px-4 py-1 text-sm font-bold ${mr.ourResult.result === "승" ? "gradient-pink text-primary-foreground" : mr.ourResult.result === "패" ? "bg-muted text-muted-foreground" : "border border-primary/40 text-primary"}`}>{mr.ourResult.result}</span>
+            <span className={`rounded-full px-4 py-1 text-sm font-bold ${mr.ourResult.result === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : mr.ourResult.result === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{mr.ourResult.result}</span>
+          </div>
+        )}
+        {!mr && (
+          <div className="mt-3 flex justify-center">
+            <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">예정</span>
           </div>
         )}
       </motion.div>
@@ -218,6 +224,13 @@ const MatchDetailPage = () => {
             ))}
           </div>
         </motion.div>
+      )}
+
+      {/* Match Prediction (for scheduled matches) */}
+      {!mr && (
+        <div className="mx-4 mt-4">
+          <MatchPrediction matchId={matchId} />
+        </div>
       )}
 
       {/* MOM Voting */}

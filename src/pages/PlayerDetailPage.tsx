@@ -5,6 +5,7 @@ import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gif
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge } from "@/hooks/useAdvancedStats";
+import { useOnFirePlayers } from "@/hooks/useOnFirePlayers";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +19,7 @@ const PlayerDetailPage = () => {
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const onFireIds = useOnFirePlayers(matches);
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -142,7 +144,9 @@ const PlayerDetailPage = () => {
           <div className="flex items-center gap-5 relative z-10">
             {/* Profile image */}
             <div className="relative flex-shrink-0">
-              <div className="h-24 w-24 overflow-hidden rounded-2xl border-2 border-primary/50 bg-secondary shadow-lg shadow-primary/20">
+              <div className={`h-24 w-24 overflow-hidden rounded-2xl border-2 bg-secondary shadow-lg ${
+                onFireIds.has(playerId) ? "on-fire-ring shadow-orange-500/30" : "border-primary/50 shadow-primary/20"
+              }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                 ) : (
@@ -162,8 +166,9 @@ const PlayerDetailPage = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+                {onFireIds.has(playerId) && <span className="text-lg sparkle-anim" title="5연속 출석! On Fire!">🔥</span>}
                 <PlayerTierBadge tier={tier} size="md" />
-                {formGuide.form === "hot" && <span className="text-lg" title="최근 폼 상승">🔥</span>}
+                {formGuide.form === "hot" && !onFireIds.has(playerId) && <span className="text-lg" title="최근 폼 상승">🔥</span>}
                 {formGuide.form === "cold" && <span className="text-lg" title="최근 폼 하락">❄️</span>}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
