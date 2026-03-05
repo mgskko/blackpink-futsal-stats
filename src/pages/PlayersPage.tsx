@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
@@ -6,6 +7,7 @@ import { getPlayerFormGuide } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
+import AvatarModal from "@/components/player/AvatarModal";
 
 function getCardClass(tier: FireTier) {
   if (tier === "golden") return "golden-fire-card border-yellow-500/50";
@@ -30,6 +32,7 @@ const PlayersPage = () => {
   const navigate = useNavigate();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const fireMap = useOnFirePlayers(matches, rosters);
+  const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
 
   if (isLoading) return <SplashScreen />;
 
@@ -41,6 +44,7 @@ const PlayersPage = () => {
 
   return (
     <div className="pb-20">
+      <AvatarModal imageUrl={avatarPlayer?.url || null} name={avatarPlayer?.name || ""} open={!!avatarPlayer} onClose={() => setAvatarPlayer(null)} />
       <PageHeader title="PLAYERS" subtitle={`총 ${players.length}명`} />
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
@@ -49,17 +53,13 @@ const PlayersPage = () => {
           const fire = fireMap.get(player.id);
           const tier = fire?.tier || "none";
           return (
-            <motion.div
-              key={player.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.03 }}
+            <motion.div key={player.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
-              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)}`}
-            >
+              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)}`}>
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
-                  <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${getRingClass(tier)}`}>
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${getRingClass(tier)}`}
+                    onClick={(e) => { e.stopPropagation(); if (player.profile_image_url) setAvatarPlayer({ url: player.profile_image_url, name: player.name }); }}>
                     {player.profile_image_url ? (
                       <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
                     ) : (
@@ -67,19 +67,13 @@ const PlayersPage = () => {
                     )}
                   </div>
                   {player.back_number !== null && player.back_number !== undefined && (
-                    <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-md">
-                      {player.back_number}
-                    </span>
+                    <span className="absolute -top-1 -left-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-md">{player.back_number}</span>
                   )}
                   {tier !== "none" && <span className="absolute -top-1 -right-1 text-sm sparkle-anim">{getFireEmoji(tier)}</span>}
                   {tier === "none" && form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
                   {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
-                <span className="font-medium text-foreground">
-                  {player.name}
-                  {tier !== "none" && <span className="ml-1 sparkle-anim inline-block">✨</span>}
-                </span>
-                {/* Fire particles */}
+                <span className="font-medium text-foreground">{player.name}{tier !== "none" && <span className="ml-1 sparkle-anim inline-block">✨</span>}</span>
                 {tier === "red" && (
                   <>
                     <span className="fire-particle fire-particle-1" style={{ bottom: '8px', right: '12px' }}>🔥</span>
@@ -90,26 +84,13 @@ const PlayersPage = () => {
                   <>
                     <span className="fire-particle fire-particle-1" style={{ bottom: '8px', right: '8px' }}>👑</span>
                     <span className="fire-particle fire-particle-2" style={{ bottom: '8px', left: '8px' }}>⭐</span>
-                    <span className="fire-particle fire-particle-1" style={{ top: '50%', right: '4px' }}>✨</span>
                   </>
                 )}
                 <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">
-                  <div className="text-center">
-                    <div className="font-display text-lg text-primary text-glow">{stats.goals}</div>
-                    <div className="text-muted-foreground">골</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-display text-lg text-pink-soft">{stats.assists}</div>
-                    <div className="text-muted-foreground">도움</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-display text-lg text-foreground">{stats.appearances}</div>
-                    <div className="text-muted-foreground">출전</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-display text-lg text-primary">{stats.winRate}%</div>
-                    <div className="text-muted-foreground">승률</div>
-                  </div>
+                  <div className="text-center"><div className="font-display text-lg text-primary text-glow">{stats.goals}</div><div className="text-muted-foreground">골</div></div>
+                  <div className="text-center"><div className="font-display text-lg text-pink-soft">{stats.assists}</div><div className="text-muted-foreground">도움</div></div>
+                  <div className="text-center"><div className="font-display text-lg text-foreground">{stats.appearances}</div><div className="text-muted-foreground">출전</div></div>
+                  <div className="text-center"><div className="font-display text-lg text-primary">{stats.winRate}%</div><div className="text-muted-foreground">승률</div></div>
                 </div>
               </div>
             </motion.div>

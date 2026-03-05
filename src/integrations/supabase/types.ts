@@ -335,6 +335,38 @@ export type Database = {
           },
         ]
       }
+      player_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          player_id: number
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          player_id: number
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          player_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_comments_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           back_number: number | null
