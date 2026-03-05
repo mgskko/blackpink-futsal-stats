@@ -322,6 +322,74 @@ const StatisticsPage = () => {
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* 방해꾼 트리오 Widget */}
+            {!isCustomFilter && (() => {
+              const TRIO_IDS = [
+                players.find(p => p.name === "이래현")?.id,
+                players.find(p => p.name === "최영재")?.id,
+                players.find(p => p.name === "유성민")?.id,
+              ].filter(Boolean) as number[];
+              if (TRIO_IDS.length < 3) return null;
+              // Find matches where all 3 were in roster
+              const trioMatchIds = [...new Set(filteredRosters.filter(r => TRIO_IDS.includes(r.player_id)).map(r => r.match_id))]
+                .filter(mid => TRIO_IDS.every(pid => filteredRosters.some(r => r.match_id === mid && r.player_id === pid)));
+              const nonCustomTrioMatches = filteredMatches.filter(m => trioMatchIds.includes(m.id) && !m.is_custom);
+              let trioWins = 0, trioTotal = 0, trioAP = 0, trioNoLoss = 0;
+              nonCustomTrioMatches.forEach(m => {
+                const mTeams = filteredTeams.filter(t => t.match_id === m.id);
+                const ourTeam = mTeams.find(t => t.is_ours);
+                if (!ourTeam) return;
+                const r = filteredResults.find(r => r.team_id === ourTeam.id && r.match_id === m.id);
+                if (!r) return;
+                trioTotal++;
+                if (r.result === "승") trioWins++;
+                if (r.result !== "패") trioNoLoss++;
+              });
+              // AP from all matches (including custom)
+              TRIO_IDS.forEach(pid => {
+                trioAP += filteredGoalEvents.filter(g => trioMatchIds.includes(g.match_id) && g.goal_player_id === pid && !g.is_own_goal).length;
+                trioAP += filteredGoalEvents.filter(g => trioMatchIds.includes(g.match_id) && g.assist_player_id === pid).length;
+                trioAP += filteredRosters.filter(r => trioMatchIds.includes(r.match_id) && r.player_id === pid).reduce((s, r) => s + (r.goals || 0) + (r.assists || 0), 0);
+              });
+              const trioWinRate = trioTotal > 0 ? Math.round((trioWins / trioTotal) * 100) : 0;
+              const trioNoLossRate = trioTotal > 0 ? Math.round((trioNoLoss / trioTotal) * 100) : 0;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🚧 방해꾼 트리오</h3>
+                  <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5 box-glow">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      {TRIO_IDS.map((pid, i) => {
+                        const p = players.find(pp => pp.id === pid);
+                        return (
+                          <div key={pid} className="text-center cursor-pointer" onClick={() => navigate(`/player/${pid}`)}>
+                            <div className="h-12 w-12 mx-auto rounded-full border-2 border-primary/50 bg-secondary overflow-hidden">
+                              {p?.profile_image_url ? <img src={p.profile_image_url} alt={p.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-primary text-lg">👤</div>}
+                            </div>
+                            <span className="text-xs font-medium text-foreground mt-1 block">{p?.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="rounded-lg bg-secondary/50 p-3">
+                        <div className="font-display text-2xl text-primary text-glow">{trioWinRate}%</div>
+                        <div className="text-[10px] text-muted-foreground">동시출전 승률</div>
+                      </div>
+                      <div className="rounded-lg bg-secondary/50 p-3">
+                        <div className="font-display text-2xl text-foreground">{trioAP}</div>
+                        <div className="text-[10px] text-muted-foreground">합작 AP</div>
+                      </div>
+                      <div className="rounded-lg bg-secondary/50 p-3">
+                        <div className="font-display text-2xl text-primary">{trioNoLossRate}%</div>
+                        <div className="text-[10px] text-muted-foreground">무패율</div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-center text-[10px] text-muted-foreground">총 {trioMatchIds.length}경기 동시 출격 (외부전 {trioTotal}경기)</p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
               <div className="mb-6">
