@@ -54,7 +54,7 @@ const StatisticsPage = () => {
   const navigate = useNavigate();
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
-  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun">("player");
+  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "toto">("player");
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
