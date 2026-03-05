@@ -460,6 +460,10 @@ const StatisticsPage = () => {
             )}
           </motion.div>
         )}
+
+        {activeTab === "toto" && (
+          <TotoStatsTab matches={matches} teams={teams} results={results} />
+        )}
       </div>
     </div>
   );
