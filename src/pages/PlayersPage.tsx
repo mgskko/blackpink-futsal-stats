@@ -56,7 +56,10 @@ const PlayersPage = () => {
                   {!onFireIds.has(player.id) && form.form === "hot" && <span className="absolute -top-1 -right-1 text-sm">🔥</span>}
                   {form.form === "cold" && <span className="absolute -top-1 -right-1 text-sm">❄️</span>}
                 </div>
-                <span className="font-medium text-foreground">{player.name}</span>
+                <span className="font-medium text-foreground">
+                  {player.name}
+                  {onFireIds.has(player.id) && <span className="ml-1 sparkle-anim inline-block">✨</span>}
+                </span>
                 <div className="mt-3 grid grid-cols-4 gap-1 text-xs w-full">
                   <div className="text-center">
                     <div className="font-display text-lg text-primary text-glow">{stats.goals}</div>
