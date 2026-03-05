@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
+import MatchPrediction from "@/components/match/MatchPrediction";
 import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
