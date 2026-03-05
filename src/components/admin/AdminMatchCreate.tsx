@@ -30,6 +30,9 @@ const AdminMatchCreate = () => {
   const [playerTeams, setPlayerTeams] = useState<Record<number, "A" | "B">>({});
   const [saving, setSaving] = useState(false);
   const [youtubeLink, setYoutubeLink] = useState("");
+  const [overrideScore, setOverrideScore] = useState(false);
+  const [scoreFor, setScoreFor] = useState(0);
+  const [scoreAgainst, setScoreAgainst] = useState(0);
 
   const activePlayers = players.filter(p => p.is_active);
 
