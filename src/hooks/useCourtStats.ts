@@ -383,7 +383,7 @@ export function computePlayerTraits(
     value: goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && g.quarter >= 7).length
   })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, lateGoalRanking, 2, 1)) {
-    traits.push({ name: "극장골 장인", emoji: "🟢", description: `7-8Q 득점 팀 내 1~2위`, category: "clutch", color: "green" });
+    traits.push({ name: "라모스 극장골", emoji: "👑", description: `7-8Q 득점 팀 내 1~2위`, category: "clutch", color: "green" });
   }
 
   // 위기의 남자: 동점/지고있을 때 득점
