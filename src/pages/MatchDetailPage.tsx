@@ -50,6 +50,7 @@ const MatchDetailPage = () => {
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { data: matchQuarters } = useMatchQuarters(matchId);
 
   useEffect(() => {
     if (!matchId) return;
