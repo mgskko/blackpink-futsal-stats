@@ -9,6 +9,8 @@ import MOMVoting from "@/components/MOMVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
+import QuarterScoreboard from "@/components/match/QuarterScoreboard";
+import QuarterLineupViewer from "@/components/match/QuarterLineupViewer";
 import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
