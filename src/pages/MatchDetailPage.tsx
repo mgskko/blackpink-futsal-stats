@@ -10,7 +10,6 @@ import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
-import QuarterLineupViewer from "@/components/match/QuarterLineupViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis } from "@/hooks/useMatchAnalysis";
@@ -44,6 +43,18 @@ function formatTimestamp(ts: string): string {
 
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
+// Helper: get player position info per quarter from lineup data
+function getPlayerPosition(lineup: any, playerId: number): string | null {
+  if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return null;
+  for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+    if (lineup[pos]) {
+      const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+      if (ids.includes(playerId)) return pos;
+    }
+  }
+  return null;
+}
+
 const MatchDetailPage = () => {
   const { isAdmin } = useAuth();
   const { id } = useParams();
@@ -67,7 +78,6 @@ const MatchDetailPage = () => {
     fetchAttendance();
   }, [matchId]);
 
-  // Court margins for this match
   const courtMargins = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return null;
     const sorted = [...matchQuarters].sort((a, b) => a.quarter - b.quarter);
@@ -75,8 +85,61 @@ const MatchDetailPage = () => {
     return computeMatchCourtMargins(sorted, matchGoals, players);
   }, [matchQuarters, goalEvents, matchId, players]);
 
-  // AI match analysis
   const { dataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? []);
+
+  // Compute total score from quarters
+  const quarterTotalScore = useMemo(() => {
+    if (!matchQuarters || matchQuarters.length === 0) return null;
+    let scoreFor = 0, scoreAgainst = 0;
+    matchQuarters.forEach(q => {
+      scoreFor += q.score_for || 0;
+      scoreAgainst += q.score_against || 0;
+    });
+    return { scoreFor, scoreAgainst };
+  }, [matchQuarters]);
+
+  // Build lineup summary table: player → position per quarter
+  const lineupSummary = useMemo(() => {
+    if (!matchQuarters || matchQuarters.length === 0) return null;
+    const hasLineup = matchQuarters.some(q => q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).GK);
+    if (!hasLineup) return null;
+
+    const sortedQ = [...matchQuarters].sort((a, b) => a.quarter - b.quarter);
+    const playerMap = new Map<number, Map<number, string>>();
+
+    sortedQ.forEach(q => {
+      if (!q.lineup) return;
+      for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+        const lineup = q.lineup as any;
+        if (lineup[pos]) {
+          const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+          ids.forEach((pid: number) => {
+            if (!playerMap.has(pid)) playerMap.set(pid, new Map());
+            playerMap.get(pid)!.set(q.quarter, pos);
+          });
+        }
+      }
+    });
+
+    return { players: playerMap, quarters: sortedQ.map(q => q.quarter) };
+  }, [matchQuarters]);
+
+  // Compute clean sheet badges per player
+  const cleanSheetBadges = useMemo(() => {
+    if (!matchQuarters || matchQuarters.length === 0) return new Map<number, number>();
+    const badges = new Map<number, number>(); // playerId → count of clean sheet quarters as DF/GK
+    matchQuarters.forEach(q => {
+      if (!q.lineup || (q.score_against || 0) > 0) return;
+      const lineup = q.lineup as any;
+      const dfGkPlayers: number[] = [];
+      if (lineup.GK) (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).forEach((id: any) => dfGkPlayers.push(Number(id)));
+      if (lineup.DF) (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).forEach((id: any) => dfGkPlayers.push(Number(id)));
+      dfGkPlayers.forEach(pid => {
+        badges.set(pid, (badges.get(pid) || 0) + 1);
+      });
+    });
+    return badges;
+  }, [matchQuarters]);
 
   if (isLoading) return <SplashScreen />;
 
@@ -99,6 +162,13 @@ const MatchDetailPage = () => {
     if (secs === null || !iframeRef.current) return;
     iframeRef.current.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&start=${secs}`;
   };
+
+  // Use quarter total if available, otherwise use results table
+  const displayScoreFor = quarterTotalScore?.scoreFor ?? mr?.ourResult.score_for ?? null;
+  const displayScoreAgainst = quarterTotalScore?.scoreAgainst ?? mr?.ourResult.score_against ?? null;
+  const displayResult = displayScoreFor !== null && displayScoreAgainst !== null
+    ? (displayScoreFor > displayScoreAgainst ? "승" : displayScoreFor < displayScoreAgainst ? "패" : "무")
+    : mr?.ourResult.result ?? null;
 
   const getPlayerMatchStats = () => {
     const statsMap = new Map<number, { goals: number; assists: number; teamId: number }>();
@@ -146,17 +216,17 @@ const MatchDetailPage = () => {
         <div className="mx-4 mt-4"><MatchPrediction matchId={matchId} /></div>
       )}
 
-      {/* Score Card */}
+      {/* Score Card - uses quarter totals */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-center gap-6">
           <div className="text-center">
             <div className="text-sm font-medium text-foreground">{mr?.ourTeam.name ?? "버니즈"}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.ourResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>{mr?.ourResult.score_for ?? "-"}</div>
+            <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "승" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreFor ?? "-"}</div>
           </div>
           <div className="text-2xl text-muted-foreground">:</div>
           <div className="text-center">
             <div className="text-sm font-medium text-foreground">{mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${mr?.opponentResult.result === "승" ? "text-primary text-glow" : "text-foreground"}`}>{mr?.ourResult.score_against ?? "-"}</div>
+            <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "패" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreAgainst ?? "-"}</div>
           </div>
         </div>
         <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted-foreground">
@@ -170,12 +240,12 @@ const MatchDetailPage = () => {
             <span className="text-[10px] text-muted-foreground">상대 연령대: {opponentTeam.original_age_desc || opponentTeam.age_category}</span>
           </div>
         )}
-        {mr && (
+        {displayResult && (
           <div className="mt-3 flex justify-center">
-            <span className={`rounded-full px-4 py-1 text-sm font-bold ${mr.ourResult.result === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : mr.ourResult.result === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{mr.ourResult.result}</span>
+            <span className={`rounded-full px-4 py-1 text-sm font-bold ${displayResult === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : displayResult === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{displayResult}</span>
           </div>
         )}
-        {isScheduled && (
+        {isScheduled && !displayResult && (
           <div className="mt-3 flex justify-center">
             <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">예정</span>
           </div>
@@ -266,7 +336,10 @@ const MatchDetailPage = () => {
                         {g.video_timestamp && youtubeId && (
                           <button onClick={() => seekTo(g.video_timestamp!)} className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary hover:bg-primary/30 transition-colors">▶ {formatTimestamp(g.video_timestamp)}</button>
                         )}
-                        {g.is_own_goal ? <span className="text-destructive">⚽ 자책골</span> : (
+                        {g.video_timestamp && !youtubeId && (
+                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{formatTimestamp(g.video_timestamp)}</span>
+                        )}
+                        {g.is_own_goal ? <span className="text-destructive">⚽ 자책골 ({g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"})</span> : (
                           <>
                             <span className="text-primary">⚽</span>
                             <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}</span>
@@ -296,7 +369,7 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Match Summary with Court Margin */}
+      {/* Match Summary with Court Margin + Clean Sheet Badge */}
       {playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? "종합 기록" : "MATCH SUMMARY"}</h2>
@@ -306,27 +379,35 @@ const MatchDetailPage = () => {
               const cm = courtMargins?.get(p.playerId);
               const margin = cm?.margin ?? null;
               const isSuperSub = cm?.isSuperSub ?? false;
+              const csCount = cleanSheetBadges.get(p.playerId) || 0;
               return (
-                <div key={p.playerId} onClick={() => navigate(`/player/${p.playerId}`)}
-                  className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < playerMatchStats.length - 1 ? "border-b border-border" : ""}`}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{getPlayerName(players, p.playerId)}</span>
-                    {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 슈퍼 서브</span>}
+                <div key={p.playerId}
+                  className={`px-4 py-2.5 transition-colors hover:bg-secondary ${i < playerMatchStats.length - 1 ? "border-b border-border" : ""}`}>
+                  <div className="flex cursor-pointer items-center justify-between" onClick={() => navigate(`/player/${p.playerId}`)}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">{getPlayerName(players, p.playerId)}</span>
+                      {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 슈퍼 서브</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
+                      {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
+                      {p.goals === 0 && p.assists === 0 && margin === null && <span className="text-xs text-muted-foreground">-</span>}
+                      {margin !== null && (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          margin > 0 ? "bg-green-500/10 border border-green-500/30 text-green-400"
+                          : margin < 0 ? "bg-red-500/10 border border-red-500/30 text-red-400"
+                          : "bg-muted border border-border text-muted-foreground"
+                        }`}>
+                          {margin > 0 ? `+${margin}` : margin === 0 ? "0" : `${margin}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
-                    {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
-                    {p.goals === 0 && p.assists === 0 && margin === null && <span className="text-xs text-muted-foreground">-</span>}
-                    {margin !== null && (
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        margin > 0 ? "bg-green-500/10 border border-green-500/30 text-green-400"
-                        : margin < 0 ? "bg-red-500/10 border border-red-500/30 text-red-400"
-                        : "bg-muted border border-border text-muted-foreground"
-                      }`}>
-                        {margin > 0 ? `+${margin}` : margin === 0 ? "0" : `${margin}`}
-                      </span>
-                    )}
-                  </div>
+                  {csCount > 0 && (
+                    <div className="mt-1 text-[11px] text-green-400">
+                      🛡️ DF/GK로 출전하여 무실점 쿼터를 {csCount}회 기록했습니다!
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -364,9 +445,41 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Quarter Lineup Viewer */}
-      {matchQuarters && matchQuarters.length > 0 && (
-        <div className="mx-4 mt-4"><QuarterLineupViewer quarters={matchQuarters} players={players} /></div>
+      {/* Quarter Lineup Summary Table */}
+      {lineupSummary && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">
+          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">QUARTER LINEUP</h2>
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-secondary/30">
+                  <th className="px-3 py-2 text-left font-bold text-foreground">이름</th>
+                  {lineupSummary.quarters.map(q => (
+                    <th key={q} className="px-2 py-2 text-center font-bold text-primary">{q}Q</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...lineupSummary.players.entries()].map(([pid, posMap]) => (
+                  <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                    <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
+                      {getPlayerName(players, pid)}
+                    </td>
+                    {lineupSummary.quarters.map(q => {
+                      const pos = posMap.get(q);
+                      const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
+                      return (
+                        <td key={q} className={`px-2 py-2 text-center ${posColor}`}>
+                          {pos || "-"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       )}
 
       {/* Formation Builder */}
