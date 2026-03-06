@@ -282,7 +282,7 @@ export function computePlayerTraits(
   // 위치 선정의 달인: 주워먹기+혼전골+인자기골
   const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "인자기골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pocherRanking, 2, 1)) {
-    traits.push({ name: "위치 선정의 달인", emoji: "🟢", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 아크로바틱: 발리+터닝+칩슛+헤딩 등
