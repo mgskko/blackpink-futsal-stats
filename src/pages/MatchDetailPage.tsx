@@ -75,6 +75,9 @@ const MatchDetailPage = () => {
     return computeMatchCourtMargins(sorted, matchGoals, players);
   }, [matchQuarters, goalEvents, matchId, players]);
 
+  // AI match analysis
+  const { dataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? []);
+
   if (isLoading) return <SplashScreen />;
 
   const match = matches.find((m) => m.id === matchId);
