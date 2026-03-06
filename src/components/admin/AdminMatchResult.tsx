@@ -172,7 +172,7 @@ const AdminMatchResult = () => {
                     <Select value={entry.goalPlayerId} onValueChange={v => updateGoalEntry(i, "goalPlayerId", v)}>
                       <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>
-                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -182,7 +182,7 @@ const AdminMatchResult = () => {
                       <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">없음</SelectItem>
-                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

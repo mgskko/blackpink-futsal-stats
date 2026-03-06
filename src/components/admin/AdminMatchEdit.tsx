@@ -395,7 +395,7 @@ const AdminMatchEdit = () => {
                             <label className="text-[10px] text-muted-foreground">득점자</label>
                             <Select value={editGoalPlayerId} onValueChange={setEditGoalPlayerId}>
                               <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
-                              <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                              <SelectContent>{allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
                             </Select>
                           </div>
                           <div>
@@ -404,7 +404,7 @@ const AdminMatchEdit = () => {
                               <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">없음</SelectItem>
-                                {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                                {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
