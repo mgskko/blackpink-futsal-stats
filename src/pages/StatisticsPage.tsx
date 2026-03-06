@@ -103,6 +103,18 @@ const StatisticsPage = () => {
   const filteredResults = useMemo(() => results.filter(r => filteredMatchIds.has(r.match_id)), [results, filteredMatchIds]);
   const filteredQuarters = useMemo(() => allQuarters.filter(q => filteredMatchIds.has(q.match_id)), [allQuarters, filteredMatchIds]);
 
+  const dataMomRanking = useMemo(() => {
+    const momCounts = new Map<number, number>();
+    const matchIdsWithQuarters = [...new Set(filteredQuarters.map(q => q.match_id))];
+    matchIdsWithQuarters.forEach(mid => {
+      const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+      if (mom) momCounts.set(mom.playerId, (momCounts.get(mom.playerId) || 0) + 1);
+    });
+    return [...momCounts.entries()].map(([pid, count]) => ({
+      id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
+    })).sort((a, b) => b.count - a.count).slice(0, 10);
+  }, [filteredQuarters, players, teams, goalEvents, allQuarters, results]);
+
   if (isLoading) return <SplashScreen />;
 
   const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
@@ -127,19 +139,6 @@ const StatisticsPage = () => {
     const dc = getDefenseContribution(p.id, filteredQuarters);
     return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
   }).filter(p => p.quartersWithPlayer >= 5).sort((a, b) => a.diff - b.diff).slice(0, 10);
-
-  // Data MOM ranking
-  const dataMomRanking = useMemo(() => {
-    const momCounts = new Map<number, number>();
-    const matchIdsWithQuarters = [...new Set(filteredQuarters.map(q => q.match_id))];
-    matchIdsWithQuarters.forEach(mid => {
-      const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
-      if (mom) momCounts.set(mom.playerId, (momCounts.get(mom.playerId) || 0) + 1);
-    });
-    return [...momCounts.entries()].map(([pid, count]) => ({
-      id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
-    })).sort((a, b) => b.count - a.count).slice(0, 10);
-  }, [filteredQuarters, players, teams, goalEvents, allQuarters, results]);
 
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
