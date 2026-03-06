@@ -11,9 +11,18 @@ export interface GoalEvent { id: number; match_id: number; team_id: number; quar
 export interface MatchQuarter { id: number; match_id: number; quarter: number; score_for: number; score_against: number; lineup: any; }
 
 async function fetchAll<T>(table: string): Promise<T[]> {
-  const { data, error } = await (supabase as any).from(table).select("*");
-  if (error) throw error;
-  return (data ?? []) as T[];
+  let allData: T[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await (supabase as any).from(table).select("*").range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data as T[]);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return allData;
 }
 
 export function usePlayers() {
@@ -73,7 +82,58 @@ export function useAllFutsalData() {
   };
 }
 
-// Helper functions that work with loaded data
+// ─── CORE FIX: Non-duplicating AP computation ───
+// For matches with has_detail_log=true, use goal_events only.
+// For matches without, use rosters only.
+export function computeNonDuplicatedAP(
+  playerId: number,
+  matches: Match[],
+  rosters: Roster[],
+  goalEvents: GoalEvent[],
+  filterMatchIds?: Set<number>
+): { goals: number; assists: number } {
+  let goals = 0, assists = 0;
+  const detailMatchIds = new Set(matches.filter(m => m.has_detail_log && (!filterMatchIds || filterMatchIds.has(m.id))).map(m => m.id));
+  const nonDetailMatchIds = new Set(matches.filter(m => !m.has_detail_log && (!filterMatchIds || filterMatchIds.has(m.id))).map(m => m.id));
+
+  // From goal_events (only for detail_log matches)
+  goalEvents.forEach(g => {
+    if (!detailMatchIds.has(g.match_id)) return;
+    if (filterMatchIds && !filterMatchIds.has(g.match_id)) return;
+    if (g.goal_player_id === playerId && !g.is_own_goal) goals++;
+    if (g.assist_player_id === playerId) assists++;
+  });
+
+  // From rosters (only for NON-detail_log matches)
+  rosters.forEach(r => {
+    if (r.player_id !== playerId) return;
+    if (!nonDetailMatchIds.has(r.match_id)) return;
+    if (filterMatchIds && !filterMatchIds.has(r.match_id)) return;
+    goals += r.goals || 0;
+    assists += r.assists || 0;
+  });
+
+  return { goals, assists };
+}
+
+// Per-match AP (non-duplicated)
+export function computeMatchAP(
+  playerId: number,
+  match: Match,
+  rosters: Roster[],
+  goalEvents: GoalEvent[]
+): { goals: number; assists: number } {
+  if (match.has_detail_log) {
+    const g = goalEvents.filter(e => e.match_id === match.id && e.goal_player_id === playerId && !e.is_own_goal).length;
+    const a = goalEvents.filter(e => e.match_id === match.id && e.assist_player_id === playerId).length;
+    return { goals: g, assists: a };
+  } else {
+    const r = rosters.find(r => r.match_id === match.id && r.player_id === playerId);
+    return { goals: r?.goals || 0, assists: r?.assists || 0 };
+  }
+}
+
+// Helper functions
 export function getPlayerName(players: Player[], id: number): string {
   return players.find(p => p.id === id)?.name ?? `선수#${id}`;
 }
@@ -108,18 +168,7 @@ export function getMatchGoalEvents(goalEvents: GoalEvent[], matchId: number): Go
 }
 
 export function getPlayerStats(players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], playerId: number) {
-  const goalsFromEvents = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
-  const assistsFromEvents = goalEvents.filter(g => g.assist_player_id === playerId).length;
-
-  const rosterGoals = rosters
-    .filter(r => r.player_id === playerId && r.goals)
-    .reduce((sum, r) => sum + (r.goals || 0), 0);
-  const rosterAssists = rosters
-    .filter(r => r.player_id === playerId && r.assists)
-    .reduce((sum, r) => sum + (r.assists || 0), 0);
-
-  const goals = goalsFromEvents + rosterGoals;
-  const assists = assistsFromEvents + rosterAssists;
+  const { goals, assists } = computeNonDuplicatedAP(playerId, matches, rosters, goalEvents);
   const appearances = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))].length;
 
   const playerRosters = rosters.filter(r => r.player_id === playerId);
@@ -151,15 +200,7 @@ export function getPlayerBestAPMatch(matches: Match[], rosters: Roster[], goalEv
   playerMatchIds.forEach(matchId => {
     const match = matches.find(m => m.id === matchId);
     if (!match) return;
-    let g = 0, a = 0;
-    if (match.has_detail_log) {
-      g = goalEvents.filter(e => e.match_id === matchId && e.goal_player_id === playerId && !e.is_own_goal).length;
-      a = goalEvents.filter(e => e.match_id === matchId && e.assist_player_id === playerId).length;
-    } else {
-      const r = rosters.find(r => r.match_id === matchId && r.player_id === playerId);
-      g = r?.goals || 0;
-      a = r?.assists || 0;
-    }
+    const { goals: g, assists: a } = computeMatchAP(playerId, match, rosters, goalEvents);
     const ap = g + a;
     if (!best || ap > best.ap) {
       best = { matchId, goals: g, assists: a, ap, date: match.date };

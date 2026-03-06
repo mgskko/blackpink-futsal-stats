@@ -5,7 +5,7 @@ import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gif
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
-import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters } from "@/hooks/useFutsalData";
+import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters, computeMatchAP } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
@@ -99,14 +99,7 @@ const PlayerDetailPage = () => {
         const mr = getMatchResult(teams, results, m.id);
         const mTeams = teams.filter(t => t.match_id === m.id);
         const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
-        let g = 0, a = 0;
-        if (m.has_detail_log) {
-          g = goalEvents.filter(e => e.match_id === m.id && e.goal_player_id === playerId && !e.is_own_goal).length;
-          a = goalEvents.filter(e => e.match_id === m.id && e.assist_player_id === playerId).length;
-        } else {
-          const r = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
-          g = r?.goals || 0; a = r?.assists || 0;
-        }
+        const { goals: g, assists: a } = computeMatchAP(playerId, m, rosters, goalEvents);
         return { match: m, matchResult: mr, opponentName: oppTeam?.name || (m.is_custom ? "자체전" : "???"), goals: g, assists: a };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
@@ -505,8 +498,8 @@ const PlayerDetailPage = () => {
             {positionDist.total > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-3">
                 <div className="text-xs font-bold text-primary mb-2">📍 포지션 분포</div>
-                <div className="space-y-1">
-                  {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).map(pos => (
+              <div className="space-y-1">
+                  {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).sort((a, b) => positionDist[b] - positionDist[a]).map(pos => (
                     <div key={pos} className="flex items-center justify-between text-[11px]">
                       <span className="text-foreground font-medium">{pos}</span>
                       <div className="flex items-center gap-1.5">
