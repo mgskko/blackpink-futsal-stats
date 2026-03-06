@@ -446,8 +446,8 @@ const PlayerDetailPage = () => {
       {activeTab === "matches" && (
         <div className="mx-4 mt-4 space-y-2">
           {playerMatchList.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">출전 기록이 없습니다</p>}
-          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists }) => {
-            const resultStr = mr?.ourResult.result;
+          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists, playerResult }) => {
+            const resultStr = m.is_custom ? playerResult : mr?.ourResult.result;
             const bgColor = resultStr === "승" ? "border-blue-500/30 bg-blue-500/5" : resultStr === "패" ? "border-red-500/30 bg-red-500/5" : resultStr === "무" ? "border-muted bg-muted/5" : "border-border bg-card";
             return (
               <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
