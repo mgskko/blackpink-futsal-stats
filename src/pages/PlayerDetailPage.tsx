@@ -96,11 +96,29 @@ const PlayerDetailPage = () => {
       .filter(m => playerMatchIds.includes(m.id))
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(m => {
-        const mr = getMatchResult(teams, results, m.id);
+      const mr = getMatchResult(teams, results, m.id);
         const mTeams = teams.filter(t => t.match_id === m.id);
-        const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
         const { goals: g, assists: a } = computeMatchAP(playerId, m, rosters, goalEvents);
-        return { match: m, matchResult: mr, opponentName: oppTeam?.name || (m.is_custom ? "자체전" : "???"), goals: g, assists: a };
+        
+        // For custom matches, find the player's team and the opposing team
+        let opponentName = "???";
+        let playerResult: string | undefined = mr?.ourResult.result;
+        if (m.is_custom) {
+          const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+          if (playerRoster) {
+            const playerTeam = mTeams.find(t => t.id === playerRoster.team_id);
+            const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
+            opponentName = oppTeam?.name || "자체전";
+            const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
+            playerResult = playerTeamResult?.result;
+          } else {
+            opponentName = "자체전";
+          }
+        } else {
+          const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
+          opponentName = oppTeam?.name || "???";
+        }
+        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
 
