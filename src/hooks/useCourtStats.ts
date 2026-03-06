@@ -360,7 +360,7 @@ export function computePlayerTraits(
     return { id: pid, value: goalCount + assistCount };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pressureRanking, 2, 1)) {
-    traits.push({ name: "미친 개", emoji: "🟢", description: `압박/차단 기반 득점+어시 팀 내 1~2위`, category: "defense", color: "green" });
+    traits.push({ name: "가투소의 미친개", emoji: "🛡️", description: `압박/차단 기반 득점+어시 팀 내 1~2위`, category: "defense", color: "green" });
   }
 
   // 퍼스트 블러드: 선제골 횟수
