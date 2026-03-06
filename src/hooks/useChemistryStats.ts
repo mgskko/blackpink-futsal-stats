@@ -55,7 +55,7 @@ export function computeDeathLineup(
 
   // Find best combo with at least 3 quarters
   const combos = [...comboMap.values()]
-    .filter(c => c.quarters >= 3)
+    .filter(c => c.quarters >= 5)
     .sort((a, b) => (b.margin / b.quarters) - (a.margin / a.quarters));
 
   if (combos.length === 0) return null;
