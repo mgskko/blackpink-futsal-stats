@@ -23,9 +23,10 @@ function getAvailableYears(matches: Match[]): string[] {
 }
 
 function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], filter: FilterType) {
-  let filteredMatches = matches;
-  if (filter === "custom") filteredMatches = matches.filter(m => m.is_custom);
-  else if (filter !== "all") filteredMatches = matches.filter(m => m.date.startsWith(filter));
+  const today = new Date().toISOString().slice(0, 10);
+  let filteredMatches = matches.filter(m => m.date <= today); // exclude scheduled
+  if (filter === "custom") filteredMatches = filteredMatches.filter(m => m.is_custom);
+  else if (filter !== "all") filteredMatches = filteredMatches.filter(m => m.date.startsWith(filter));
 
   const filteredMatchIds = new Set(filteredMatches.map(m => m.id));
   const { goals, assists } = computeNonDuplicatedAP(playerId, filteredMatches, rosters.filter(r => filteredMatchIds.has(r.match_id)), goalEvents.filter(g => filteredMatchIds.has(g.match_id)));
@@ -35,10 +36,14 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
   const appearances = matchIds.length;
   let wins = 0, losses = 0, draws = 0;
   matchIds.forEach(matchId => {
-    const teamIds = playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id);
+    const teamIds = [...new Set(playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id))];
     teamIds.forEach(teamId => {
       const result = results.find(r => r.team_id === teamId && r.match_id === matchId);
-      if (result) { if (result.result === "승") wins++; else if (result.result === "패") losses++; else draws++; }
+      if (result) {
+        if (result.result === "승") wins++;
+        else if (result.result === "패") losses++;
+        else if (result.result === "무") draws++;
+      }
     });
   });
   const totalGames = wins + losses + draws;
