@@ -28,8 +28,13 @@ const AdminMatchResult = () => {
   const matchTeams = matchId ? teams.filter(t => t.match_id === matchId) : [];
   const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
   const ourTeams = matchTeams.filter(t => t.is_ours);
-  const rosterPlayerIds = [...new Set(matchRoster.map(r => r.player_id))];
-  const rosterPlayers = players.filter(p => rosterPlayerIds.includes(p.id));
+  const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
+  const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
+  // For goal/assist selection, show all players (roster first, then others)
+  const allSelectablePlayers = [
+    ...rosterPlayers,
+    ...players.filter(p => p.is_active && !rosterPlayerIds.has(p.id)),
+  ];
 
   const addGoalEntry = () => {
     setGoalEntries(prev => [
@@ -167,7 +172,7 @@ const AdminMatchResult = () => {
                     <Select value={entry.goalPlayerId} onValueChange={v => updateGoalEntry(i, "goalPlayerId", v)}>
                       <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>
-                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -177,7 +182,7 @@ const AdminMatchResult = () => {
                       <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">없음</SelectItem>
-                        {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

@@ -391,12 +391,12 @@ const StatisticsPage = () => {
 
             {/* Pass Network */}
             {(() => {
-              const passNet = computePassNetwork(players, filteredGoalEvents, 10);
+              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 3);
               if (passNet.length === 0) return null;
               return (
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🎯 TELEPATHIC DUO</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수</p>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 환상의 짝꿍 TOP 3</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수 (8경기 이상 함께 출전)</p>
                   <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {passNet.map((d, i) => (
                       <div key={`${d.assisterId}-${d.scorerId}`} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < passNet.length - 1 ? "border-b border-border" : ""}`}>

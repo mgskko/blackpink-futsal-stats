@@ -1,4 +1,4 @@
-import type { Player, Match, Team, Result, GoalEvent, MatchQuarter } from "./useFutsalData";
+import type { Player, Match, Team, Result, GoalEvent, MatchQuarter, Roster } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
 
 // Helper: parse lineup to get field players
@@ -55,7 +55,7 @@ export function computeDeathLineup(
 
   // Find best combo with at least 3 quarters
   const combos = [...comboMap.values()]
-    .filter(c => c.quarters >= 3)
+    .filter(c => c.quarters >= 5)
     .sort((a, b) => (b.margin / b.quarters) - (a.margin / a.quarters));
 
   if (combos.length === 0) return null;
@@ -81,11 +81,32 @@ export interface PassNetworkEntry {
 export function computePassNetwork(
   players: Player[],
   goalEvents: GoalEvent[],
-  topN: number = 10
+  rosters: Roster[],
+  topN: number = 3
 ): PassNetworkEntry[] {
+  // First compute co-appearance counts per duo (min 8 matches together)
+  const coAppearanceMap = new Map<string, number>();
+  const matchPlayerMap = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!matchPlayerMap.has(r.match_id)) matchPlayerMap.set(r.match_id, new Set());
+    matchPlayerMap.get(r.match_id)!.add(r.player_id);
+  });
+  matchPlayerMap.forEach((playerSet) => {
+    const pids = [...playerSet];
+    for (let i = 0; i < pids.length; i++) {
+      for (let j = i + 1; j < pids.length; j++) {
+        const key = `${Math.min(pids[i], pids[j])}-${Math.max(pids[i], pids[j])}`;
+        coAppearanceMap.set(key, (coAppearanceMap.get(key) || 0) + 1);
+      }
+    }
+  });
+
   const map = new Map<string, PassNetworkEntry>();
   goalEvents.forEach(g => {
     if (!g.assist_player_id || !g.goal_player_id || g.is_own_goal) return;
+    const duoKey = `${Math.min(g.assist_player_id, g.goal_player_id)}-${Math.max(g.assist_player_id, g.goal_player_id)}`;
+    const coCount = coAppearanceMap.get(duoKey) || 0;
+    if (coCount < 8) return; // Must have played together in 8+ matches
     const key = `${g.assist_player_id}->${g.goal_player_id}`;
     const cur = map.get(key);
     if (cur) cur.count++;
@@ -133,7 +154,7 @@ export function computeToxicDuos(
   });
 
   return [...duoMap.values()]
-    .filter(d => d.quarters >= 5)
+    .filter(d => d.quarters >= 10)
     .map(d => ({
       p1: d.p1, name1: getPlayerName(players, d.p1),
       p2: d.p2, name2: getPlayerName(players, d.p2),
@@ -219,7 +240,7 @@ export function computeSynergyMargin(
         if (has1 && has2) { togetherMargin += diff; togetherQ++; }
         else if (has1 || has2) { apartMargin += diff; apartQ++; }
       });
-      if (togetherQ >= 3 && apartQ >= 3) {
+      if (togetherQ >= 10 && apartQ >= 10) {
         const key = `${Math.min(p1, p2)}-${Math.max(p1, p2)}`;
         duoMap.set(key, { p1: Math.min(p1, p2), p2: Math.max(p1, p2), togetherMargin, togetherQ, apartMargin, apartQ });
       }
@@ -331,7 +352,7 @@ export function computeFWDuos(
   });
 
   return [...duoMap.values()]
-    .filter(d => d.quarters >= 3)
+    .filter(d => d.quarters >= 5)
     .map(d => ({
       p1: d.p1, name1: getPlayerName(players, d.p1),
       p2: d.p2, name2: getPlayerName(players, d.p2),

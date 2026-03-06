@@ -56,6 +56,11 @@ const AdminMatchEdit = () => {
   const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
   const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
   const nonRosterPlayers = players.filter(p => p.is_active && !rosterPlayerIds.has(p.id));
+  // For goal/assist editing, show all players (roster first, then others)
+  const allSelectablePlayers = [
+    ...rosterPlayers,
+    ...nonRosterPlayers,
+  ];
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
@@ -390,7 +395,7 @@ const AdminMatchEdit = () => {
                             <label className="text-[10px] text-muted-foreground">득점자</label>
                             <Select value={editGoalPlayerId} onValueChange={setEditGoalPlayerId}>
                               <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
-                              <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                              <SelectContent>{allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
                             </Select>
                           </div>
                           <div>
@@ -399,7 +404,7 @@ const AdminMatchEdit = () => {
                               <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">없음</SelectItem>
-                                {rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                                {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
