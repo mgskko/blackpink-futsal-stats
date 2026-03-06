@@ -108,6 +108,22 @@ const PlayerDetailPage = () => {
     return getOpponentRecords(playerMatches, playerTeams, playerResults);
   }, [filtered, playerId, filterMode]);
 
+  const goalTypeStats = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && g.goal_type).forEach(g => {
+      map.set(g.goal_type!, (map.get(g.goal_type!) || 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered.goalEvents, playerId]);
+
+  const assistTypeStats = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.goalEvents.filter(g => g.assist_player_id === playerId && g.assist_type).forEach(g => {
+      map.set(g.assist_type!, (map.get(g.assist_type!) || 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered.goalEvents, playerId]);
+
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
