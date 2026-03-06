@@ -292,14 +292,15 @@ export function computePlayerTraits(
     traits.push({ name: "아크로바틱", emoji: "🟢", description: `고난도 골 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
-  // 스피드 레이서: 솔로 치달골+역습 득점
+  // 스피드 레이서: 솔로 치달골+역습 득점+어시 (골/어시 모두 카운트)
   const speedRanking = allPlayerIds.map(pid => {
-    const solo = gtc(pid, "솔로 치달골", "드리블골");
-    const counter = goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && g.build_up_process === "역습").length;
-    return { id: pid, value: solo + counter };
+    const soloGoals = gtc(pid, "솔로 치달골", "드리블골");
+    const counterGoals = goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && g.build_up_process === "역습").length;
+    const counterAssists = goalEvents.filter(g => g.assist_player_id === pid && (g.build_up_process === "역습" || g.goal_type === "솔로 치달골" || g.goal_type === "드리블골")).length;
+    return { id: pid, value: soloGoals + counterGoals + counterAssists };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, speedRanking, 2, 1)) {
-    traits.push({ name: "스피드 레이서", emoji: "🟢", description: `치달/역습 득점 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "스피드 레이서", emoji: "🟢", description: `치달/역습 득점+어시 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 침투의 귀재: 침투골+킬패스 받아 득점
