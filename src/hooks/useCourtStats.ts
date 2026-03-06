@@ -289,7 +289,7 @@ export function computePlayerTraits(
   const acroTypes = ["발리골", "터닝골", "칩슛", "헤딩골", "파포스트골", "엉덩이골", "가슴골"];
   const acroRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, ...acroTypes) })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, acroRanking, 2, 1)) {
-    traits.push({ name: "아크로바틱", emoji: "🟢", description: `고난도 골 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "즐라탄 빙의", emoji: "⚽", description: `고난도 골 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 스피드 레이서: 솔로 치달골+역습 득점+어시 (골/어시 모두 카운트)
