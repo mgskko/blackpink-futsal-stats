@@ -28,8 +28,13 @@ const AdminMatchResult = () => {
   const matchTeams = matchId ? teams.filter(t => t.match_id === matchId) : [];
   const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
   const ourTeams = matchTeams.filter(t => t.is_ours);
-  const rosterPlayerIds = [...new Set(matchRoster.map(r => r.player_id))];
-  const rosterPlayers = players.filter(p => rosterPlayerIds.includes(p.id));
+  const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
+  const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
+  // For goal/assist selection, show all players (roster first, then others)
+  const allSelectablePlayers = [
+    ...rosterPlayers,
+    ...players.filter(p => p.is_active && !rosterPlayerIds.has(p.id)),
+  ];
 
   const addGoalEntry = () => {
     setGoalEntries(prev => [
