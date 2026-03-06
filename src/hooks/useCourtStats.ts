@@ -47,7 +47,7 @@ function getBenchPlayers(lineup: any): number[] {
   return parseLineup(lineup).Bench;
 }
 
-function getPlayerPosition(lineup: any, playerId: number): string | null {
+export function getPlayerPosition(lineup: any, playerId: number): string | null {
   const parsed = parseLineup(lineup);
   if (parsed.GK.includes(playerId)) return "GK";
   if (parsed.DF.includes(playerId)) return "DF";
