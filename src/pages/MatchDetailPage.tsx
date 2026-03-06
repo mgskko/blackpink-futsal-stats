@@ -182,6 +182,54 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
+      {/* AI Match Comments */}
+      {aiComments.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 space-y-1.5">
+          {aiComments.map((c, i) => (
+            <div key={i} className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground">
+              {c}
+            </div>
+          ))}
+        </motion.div>
+      )}
+
+      {/* Data MOM */}
+      {dataMOM && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-4 box-glow">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">👑</span>
+              <div>
+                <div className="text-[10px] font-bold tracking-wider text-primary">DATA MOM</div>
+                <div className="text-lg font-bold text-foreground">{dataMOM.name}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-display text-primary text-glow">{dataMOM.score.toFixed(1)}</div>
+              <div className="text-[9px] text-muted-foreground">종합 점수</div>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            <div className="rounded-md bg-secondary/50 p-2 text-center">
+              <div className="text-[9px] text-muted-foreground">공격</div>
+              <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.attack.toFixed(1)}</div>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-2 text-center">
+              <div className="text-[9px] text-muted-foreground">수비</div>
+              <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.defense.toFixed(1)}</div>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-2 text-center">
+              <div className="text-[9px] text-muted-foreground">클러치</div>
+              <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.clutch.toFixed(1)}</div>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-2 text-center">
+              <div className="text-[9px] text-muted-foreground">감점</div>
+              <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.penalty.toFixed(1)}</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Quarter Scoreboard */}
       {matchQuarters && matchQuarters.length > 0 && (
         <div className="mx-4 mt-4">
