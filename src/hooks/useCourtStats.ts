@@ -419,7 +419,7 @@ export function computePlayerTraits(
   });
   const gkWallRanking = allPlayerIds.map(pid => ({ id: pid, value: gkCleanSheetMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, gkWallRanking, 2, 2)) {
-    traits.push({ name: "최고의 야신", emoji: "🧤", description: `GK 무실점 쿼터 팀 내 1~2위 (${gkCleanSheetMap.get(playerId) || 0}회)`, category: "defense", color: "yellow" });
+    traits.push({ name: "부폰의 거미손", emoji: "🧤", description: `GK 무실점 쿼터 팀 내 1~2위 (${gkCleanSheetMap.get(playerId) || 0}회)`, category: "defense", color: "yellow" });
   }
 
   // 🎯 Tap-in Master (인자기 헌정상): 주워먹기/엉덩이골/혼전골 비율 최고 1~2위
