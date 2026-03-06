@@ -240,7 +240,7 @@ export function computeSynergyMargin(
         if (has1 && has2) { togetherMargin += diff; togetherQ++; }
         else if (has1 || has2) { apartMargin += diff; apartQ++; }
       });
-      if (togetherQ >= 3 && apartQ >= 3) {
+      if (togetherQ >= 10 && apartQ >= 10) {
         const key = `${Math.min(p1, p2)}-${Math.max(p1, p2)}`;
         duoMap.set(key, { p1: Math.min(p1, p2), p2: Math.max(p1, p2), togetherMargin, togetherQ, apartMargin, apartQ });
       }
