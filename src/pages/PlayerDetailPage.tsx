@@ -547,32 +547,51 @@ const PlayerDetailPage = () => {
           )}
 
           {/* Scoring Arsenal & Playmaking Style - Donut Charts */}
-          {(goalTypeChartData.length > 0 || assistTypeChartData.length > 0) && (
+          {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
               <h3 className="mb-3 font-display text-lg text-primary">🎯 시그니처 무기</h3>
               <div className="grid grid-cols-2 gap-4">
-                {goalTypeChartData.length > 0 && (
+                {goalTypeStats.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">⚽ 득점 루트</h4>
-                    <ResponsiveContainer width="100%" height={140}>
-                      <PieChart>
-                        <Pie data={goalTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
-                          {goalTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-0.5 mt-1">
-                      {goalTypeChartData.map((d, i) => (
-                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                          <span className="text-foreground truncate">{d.name}</span>
-                          <span className="text-muted-foreground ml-auto">{d.value}</span>
-                        </div>
-                      ))}
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">⚽ 득점 루트 TOP 5</h4>
+                    <div className="space-y-1.5">
+                      {goalTypeStats.slice(0, 5).map(([name, value], i) => {
+                        const total = goalTypeStats.reduce((s, [, v]) => s + v, 0);
+                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return (
+                          <div key={name} className="flex items-center gap-2 text-[11px]">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                            <span className="text-foreground truncate flex-1">{name}</span>
+                            <span className="text-primary font-bold">{value}</span>
+                            <span className="text-muted-foreground text-[9px]">({pct}%)</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
+                {assistTypeStats.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">🅰️ 어시스트 취향 TOP 5</h4>
+                    <div className="space-y-1.5">
+                      {assistTypeStats.slice(0, 5).map(([name, value], i) => {
+                        const total = assistTypeStats.reduce((s, [, v]) => s + v, 0);
+                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return (
+                          <div key={name} className="flex items-center gap-2 text-[11px]">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                            <span className="text-foreground truncate flex-1">{name}</span>
+                            <span className="text-primary font-bold">{value}</span>
+                            <span className="text-muted-foreground text-[9px]">({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
                 {assistTypeChartData.length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">🅰️ 어시스트 취향</h4>
