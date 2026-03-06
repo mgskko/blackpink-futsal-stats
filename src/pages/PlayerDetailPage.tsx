@@ -9,7 +9,7 @@ import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssist
 import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
-import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits } from "@/hooks/useCourtStats";
+import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition } from "@/hooks/useCourtStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
