@@ -300,7 +300,7 @@ export function computePlayerTraits(
     return { id: pid, value: soloGoals + counterGoals + counterAssists };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, speedRanking, 2, 1)) {
-    traits.push({ name: "스피드 레이서", emoji: "🟢", description: `치달/역습 득점+어시 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "폭주기관차 베일", emoji: "⚽", description: `치달/역습 득점+어시 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 침투의 귀재: 침투골+킬패스 받아 득점
