@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import type { Player, Match, Team, Result, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
-import { computeMatchCourtMargins } from "./useCourtStats";
 
 // ─── Data MOM Scoring System ───
 export interface DataMOMResult {
@@ -39,6 +38,11 @@ function getFieldPlayers(lineup: any): number[] {
   return result;
 }
 
+function hasLineupData(quarters: MatchQuarter[]): boolean {
+  return quarters.some(q => q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) &&
+    (q.lineup as any).GK);
+}
+
 export function computeDataMOM(
   matchId: number,
   players: Player[],
@@ -52,6 +56,8 @@ export function computeDataMOM(
   const matchTeams = teams.filter(t => t.match_id === matchId);
   const ourTeamIds = new Set(matchTeams.filter(t => t.is_ours).map(t => t.id));
 
+  // 🚨 No Data MOM if no lineup data exists
+  if (!hasLineupData(matchQuarters)) return null;
   if (matchGoals.length === 0 && matchQuarters.length === 0) return null;
 
   const playerScores = new Map<number, { attack: number; defense: number; clutch: number; penalty: number }>();
@@ -101,11 +107,50 @@ export function computeDataMOM(
     });
   });
 
+  // 🚨 Penalty: Silent FW (FW 3+ quarters, 0 AP)
+  const fwQuarterCount = new Map<number, number>();
+  matchQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const fwPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).FW)
+      ? (Array.isArray((q.lineup as any).FW) ? (q.lineup as any).FW : [(q.lineup as any).FW]).map(Number) : [];
+    fwPlayers.forEach((pid: number) => {
+      fwQuarterCount.set(pid, (fwQuarterCount.get(pid) || 0) + 1);
+    });
+  });
+  fwQuarterCount.forEach((count, pid) => {
+    if (count >= 3) {
+      const goals = matchGoals.filter(g => g.goal_player_id === pid && !g.is_own_goal).length;
+      const assists = matchGoals.filter(g => g.assist_player_id === pid).length;
+      if (goals + assists === 0) {
+        const s = initScore(pid);
+        s.penalty -= 3;
+      }
+    }
+  });
+
+  // 🚨 Penalty: Leaky DF/GK (conceded 5+ goals while playing DF/GK)
+  const dfGkConceded = new Map<number, number>();
+  matchQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const conceded = q.score_against || 0;
+    const lineup = q.lineup as any;
+    const dfGkPlayers: number[] = [];
+    if (lineup.GK) (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).forEach((id: any) => dfGkPlayers.push(Number(id)));
+    if (lineup.DF) (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).forEach((id: any) => dfGkPlayers.push(Number(id)));
+    dfGkPlayers.forEach(pid => {
+      dfGkConceded.set(pid, (dfGkConceded.get(pid) || 0) + conceded);
+    });
+  });
+  dfGkConceded.forEach((totalConceded, pid) => {
+    if (totalConceded >= 5) {
+      const s = initScore(pid);
+      s.penalty -= 3;
+    }
+  });
+
   // Clutch scoring: decisive goals/assists
-  // Find equalizers and go-ahead goals
-  matchGoals.forEach((g, idx) => {
+  matchGoals.forEach(g => {
     if (g.is_own_goal) return;
-    // Calculate score before this goal
     const priorEvents = matchGoals.filter(e => e.quarter < g.quarter || (e.quarter === g.quarter && e.id < g.id));
     let ourScore = 0, oppScore = 0;
     priorEvents.forEach(e => {
@@ -116,7 +161,6 @@ export function computeDataMOM(
 
     const isOurGoal = ourTeamIds.has(g.team_id);
     if (isOurGoal) {
-      // Equalizer (was behind, now tied) or go-ahead goal
       if (ourScore <= oppScore) {
         if (g.goal_player_id) initScore(g.goal_player_id).clutch += 2;
         if (g.assist_player_id) initScore(g.assist_player_id).clutch += 2;
@@ -152,7 +196,6 @@ export function generateMatchComment(
 
   if (matchGoals.length === 0 && matchQuarters.length === 0) return comments;
 
-  // Goal/assist leader
   const playerGoals = new Map<number, number>();
   const playerAssists = new Map<number, number>();
   matchGoals.forEach(g => {
@@ -164,7 +207,6 @@ export function generateMatchComment(
     }
   });
 
-  // Top scorer comment
   const topScorer = [...playerGoals.entries()].sort((a, b) => b[1] - a[1])[0];
   if (topScorer && topScorer[1] >= 3) {
     comments.push(`⚡ ${getPlayerName(players, topScorer[0])} 선수가 ${topScorer[1]}골을 몰아치며 원맨쇼를 펼친 경기였습니다.`);
@@ -172,20 +214,19 @@ export function generateMatchComment(
     comments.push(`⚽ ${getPlayerName(players, topScorer[0])} 선수가 멀티골(${topScorer[1]}골)을 기록하며 공격을 이끌었습니다.`);
   }
 
-  // Top assister comment
   const topAssister = [...playerAssists.entries()].sort((a, b) => b[1] - a[1])[0];
   if (topAssister && topAssister[1] >= 2) {
     comments.push(`🎯 ${getPlayerName(players, topAssister[0])} 선수의 이타적인 연계(${topAssister[1]}어시)가 팀의 득점력을 끌어올렸습니다.`);
   }
 
   // FW performance
-  if (matchQuarters.length > 0) {
+  if (hasLineupData(matchQuarters)) {
     const fwGoals = new Map<number, number>();
     matchQuarters.forEach(q => {
       if (!q.lineup) return;
-      const fwPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && q.lineup.FW)
-        ? (Array.isArray(q.lineup.FW) ? q.lineup.FW : [q.lineup.FW]).map(Number) : [];
-      fwPlayers.forEach(pid => {
+      const fwPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).FW)
+        ? (Array.isArray((q.lineup as any).FW) ? (q.lineup as any).FW : [(q.lineup as any).FW]).map(Number) : [];
+      fwPlayers.forEach((pid: number) => {
         const goals = matchGoals.filter(g => g.quarter === q.quarter && g.goal_player_id === pid && !g.is_own_goal).length;
         if (goals > 0) fwGoals.set(pid, (fwGoals.get(pid) || 0) + goals);
       });
@@ -194,16 +235,14 @@ export function generateMatchComment(
     if (topFW && topFW[1] >= 2 && (!topScorer || topFW[0] !== topScorer[0])) {
       comments.push(`🔥 ${getPlayerName(players, topFW[0])} 선수가 공격수(FW)로 출전하여 엄청난 득점력을 뽐낸 경기였습니다.`);
     }
-  }
 
-  // DF stability
-  if (matchQuarters.length > 0) {
+    // DF stability
     const dfQuarterCleanSheets = new Map<number, { clean: number; total: number }>();
     matchQuarters.forEach(q => {
       if (!q.lineup) return;
-      const dfPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && q.lineup.DF)
-        ? (Array.isArray(q.lineup.DF) ? q.lineup.DF : [q.lineup.DF]).map(Number) : [];
-      dfPlayers.forEach(pid => {
+      const dfPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).DF)
+        ? (Array.isArray((q.lineup as any).DF) ? (q.lineup as any).DF : [(q.lineup as any).DF]).map(Number) : [];
+      dfPlayers.forEach((pid: number) => {
         const cur = dfQuarterCleanSheets.get(pid) || { clean: 0, total: 0 };
         cur.total++;
         if ((q.score_against || 0) === 0) cur.clean++;
@@ -238,7 +277,6 @@ export function generateMatchComment(
     }
   }
 
-  // Limit to 3 comments max
   return comments.slice(0, 3);
 }
 
