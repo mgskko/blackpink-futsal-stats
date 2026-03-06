@@ -352,12 +352,14 @@ export function computePlayerTraits(
     }
   }
 
-  // 미친 개: 압박/패스차단 득점 횟수
+  // 미친 개: 압박/패스차단 득점+어시스트 횟수 (골/어시 모두 카운트)
   const pressureRanking = allPlayerIds.map(pid => {
-    return { id: pid, value: goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단" || g.goal_type === "압박")).length };
+    const goalCount = goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단" || g.goal_type === "압박")).length;
+    const assistCount = goalEvents.filter(g => g.assist_player_id === pid && (g.build_up_process === "압박" || g.build_up_process === "패스 차단" || g.goal_type === "압박")).length;
+    return { id: pid, value: goalCount + assistCount };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pressureRanking, 2, 1)) {
-    traits.push({ name: "미친 개", emoji: "🟢", description: `압박/차단 기반 득점 팀 내 1~2위`, category: "defense", color: "green" });
+    traits.push({ name: "미친 개", emoji: "🟢", description: `압박/차단 기반 득점+어시 팀 내 1~2위`, category: "defense", color: "green" });
   }
 
   // 퍼스트 블러드: 선제골 횟수
