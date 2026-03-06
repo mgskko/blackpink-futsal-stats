@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, ComposedChart } from "recharts";
 import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribution } from "@/hooks/useFutsalData";
 import type { Player, Match, Result, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
