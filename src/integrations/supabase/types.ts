@@ -570,6 +570,51 @@ export type Database = {
           },
         ]
       }
+      tactics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          formation: string | null
+          id: string
+          roles: Json | null
+          sort_order: number | null
+          steps: Json | null
+          subtitle: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+          warnings: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          formation?: string | null
+          id?: string
+          roles?: Json | null
+          sort_order?: number | null
+          steps?: Json | null
+          subtitle?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          formation?: string | null
+          id?: string
+          roles?: Json | null
+          sort_order?: number | null
+          steps?: Json | null
+          subtitle?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           age_category: string | null
