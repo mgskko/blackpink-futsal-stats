@@ -25,7 +25,7 @@ function getPositionPlayers(lineup: any, pos: string): number[] {
   return (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
 }
 
-// ─── 1. Death Lineup: Best 6-player combo by margin ───
+// ─── 1. Death Lineup: Best 5-player combo by margin ───
 export interface DeathLineup {
   playerIds: number[];
   names: string[];
@@ -38,13 +38,13 @@ export function computeDeathLineup(
   players: Player[],
   allQuarters: MatchQuarter[]
 ): DeathLineup | null {
-  // Group quarters by their exact 6-player field combo
+  // Group quarters by their exact 5-player field combo
   const comboMap = new Map<string, { playerIds: number[]; margin: number; quarters: number }>();
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 4) return; // need at least 4 players
+    if (field.length < 5) return; // need at least 5 players
     const key = field.join(",");
     const diff = (q.score_for || 0) - (q.score_against || 0);
     const cur = comboMap.get(key) || { playerIds: field, margin: 0, quarters: 0 };
