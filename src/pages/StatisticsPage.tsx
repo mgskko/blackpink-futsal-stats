@@ -238,7 +238,9 @@ const StatisticsPage = () => {
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
           {([
             ["player", "👤 개인"] as const,
-            ...(!isCustomFilter ? [["team", "⚔️ 팀 전적"] as const] : []),
+            ...(!isCustomFilter ? [["team", "⚔️ 팀"] as const] : []),
+            ["chemistry", "🤝 케미"] as const,
+            ["fun", "📊 기록"] as const,
             ["fun", "📊 각종 기록"] as const,
             ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
