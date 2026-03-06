@@ -276,20 +276,20 @@ export function computePlayerTraits(
   // 제라드의 재림: 중거리골 count
   const longShotRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "중거리골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, longShotRanking, 2, 2)) {
-    traits.push({ name: "제라드의 재림", emoji: "🟢", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
+    traits.push({ name: "제라드의 강림", emoji: "⚽", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
   }
 
   // 위치 선정의 달인: 주워먹기+혼전골+인자기골
   const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "인자기골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pocherRanking, 2, 1)) {
-    traits.push({ name: "위치 선정의 달인", emoji: "🟢", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 아크로바틱: 발리+터닝+칩슛+헤딩 등
   const acroTypes = ["발리골", "터닝골", "칩슛", "헤딩골", "파포스트골", "엉덩이골", "가슴골"];
   const acroRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, ...acroTypes) })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, acroRanking, 2, 1)) {
-    traits.push({ name: "아크로바틱", emoji: "🟢", description: `고난도 골 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "즐라탄 빙의", emoji: "⚽", description: `고난도 골 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 스피드 레이서: 솔로 치달골+역습 득점+어시 (골/어시 모두 카운트)
@@ -300,7 +300,7 @@ export function computePlayerTraits(
     return { id: pid, value: soloGoals + counterGoals + counterAssists };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, speedRanking, 2, 1)) {
-    traits.push({ name: "스피드 레이서", emoji: "🟢", description: `치달/역습 득점+어시 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "폭주기관차 베일", emoji: "⚽", description: `치달/역습 득점+어시 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 침투의 귀재: 침투골+킬패스 받아 득점
@@ -310,7 +310,7 @@ export function computePlayerTraits(
     return { id: pid, value: infilt + killPassReceived };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, infiltRanking, 2, 1)) {
-    traits.push({ name: "침투의 귀재", emoji: "🟢", description: `침투/킬패스 연계 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "라인 브레이커 토레스", emoji: "⚽", description: `침투/킬패스 연계 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 🎯 2. Pass Traits (top 1-2)
@@ -318,13 +318,13 @@ export function computePlayerTraits(
   // 대지를 가르는 패스: 킬패스 어시스트
   const killPassRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "킬패스") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, killPassRanking, 2, 1)) {
-    traits.push({ name: "대지를 가르는 패스", emoji: "🟢", description: `킬패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "덕배의 택배기사", emoji: "🎯", description: `킬패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 컷백 마스터
   const cutbackRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "컷백") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, cutbackRanking, 2, 1)) {
-    traits.push({ name: "컷백 마스터", emoji: "🟢", description: `컷백 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "펩이 사랑한 컷백", emoji: "🎯", description: `컷백 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 최고의 도우미: 어시스트 비율 최고 1-2위
@@ -334,7 +334,7 @@ export function computePlayerTraits(
     return { id: pid, value: ap >= 5 ? assists / ap : 0 };
   }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, assistRatioRanking, 2, 0.01)) {
-    traits.push({ name: "최고의 도우미", emoji: "🟢", description: `어시스트 비율 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "마에스트로 외질", emoji: "🎯", description: `어시스트 비율 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 🛡️ 3. Defense/Other Traits (top 1-2)
@@ -349,7 +349,7 @@ export function computePlayerTraits(
   if (dfConcededRanking.length > 0) {
     const idx = dfConcededRanking.findIndex(r => r.id === playerId);
     if (idx >= 0 && idx < 2) {
-      traits.push({ name: "통곡의 벽", emoji: "🟡", description: `DF 출전 시 최소 실점 팀 내 1~2위`, category: "defense", color: "yellow" });
+      traits.push({ name: "비디치의 통곡의 벽", emoji: "🛡️", description: `DF 출전 시 최소 실점 팀 내 1~2위`, category: "defense", color: "yellow" });
     }
   }
 
@@ -360,7 +360,7 @@ export function computePlayerTraits(
     return { id: pid, value: goalCount + assistCount };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pressureRanking, 2, 1)) {
-    traits.push({ name: "미친 개", emoji: "🟢", description: `압박/차단 기반 득점+어시 팀 내 1~2위`, category: "defense", color: "green" });
+    traits.push({ name: "가투소의 미친개", emoji: "🛡️", description: `압박/차단 기반 득점+어시 팀 내 1~2위`, category: "defense", color: "green" });
   }
 
   // 퍼스트 블러드: 선제골 횟수
@@ -374,7 +374,7 @@ export function computePlayerTraits(
   });
   const firstBloodRanking = allPlayerIds.map(pid => ({ id: pid, value: firstBloodMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, firstBloodRanking, 2, 1)) {
-    traits.push({ name: "퍼스트 블러드", emoji: "🟢", description: `선제골 팀 내 1~2위 (${firstBloodMap.get(playerId) || 0}회)`, category: "clutch", color: "green" });
+    traits.push({ name: "빅게임 해결사 드록바", emoji: "👑", description: `선제골 팀 내 1~2위 (${firstBloodMap.get(playerId) || 0}회)`, category: "clutch", color: "green" });
   }
 
   // 극장골 장인: 7-8Q 득점
@@ -383,7 +383,7 @@ export function computePlayerTraits(
     value: goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && g.quarter >= 7).length
   })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, lateGoalRanking, 2, 1)) {
-    traits.push({ name: "극장골 장인", emoji: "🟢", description: `7-8Q 득점 팀 내 1~2위`, category: "clutch", color: "green" });
+    traits.push({ name: "라모스 극장골", emoji: "👑", description: `7-8Q 득점 팀 내 1~2위`, category: "clutch", color: "green" });
   }
 
   // 위기의 남자: 동점/지고있을 때 득점
@@ -405,7 +405,7 @@ export function computePlayerTraits(
   });
   const clutchRanking = allPlayerIds.map(pid => ({ id: pid, value: clutchGoalMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, clutchRanking, 2, 1)) {
-    traits.push({ name: "위기의 남자", emoji: "🟢", description: `클러치 득점 팀 내 1~2위`, category: "clutch", color: "green" });
+    traits.push({ name: "위기의 남자", emoji: "👑", description: `클러치 득점 팀 내 1~2위`, category: "clutch", color: "green" });
   }
 
   // 🧤 GK Wall: GK 무실점 쿼터 최다 1~2위
@@ -419,7 +419,7 @@ export function computePlayerTraits(
   });
   const gkWallRanking = allPlayerIds.map(pid => ({ id: pid, value: gkCleanSheetMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, gkWallRanking, 2, 2)) {
-    traits.push({ name: "최고의 야신", emoji: "🧤", description: `GK 무실점 쿼터 팀 내 1~2위 (${gkCleanSheetMap.get(playerId) || 0}회)`, category: "defense", color: "yellow" });
+    traits.push({ name: "부폰의 거미손", emoji: "🧤", description: `GK 무실점 쿼터 팀 내 1~2위 (${gkCleanSheetMap.get(playerId) || 0}회)`, category: "defense", color: "yellow" });
   }
 
   // 🎯 Tap-in Master (인자기 헌정상): 주워먹기/엉덩이골/혼전골 비율 최고 1~2위
@@ -433,7 +433,7 @@ export function computePlayerTraits(
   if (isTopN(playerId, tapInRatioRanking, 2, 0.01)) {
     const tapIns = gtc(playerId, ...tapInTypes);
     const total = playerTotalGoals.get(playerId) || 0;
-    traits.push({ name: "인자기 헌정상", emoji: "🎯", description: `주워먹기/혼전골 비율 팀 내 1~2위 (${tapIns}/${total})`, category: "attack", color: "green" });
+    traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 비율 팀 내 1~2위 (${tapIns}/${total})`, category: "attack", color: "green" });
   }
 
   // 🤡 4. Dishonor Traits (top 1 ONLY)
@@ -476,7 +476,7 @@ export function computePlayerTraits(
     .filter(r => r.value >= 0)
     .sort((a, b) => b.value - a.value);
   if (paddingRanking.length > 0 && paddingRanking[0].id === playerId && paddingRanking[0].value >= 0.55) {
-    traits.push({ name: "공식 스탯 세탁기", emoji: "🤡", description: `3점차+ 리드 시 기록 비율 팀 내 1위`, category: "clutch", color: "red" });
+    traits.push({ name: "루카쿠의 양민학살", emoji: "🤡", description: `3점차+ 리드 시 기록 비율 팀 내 1위`, category: "clutch", color: "red" });
   }
 
   // 탐욕왕: 어시스트 비율 최저 1~2위 (min 10 AP)
@@ -491,7 +491,7 @@ export function computePlayerTraits(
   if (greedRanking.length > 0) {
     const greedIdx = greedRanking.findIndex(r => r.id === playerId);
     if (greedIdx >= 0 && greedIdx < 2) {
-      traits.push({ name: "탐욕왕", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1~2위`, category: "pass", color: "red" });
+      traits.push({ name: "패스 버튼 고장난 로벤", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1~2위`, category: "pass", color: "red" });
     }
   }
 
