@@ -374,7 +374,7 @@ export function computePlayerTraits(
   });
   const firstBloodRanking = allPlayerIds.map(pid => ({ id: pid, value: firstBloodMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, firstBloodRanking, 2, 1)) {
-    traits.push({ name: "퍼스트 블러드", emoji: "🟢", description: `선제골 팀 내 1~2위 (${firstBloodMap.get(playerId) || 0}회)`, category: "clutch", color: "green" });
+    traits.push({ name: "빅게임 해결사 드록바", emoji: "👑", description: `선제골 팀 내 1~2위 (${firstBloodMap.get(playerId) || 0}회)`, category: "clutch", color: "green" });
   }
 
   // 극장골 장인: 7-8Q 득점
