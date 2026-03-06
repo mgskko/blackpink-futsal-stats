@@ -239,12 +239,12 @@ const StatisticsPage = () => {
             ["player", "👤 개인"] as const,
             ...(!isCustomFilter ? [["team", "⚔️ 팀"] as const] : []),
             ["chemistry", "🤝 케미"] as const,
+            ["formation", "📋 포메이션"] as const,
             ["fun", "📊 기록"] as const,
-            ["fun", "📊 각종 기록"] as const,
             ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
-            <button key={key} onClick={() => setActiveTab(key as any)}
-              className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <button key={key + label} onClick={() => setActiveTab(key as any)}
+              className={`flex-1 py-2.5 text-[10px] font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
             </button>
           ))}
