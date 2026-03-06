@@ -489,6 +489,57 @@ const PlayerDetailPage = () => {
                 </div>
               )}
             </motion.div>
+           )}
+
+          {/* Signature Weapons */}
+          {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎯 나의 시그니처 무기</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {goalTypeStats.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2">⚽ 골 유형</h4>
+                    <div className="space-y-1.5">
+                      {goalTypeStats.slice(0, 5).map(([type, count]) => {
+                        const max = goalTypeStats[0][1];
+                        return (
+                          <div key={type} className="space-y-0.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-foreground">{type}</span>
+                              <span className="text-primary font-bold">{count}</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div className="h-full rounded-full gradient-pink" style={{ width: `${(count / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {assistTypeStats.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2">🅰️ 어시스트 유형</h4>
+                    <div className="space-y-1.5">
+                      {assistTypeStats.slice(0, 5).map(([type, count]) => {
+                        const max = assistTypeStats[0][1];
+                        return (
+                          <div key={type} className="space-y-0.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-foreground">{type}</span>
+                              <span className="text-primary font-bold">{count}</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div className="h-full rounded-full bg-blue-500" style={{ width: `${(count / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
         </div>
       )}

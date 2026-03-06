@@ -49,7 +49,10 @@ export type Database = {
       goal_events: {
         Row: {
           assist_player_id: number | null
+          assist_type: string | null
+          build_up_process: string | null
           goal_player_id: number | null
+          goal_type: string | null
           id: number
           is_own_goal: boolean
           match_id: number
@@ -59,7 +62,10 @@ export type Database = {
         }
         Insert: {
           assist_player_id?: number | null
+          assist_type?: string | null
+          build_up_process?: string | null
           goal_player_id?: number | null
+          goal_type?: string | null
           id?: number
           is_own_goal?: boolean
           match_id: number
@@ -69,7 +75,10 @@ export type Database = {
         }
         Update: {
           assist_player_id?: number | null
+          assist_type?: string | null
+          build_up_process?: string | null
           goal_player_id?: number | null
+          goal_type?: string | null
           id?: number
           is_own_goal?: boolean
           match_id?: number
@@ -216,6 +225,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "match_predictions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_quarters: {
+        Row: {
+          id: number
+          lineup: Json | null
+          match_id: number
+          quarter: number
+          score_against: number | null
+          score_for: number | null
+        }
+        Insert: {
+          id?: number
+          lineup?: Json | null
+          match_id: number
+          quarter: number
+          score_against?: number | null
+          score_for?: number | null
+        }
+        Update: {
+          id?: number
+          lineup?: Json | null
+          match_id?: number
+          quarter?: number
+          score_against?: number | null
+          score_for?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_quarters_match_id_fkey"
             columns: ["match_id"]
             isOneToOne: false
             referencedRelation: "matches"

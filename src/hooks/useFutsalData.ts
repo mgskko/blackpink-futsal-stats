@@ -38,6 +38,18 @@ export function useGoalEvents() {
   return useQuery({ queryKey: ["goal_events"], queryFn: () => fetchAll<GoalEvent>("goal_events") });
 }
 
+export function useMatchQuarters(matchId: number) {
+  return useQuery({
+    queryKey: ["match_quarters", matchId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("match_quarters").select("*").eq("match_id", matchId).order("quarter");
+      if (error) throw error;
+      return (data ?? []) as MatchQuarter[];
+    },
+    enabled: !!matchId,
+  });
+}
+
 export function useAllFutsalData() {
   const players = usePlayers();
   const venues = useVenues();

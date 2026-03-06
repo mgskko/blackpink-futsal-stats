@@ -291,6 +291,13 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
+      {/* Quarter Lineup Viewer */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterLineupViewer quarters={matchQuarters} players={players} />
+        </div>
+      )}
+
       {/* Formation Builder */}
       <div className="mx-4 mt-4">
         <FormationBuilder
