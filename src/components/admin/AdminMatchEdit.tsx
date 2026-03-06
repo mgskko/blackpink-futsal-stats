@@ -56,6 +56,11 @@ const AdminMatchEdit = () => {
   const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
   const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
   const nonRosterPlayers = players.filter(p => p.is_active && !rosterPlayerIds.has(p.id));
+  // For goal/assist editing, show all players (roster first, then others)
+  const allSelectablePlayers = [
+    ...rosterPlayers,
+    ...nonRosterPlayers,
+  ];
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
