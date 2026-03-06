@@ -12,6 +12,7 @@ const BottomNav = () => {
     { path: "/players", label: "선수", icon: Users },
     { path: "/stats", label: "통계", icon: BarChart3 },
     { path: "/tactics", label: "전술", icon: ClipboardList },
+    { path: "/guide", label: "설명", icon: BookOpen },
     { path: "/my", label: "MY", icon: UserCircle },
     ...(isAdmin ? [{ path: "/admin", label: "관리", icon: Shield }] : []),
   ];
