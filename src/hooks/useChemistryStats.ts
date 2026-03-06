@@ -352,7 +352,7 @@ export function computeFWDuos(
   });
 
   return [...duoMap.values()]
-    .filter(d => d.quarters >= 3)
+    .filter(d => d.quarters >= 5)
     .map(d => ({
       p1: d.p1, name1: getPlayerName(players, d.p1),
       p2: d.p2, name2: getPlayerName(players, d.p2),
