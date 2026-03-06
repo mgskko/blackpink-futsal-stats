@@ -498,8 +498,8 @@ const PlayerDetailPage = () => {
             {positionDist.total > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-3">
                 <div className="text-xs font-bold text-primary mb-2">📍 포지션 분포</div>
-                <div className="space-y-1">
-                  {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).map(pos => (
+              <div className="space-y-1">
+                  {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).sort((a, b) => positionDist[b] - positionDist[a]).map(pos => (
                     <div key={pos} className="flex items-center justify-between text-[11px]">
                       <span className="text-foreground font-medium">{pos}</span>
                       <div className="flex items-center gap-1.5">
