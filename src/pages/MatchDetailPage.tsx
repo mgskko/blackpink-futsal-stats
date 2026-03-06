@@ -172,6 +172,17 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
+      {/* Quarter Scoreboard */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterScoreboard
+            quarters={matchQuarters}
+            ourTeamName={mr?.ourTeam.name ?? matchTeams.find(t => t.is_ours)?.name ?? "버니즈"}
+            opponentTeamName={mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}
+          />
+        </div>
+      )}
+
       {/* YouTube */}
       {youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
