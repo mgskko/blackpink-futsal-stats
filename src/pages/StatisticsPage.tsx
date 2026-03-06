@@ -373,7 +373,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">💀 THE DEATH LINEUP</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 조합 (최소 3쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 5인 조합 (최소 5쿼터)</p>
                   <div className="rounded-xl border border-primary/30 bg-card p-4 box-glow">
                     <div className="flex flex-wrap gap-2 mb-3">
                       {deathLineup.names.map((name, i) => (
