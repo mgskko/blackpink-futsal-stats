@@ -13,6 +13,7 @@ import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import QuarterLineupViewer from "@/components/match/QuarterLineupViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
+import { useMatchAnalysis } from "@/hooks/useMatchAnalysis";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
