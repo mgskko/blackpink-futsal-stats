@@ -228,16 +228,17 @@ const StatisticsPage = () => {
 
             {/* Quarter trend */}
             <div className="mb-6">
-              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점 추이</h3>
+              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점/실점 추이</h3>
               <div className="rounded-lg border border-border bg-card p-4">
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={quarterData}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={quarterData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
                     <XAxis dataKey="quarter" stroke="hsl(0 0% 40%)" fontSize={11} tickFormatter={v => `${v}Q`} />
                     <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value}골`, "득점"]} />
-                    <Line type="monotone" dataKey="count" stroke="hsl(330 100% 71%)" strokeWidth={3} dot={{ fill: "hsl(330 100% 71%)", strokeWidth: 0, r: 5 }} activeDot={{ r: 8, fill: "hsl(345 80% 81%)" }} style={{ filter: "drop-shadow(0 0 6px hsl(330 100% 71% / 0.5))" }} />
-                  </LineChart>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar dataKey="goals" fill="hsl(330 100% 71%)" name="득점" radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="conceded" stroke="hsl(0 80% 60%)" strokeWidth={2.5} name="실점" dot={{ fill: "hsl(0 80% 60%)", r: 4 }} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
