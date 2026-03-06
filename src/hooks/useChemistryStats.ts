@@ -82,7 +82,7 @@ export function computePassNetwork(
   players: Player[],
   goalEvents: GoalEvent[],
   rosters: Roster[],
-  topN: number = 3
+  topN: number = 10
 ): PassNetworkEntry[] {
   // First compute co-appearance counts per duo (min 8 matches together)
   const coAppearanceMap = new Map<string, number>();

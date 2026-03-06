@@ -479,7 +479,7 @@ export function computePlayerTraits(
     traits.push({ name: "공식 스탯 세탁기", emoji: "🤡", description: `3점차+ 리드 시 기록 비율 팀 내 1위`, category: "clutch", color: "red" });
   }
 
-  // 탐욕왕: 어시스트 비율 최저 1위 (min 10 AP)
+  // 탐욕왕: 어시스트 비율 최저 1~2위 (min 10 AP)
   const greedRanking = allPlayerIds
     .map(pid => {
       const ap = playerTotalAP.get(pid) || 0;
@@ -488,8 +488,21 @@ export function computePlayerTraits(
     })
     .filter(r => r.value < 999)
     .sort((a, b) => a.value - b.value); // lower = greedier
-  if (greedRanking.length > 0 && greedRanking[0].id === playerId) {
-    traits.push({ name: "탐욕왕", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1위`, category: "pass", color: "red" });
+  if (greedRanking.length > 0) {
+    const greedIdx = greedRanking.findIndex(r => r.id === playerId);
+    if (greedIdx >= 0 && greedIdx < 2) {
+      traits.push({ name: "탐욕왕", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1~2위`, category: "pass", color: "red" });
+    }
+  }
+
+  // 🟢 세트피스 장인: 코너킥 등 세트피스 골+어시 합산 1~2위
+  const setPieceRanking = allPlayerIds.map(pid => {
+    const spGoals = goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal && (g.goal_type === "코너킥골" || g.build_up_process?.includes("세트피스") || g.build_up_process?.includes("코너킥"))).length;
+    const spAssists = goalEvents.filter(g => g.assist_player_id === pid && (g.assist_type === "코너킥패스" || g.assist_type === "코너킥" || g.goal_type === "코너킥골" || g.build_up_process?.includes("세트피스") || g.build_up_process?.includes("코너킥"))).length;
+    return { id: pid, value: spGoals + spAssists };
+  }).sort((a, b) => b.value - a.value);
+  if (isTopN(playerId, setPieceRanking, 2, 2)) {
+    traits.push({ name: "세트피스 장인", emoji: "⚽", description: `세트피스 골+어시 팀 내 1~2위 (${setPieceRanking.find(r => r.id === playerId)?.value || 0}회)`, category: "attack", color: "green" });
   }
 
   return traits;
