@@ -310,7 +310,7 @@ export function computePlayerTraits(
     return { id: pid, value: infilt + killPassReceived };
   }).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, infiltRanking, 2, 1)) {
-    traits.push({ name: "침투의 귀재", emoji: "🟢", description: `침투/킬패스 연계 팀 내 1~2위`, category: "attack", color: "green" });
+    traits.push({ name: "라인 브레이커 토레스", emoji: "⚽", description: `침투/킬패스 연계 팀 내 1~2위`, category: "attack", color: "green" });
   }
 
   // 🎯 2. Pass Traits (top 1-2)
