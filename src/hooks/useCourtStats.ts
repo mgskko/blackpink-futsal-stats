@@ -405,7 +405,7 @@ export function computePlayerTraits(
   });
   const clutchRanking = allPlayerIds.map(pid => ({ id: pid, value: clutchGoalMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, clutchRanking, 2, 1)) {
-    traits.push({ name: "위기의 남자", emoji: "🟢", description: `클러치 득점 팀 내 1~2위`, category: "clutch", color: "green" });
+    traits.push({ name: "위기의 남자", emoji: "👑", description: `클러치 득점 팀 내 1~2위`, category: "clutch", color: "green" });
   }
 
   // 🧤 GK Wall: GK 무실점 쿼터 최다 1~2위
