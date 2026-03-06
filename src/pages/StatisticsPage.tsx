@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import TotoStatsTab from "@/components/stats/TotoStatsTab";
 import FormationStatsTab from "@/components/stats/FormationStatsTab";
+import FunStatsTab from "@/components/stats/FunStatsTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type FilterType = "all" | "custom" | string;
@@ -569,6 +570,9 @@ const StatisticsPage = () => {
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* 이색/예능 기록 랭킹보드 */}
+            <FunStatsTab players={players} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
             {/* 방해꾼 트리오 */}
             {!isCustomFilter && (() => {
               const TRIO_IDS = [players.find(p => p.name === "이래현")?.id, players.find(p => p.name === "최영재")?.id, players.find(p => p.name === "유성민")?.id].filter(Boolean) as number[];

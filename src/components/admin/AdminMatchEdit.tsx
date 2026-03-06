@@ -7,8 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, UserMinus, Star } from "lucide-react";
+import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import CreatableSelect from "@/components/ui/creatable-select";
+
+const GOAL_TYPE_OPTIONS = ["주워먹기", "중거리골", "발리골", "헤딩골", "칩슛", "드리블골", "터닝골", "아크로바틱", "파포스트골", "엉덩이골", "가슴골", "프리킥골", "페널티킥", "코너킥직접골"];
+const ASSIST_TYPE_OPTIONS = ["킬패스", "컷백", "크로스", "스루패스", "숏패스", "롱패스", "코너킥", "프리킥", "헤더패스", "드리블돌파", "GK어시"];
+const BUILD_UP_OPTIONS = ["압박 탈취", "역습", "빌드업", "세트피스", "개인기", "키퍼 실수", "혼전", "세컨볼", "패스연계", "롱볼"];
 
 const AdminMatchEdit = () => {
   const { matches, venues, teams, results, players, rosters, goalEvents } = useAllFutsalData();
@@ -20,23 +25,31 @@ const AdminMatchEdit = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "match" | "goal" | "roster"; id: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Goal editing
+  // Goal editing states
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
   const [editGoalQuarter, setEditGoalQuarter] = useState(1);
   const [editGoalIsOwnGoal, setEditGoalIsOwnGoal] = useState(false);
   const [editGoalPlayerId, setEditGoalPlayerId] = useState("");
   const [editGoalAssistId, setEditGoalAssistId] = useState("");
   const [editGoalTimestamp, setEditGoalTimestamp] = useState("");
+  const [editGoalType, setEditGoalType] = useState("");
+  const [editAssistType, setEditAssistType] = useState("");
+  const [editBuildUp, setEditBuildUp] = useState("");
 
   // YouTube link editing
   const [editYoutubeLink, setEditYoutubeLink] = useState("");
   const [editingYoutube, setEditingYoutube] = useState(false);
 
-  // Guest goal
-  const [showGuestGoal, setShowGuestGoal] = useState(false);
-  const [guestName, setGuestName] = useState("");
-  const [guestQuarter, setGuestQuarter] = useState(1);
-  const [guestIsGoal, setGuestIsGoal] = useState(true);
+  // Add goal record (replaces guest-only)
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [addQuarter, setAddQuarter] = useState(1);
+  const [addIsOwnGoal, setAddIsOwnGoal] = useState(false);
+  const [addGoalPlayerId, setAddGoalPlayerId] = useState("");
+  const [addAssistPlayerId, setAddAssistPlayerId] = useState("");
+  const [addTimestamp, setAddTimestamp] = useState("");
+  const [addGoalType, setAddGoalType] = useState("");
+  const [addAssistType, setAddAssistType] = useState("");
+  const [addBuildUp, setAddBuildUp] = useState("");
 
   // Roster add
   const [showAddRoster, setShowAddRoster] = useState(false);
@@ -56,11 +69,7 @@ const AdminMatchEdit = () => {
   const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
   const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
   const nonRosterPlayers = players.filter(p => p.is_active && !rosterPlayerIds.has(p.id));
-  // For goal/assist editing, show all players (roster first, then others)
-  const allSelectablePlayers = [
-    ...rosterPlayers,
-    ...nonRosterPlayers,
-  ];
+  const allSelectablePlayers = [...rosterPlayers, ...nonRosterPlayers];
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
@@ -72,7 +81,7 @@ const AdminMatchEdit = () => {
     setSelectedMatchId(v);
     setEditingScore(false);
     setEditingGoalId(null);
-    setShowGuestGoal(false);
+    setShowAddGoal(false);
     setShowAddRoster(false);
     setShowMOM(false);
     setEditingYoutube(false);
@@ -124,6 +133,9 @@ const AdminMatchEdit = () => {
     setEditGoalPlayerId(g.goal_player_id ? String(g.goal_player_id) : "");
     setEditGoalAssistId(g.assist_player_id ? String(g.assist_player_id) : "");
     setEditGoalTimestamp(g.video_timestamp || "");
+    setEditGoalType(g.goal_type || "");
+    setEditAssistType(g.assist_type || "");
+    setEditBuildUp(g.build_up_process || "");
   };
 
   const handleSaveGoalEdit = async () => {
@@ -134,8 +146,11 @@ const AdminMatchEdit = () => {
         quarter: editGoalQuarter,
         is_own_goal: editGoalIsOwnGoal,
         goal_player_id: editGoalIsOwnGoal ? null : (editGoalPlayerId ? Number(editGoalPlayerId) : null),
-        assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId ? Number(editGoalAssistId) : null),
+        assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId && editGoalAssistId !== "none" ? Number(editGoalAssistId) : null),
         video_timestamp: editGoalTimestamp || null,
+        goal_type: editGoalType || null,
+        assist_type: editAssistType || null,
+        build_up_process: editBuildUp || null,
       }).eq("id", editingGoalId);
       if (error) throw error;
       invalidateAll();
@@ -146,25 +161,28 @@ const AdminMatchEdit = () => {
     } finally { setSaving(false); }
   };
 
-  const handleAddGuestGoal = async () => {
-    if (!matchId || !guestName.trim()) return;
+  const handleAddGoalRecord = async () => {
+    if (!matchId) return;
     setSaving(true);
     try {
-      // Insert goal event with no player_id (guest)
       const { error } = await supabase.from("goal_events").insert({
         match_id: matchId,
         team_id: ourTeam?.id || matchTeams[0]?.id,
-        quarter: guestQuarter,
-        goal_player_id: null,
-        assist_player_id: null,
-        is_own_goal: false,
-        video_timestamp: `용병: ${guestName}`,
+        quarter: addQuarter,
+        goal_player_id: addIsOwnGoal ? null : (addGoalPlayerId ? Number(addGoalPlayerId) : null),
+        assist_player_id: addIsOwnGoal ? null : (addAssistPlayerId && addAssistPlayerId !== "none" ? Number(addAssistPlayerId) : null),
+        is_own_goal: addIsOwnGoal,
+        video_timestamp: addTimestamp || null,
+        goal_type: addGoalType || null,
+        assist_type: addAssistType || null,
+        build_up_process: addBuildUp || null,
       });
       if (error) throw error;
       invalidateAll();
-      toast({ title: `용병 ${guestName}의 기록이 추가되었습니다` });
-      setGuestName("");
-      setShowGuestGoal(false);
+      toast({ title: "기록이 추가되었습니다 ✅" });
+      setAddQuarter(1); setAddIsOwnGoal(false); setAddGoalPlayerId(""); setAddAssistPlayerId("");
+      setAddTimestamp(""); setAddGoalType(""); setAddAssistType(""); setAddBuildUp("");
+      setShowAddGoal(false);
     } catch (err: any) {
       toast({ title: "오류", description: err.message, variant: "destructive" });
     } finally { setSaving(false); }
@@ -199,14 +217,11 @@ const AdminMatchEdit = () => {
     if (!matchId || !manualMOM) return;
     setSaving(true);
     try {
-      // Delete existing votes for this match, then insert admin vote
       await supabase.from("mom_votes").delete().eq("match_id", matchId);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("로그인이 필요합니다");
       const { error } = await supabase.from("mom_votes").insert({
-        match_id: matchId,
-        voted_player_id: Number(manualMOM),
-        voter_id: user.id,
+        match_id: matchId, voted_player_id: Number(manualMOM), voter_id: user.id,
       });
       if (error) throw error;
       invalidateAll();
@@ -235,6 +250,30 @@ const AdminMatchEdit = () => {
       toast({ title: "오류", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
   };
+
+  const GoalEditFields = ({ isOwnGoal, goalType, setGoalType, assistType, setAssistType, buildUp, setBuildUp }: {
+    isOwnGoal: boolean; goalType: string; setGoalType: (v: string) => void;
+    assistType: string; setAssistType: (v: string) => void; buildUp: string; setBuildUp: (v: string) => void;
+  }) => (
+    <>
+      {!isOwnGoal && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-muted-foreground">골 유형</label>
+            <CreatableSelect value={goalType} onChange={setGoalType} options={GOAL_TYPE_OPTIONS} placeholder="골 유형" />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">어시스트 유형</label>
+            <CreatableSelect value={assistType} onChange={setAssistType} options={ASSIST_TYPE_OPTIONS} placeholder="어시 유형" />
+          </div>
+        </div>
+      )}
+      <div>
+        <label className="text-[10px] text-muted-foreground">득점 과정</label>
+        <CreatableSelect value={buildUp} onChange={setBuildUp} options={BUILD_UP_OPTIONS} placeholder="득점 과정" />
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-4 mt-4">
@@ -347,27 +386,60 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
-          {/* Goal Events with edit */}
+          {/* Goal Events */}
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary">골 이벤트 ({matchGoals.length}개)</h3>
-              <Button size="sm" variant="outline" onClick={() => setShowGuestGoal(!showGuestGoal)} className="h-7 text-xs border-primary/30 text-primary">
-                <Plus size={12} /> 용병 기록
+              <Button size="sm" variant="outline" onClick={() => setShowAddGoal(!showAddGoal)} className="h-7 text-xs border-primary/30 text-primary">
+                <Plus size={12} /> 기록
               </Button>
             </div>
 
-            {/* Guest goal form */}
-            {showGuestGoal && (
+            {/* Add goal form */}
+            {showAddGoal && (
               <div className="mb-3 rounded-md border border-dashed border-primary/30 bg-secondary/30 p-3 space-y-2">
-                <p className="text-[10px] text-primary font-bold">용병 득점/도움 기록</p>
-                <Input value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="용병 이름" className="h-8 text-xs bg-background border-border" />
-                <div className="flex gap-2">
-                  <Select value={String(guestQuarter)} onValueChange={v => setGuestQuarter(Number(v))}>
-                    <SelectTrigger className="h-8 text-xs bg-background border-border flex-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>{[1,2,3,4,5,6,7,8,9,10].map(q => <SelectItem key={q} value={String(q)}>{q}Q</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={handleAddGuestGoal} disabled={saving || !guestName.trim()} className="h-8 text-xs gradient-pink text-primary-foreground">추가</Button>
+                <p className="text-[10px] text-primary font-bold">득점 기록 추가</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">쿼터</label>
+                    <Select value={String(addQuarter)} onValueChange={v => setAddQuarter(Number(v))}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>{[1,2,3,4,5,6,7,8,9,10].map(q => <SelectItem key={q} value={String(q)}>{q}Q</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end gap-2 pb-1">
+                    <Checkbox checked={addIsOwnGoal} onCheckedChange={c => setAddIsOwnGoal(c === true)} className="border-primary" />
+                    <label className="text-xs text-muted-foreground">자책골</label>
+                  </div>
                 </div>
+                {!addIsOwnGoal && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">득점자</label>
+                      <Select value={addGoalPlayerId} onValueChange={setAddGoalPlayerId}>
+                        <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
+                        <SelectContent>{allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">도움</label>
+                      <Select value={addAssistPlayerId} onValueChange={setAddAssistPlayerId}>
+                        <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">없음</SelectItem>
+                          {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="text-[10px] text-muted-foreground">타임스탬프 (예: 1:12:08)</label>
+                  <Input value={addTimestamp} onChange={e => setAddTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
+                </div>
+                <GoalEditFields isOwnGoal={addIsOwnGoal} goalType={addGoalType} setGoalType={setAddGoalType}
+                  assistType={addAssistType} setAssistType={setAddAssistType} buildUp={addBuildUp} setBuildUp={setAddBuildUp} />
+                <Button size="sm" onClick={handleAddGoalRecord} disabled={saving} className="w-full h-8 text-xs gradient-pink text-primary-foreground">추가</Button>
               </div>
             )}
 
@@ -414,6 +486,8 @@ const AdminMatchEdit = () => {
                         <label className="text-[10px] text-muted-foreground">타임스탬프 (예: 1:12:08)</label>
                         <Input value={editGoalTimestamp} onChange={e => setEditGoalTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
                       </div>
+                      <GoalEditFields isOwnGoal={editGoalIsOwnGoal} goalType={editGoalType} setGoalType={setEditGoalType}
+                        assistType={editAssistType} setAssistType={setEditAssistType} buildUp={editBuildUp} setBuildUp={setEditBuildUp} />
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleSaveGoalEdit} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground flex-1"><Save size={12} /> 저장</Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingGoalId(null)} className="h-7 text-xs border-border">취소</Button>
@@ -421,7 +495,7 @@ const AdminMatchEdit = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between rounded-md bg-secondary/50 px-3 py-2">
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
                         <span className="font-bold text-primary">{g.quarter}Q</span>
                         {g.is_own_goal ? (
                           <span className="text-destructive">자책골</span>
@@ -429,6 +503,7 @@ const AdminMatchEdit = () => {
                           <>
                             <span className="text-foreground">⚽ {g.goal_player_id ? getPlayerName(players, g.goal_player_id) : (g.video_timestamp?.startsWith("용병:") ? g.video_timestamp.replace("용병: ", "🎽 ") : "?")}</span>
                             {g.assist_player_id && <span className="text-muted-foreground">← {getPlayerName(players, g.assist_player_id)}</span>}
+                            {g.goal_type && <span className="text-[10px] text-primary/70">({g.goal_type})</span>}
                           </>
                         )}
                       </div>
