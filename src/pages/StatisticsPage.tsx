@@ -392,7 +392,7 @@ const StatisticsPage = () => {
 
             {/* Pass Network */}
             {(() => {
-              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 3);
+              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 10);
               if (passNet.length === 0) return null;
               return (
                 <div className="mb-6">
