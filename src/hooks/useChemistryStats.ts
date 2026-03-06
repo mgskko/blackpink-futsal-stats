@@ -1,4 +1,4 @@
-import type { Player, Match, Team, Result, GoalEvent, MatchQuarter } from "./useFutsalData";
+import type { Player, Match, Team, Result, GoalEvent, MatchQuarter, Roster } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
 
 // Helper: parse lineup to get field players
