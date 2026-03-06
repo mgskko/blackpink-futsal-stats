@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Youtube, Check, X, HelpCircle, Users } from "lucide-react";
-import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMatchGoalEvents, getPlayerName } from "@/hooks/useFutsalData";
+import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMatchGoalEvents, getPlayerName, useMatchQuarters } from "@/hooks/useFutsalData";
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
+import QuarterScoreboard from "@/components/match/QuarterScoreboard";
+import QuarterLineupViewer from "@/components/match/QuarterLineupViewer";
 import { useAuth } from "@/hooks/useAuth";
 
 function extractYoutubeId(url: string): string | null {
@@ -48,6 +50,7 @@ const MatchDetailPage = () => {
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { data: matchQuarters } = useMatchQuarters(matchId);
 
   useEffect(() => {
     if (!matchId) return;
@@ -169,6 +172,17 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
+      {/* Quarter Scoreboard */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterScoreboard
+            quarters={matchQuarters}
+            ourTeamName={mr?.ourTeam.name ?? matchTeams.find(t => t.is_ours)?.name ?? "버니즈"}
+            opponentTeamName={mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}
+          />
+        </div>
+      )}
+
       {/* YouTube */}
       {youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
@@ -189,23 +203,32 @@ const MatchDetailPage = () => {
                 <div className="mb-2 text-xs font-bold text-primary">{q}Q</div>
                 <div className="space-y-1.5">
                   {matchGoalEvents.filter((g) => g.quarter === q).map((g) => (
-                    <div key={g.id} className="flex items-center gap-2 text-sm">
-                      {g.video_timestamp && youtubeId && (
-                        <button onClick={() => seekTo(g.video_timestamp!)} className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary hover:bg-primary/30 transition-colors">▶ {formatTimestamp(g.video_timestamp)}</button>
+                    <div key={g.id} className="space-y-0.5">
+                      <div className="flex items-center gap-2 text-sm flex-wrap">
+                        {g.video_timestamp && youtubeId && (
+                          <button onClick={() => seekTo(g.video_timestamp!)} className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary hover:bg-primary/30 transition-colors">▶ {formatTimestamp(g.video_timestamp)}</button>
+                        )}
+                        {g.is_own_goal ? <span className="text-destructive">⚽ 자책골</span> : (
+                          <>
+                            <span className="text-primary">⚽</span>
+                            <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}</span>
+                            {g.assist_player_id && (
+                              <>
+                                <span className="text-muted-foreground">←</span>
+                                <span className="cursor-pointer text-muted-foreground hover:text-primary" onClick={() => navigate(`/player/${g.assist_player_id}`)}>{getPlayerName(players, g.assist_player_id)}</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {match.is_custom && <span className="ml-auto text-[10px] text-muted-foreground">{matchTeams.find(t => t.id === g.team_id)?.name}</span>}
+                      </div>
+                      {(g.goal_type || g.assist_type || g.build_up_process) && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {g.goal_type && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary border border-primary/20">{g.goal_type}</span>}
+                          {g.assist_type && <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400 border border-blue-500/20">{g.assist_type}</span>}
+                          {g.build_up_process && <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] text-green-400 border border-green-500/20">{g.build_up_process}</span>}
+                        </div>
                       )}
-                      {g.is_own_goal ? <span className="text-destructive">⚽ 자책골</span> : (
-                        <>
-                          <span className="text-primary">⚽</span>
-                          <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}</span>
-                          {g.assist_player_id && (
-                            <>
-                              <span className="text-muted-foreground">←</span>
-                              <span className="cursor-pointer text-muted-foreground hover:text-primary" onClick={() => navigate(`/player/${g.assist_player_id}`)}>{getPlayerName(players, g.assist_player_id)}</span>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {match.is_custom && <span className="ml-auto text-[10px] text-muted-foreground">{matchTeams.find(t => t.id === g.team_id)?.name}</span>}
                     </div>
                   ))}
                 </div>
@@ -266,6 +289,13 @@ const MatchDetailPage = () => {
             )}
           </div>
         </motion.div>
+      )}
+
+      {/* Quarter Lineup Viewer */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterLineupViewer quarters={matchQuarters} players={players} />
+        </div>
       )}
 
       {/* Formation Builder */}

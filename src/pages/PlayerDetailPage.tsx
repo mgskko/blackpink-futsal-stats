@@ -108,6 +108,22 @@ const PlayerDetailPage = () => {
     return getOpponentRecords(playerMatches, playerTeams, playerResults);
   }, [filtered, playerId, filterMode]);
 
+  const goalTypeStats = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && g.goal_type).forEach(g => {
+      map.set(g.goal_type!, (map.get(g.goal_type!) || 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered.goalEvents, playerId]);
+
+  const assistTypeStats = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.goalEvents.filter(g => g.assist_player_id === playerId && g.assist_type).forEach(g => {
+      map.set(g.assist_type!, (map.get(g.assist_type!) || 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filtered.goalEvents, playerId]);
+
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
@@ -472,6 +488,57 @@ const PlayerDetailPage = () => {
                   <div className="text-[10px] text-muted-foreground">{worstOpponent.matches}경기</div>
                 </div>
               )}
+            </motion.div>
+           )}
+
+          {/* Signature Weapons */}
+          {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎯 나의 시그니처 무기</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {goalTypeStats.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2">⚽ 골 유형</h4>
+                    <div className="space-y-1.5">
+                      {goalTypeStats.slice(0, 5).map(([type, count]) => {
+                        const max = goalTypeStats[0][1];
+                        return (
+                          <div key={type} className="space-y-0.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-foreground">{type}</span>
+                              <span className="text-primary font-bold">{count}</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div className="h-full rounded-full gradient-pink" style={{ width: `${(count / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {assistTypeStats.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2">🅰️ 어시스트 유형</h4>
+                    <div className="space-y-1.5">
+                      {assistTypeStats.slice(0, 5).map(([type, count]) => {
+                        const max = assistTypeStats[0][1];
+                        return (
+                          <div key={type} className="space-y-0.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-foreground">{type}</span>
+                              <span className="text-primary font-bold">{count}</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div className="h-full rounded-full bg-blue-500" style={{ width: `${(count / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </div>

@@ -7,7 +7,8 @@ export interface Match { id: number; date: string; venue_id: number; match_type:
 export interface Team { id: number; match_id: number; name: string; is_ours: boolean; original_age_desc: string | null; age_category: string | null; }
 export interface Result { id: number; team_id: number; match_id: number; result: string; score_for: number | null; score_against: number | null; }
 export interface Roster { id: number; match_id: number; team_id: number; player_id: number; goals: number; assists: number; }
-export interface GoalEvent { id: number; match_id: number; team_id: number; quarter: number; goal_player_id: number | null; assist_player_id: number | null; is_own_goal: boolean; video_timestamp: string | null; }
+export interface GoalEvent { id: number; match_id: number; team_id: number; quarter: number; goal_player_id: number | null; assist_player_id: number | null; is_own_goal: boolean; video_timestamp: string | null; assist_type: string | null; goal_type: string | null; build_up_process: string | null; }
+export interface MatchQuarter { id: number; match_id: number; quarter: number; score_for: number; score_against: number; lineup: any; }
 
 async function fetchAll<T>(table: string): Promise<T[]> {
   const { data, error } = await (supabase as any).from(table).select("*");
@@ -35,6 +36,18 @@ export function useRosters() {
 }
 export function useGoalEvents() {
   return useQuery({ queryKey: ["goal_events"], queryFn: () => fetchAll<GoalEvent>("goal_events") });
+}
+
+export function useMatchQuarters(matchId: number) {
+  return useQuery({
+    queryKey: ["match_quarters", matchId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("match_quarters").select("*").eq("match_id", matchId).order("quarter");
+      if (error) throw error;
+      return (data ?? []) as MatchQuarter[];
+    },
+    enabled: !!matchId,
+  });
 }
 
 export function useAllFutsalData() {
