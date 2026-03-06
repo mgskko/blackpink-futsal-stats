@@ -2,21 +2,22 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift, Skull, Shield } from "lucide-react";
-import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult } from "@/hooks/useFutsalData";
-import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters } from "@/hooks/useFutsalData";
+import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
+import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits } from "@/hooks/useCourtStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PlayerFilterTabs, { getAvailableYears, filterMatchesByMode, type FilterMode } from "@/components/player/PlayerFilterTabs";
-import PlayerTierBadge, { getPlayerTier, TIER_CONFIG } from "@/components/player/PlayerTierBadge";
+import PlayerTierBadge, { getPlayerTier } from "@/components/player/PlayerTierBadge";
 import ActivityHeatmap from "@/components/player/ActivityHeatmap";
 import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 
-// CONCACAF mode check: 6+ AP in last 3 games
 function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): boolean {
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
@@ -29,6 +30,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   const rAssists = rosters.filter(r => r3Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
   return (goals + assists + rGoals + rAssists) >= 6;
 }
+
+const CHART_COLORS = ["hsl(330, 100%, 71%)", "hsl(210, 100%, 60%)", "hsl(150, 80%, 50%)", "hsl(45, 100%, 60%)", "hsl(280, 80%, 60%)", "hsl(0, 80%, 60%)", "hsl(180, 70%, 50%)"];
 
 const PlayerDetailPage = () => {
   const { id } = useParams();
@@ -53,20 +56,30 @@ const PlayerDetailPage = () => {
     },
   });
 
+  // Fetch ALL quarters for court stats
+  const { data: allQuartersRaw } = useQuery({
+    queryKey: ["all_match_quarters"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("match_quarters").select("*").order("quarter");
+      return (data ?? []) as MatchQuarter[];
+    },
+  });
+  const allQuarters = allQuartersRaw ?? [];
+
   const years = useMemo(() => getAvailableYears(matches), [matches]);
 
   const filtered = useMemo(() => {
     const fm = filterMatchesByMode(matches, filterMode, selectedYear);
     const fmIds = new Set(fm.map(m => m.id));
     return {
-      matches: fm,
-      matchIds: fmIds,
+      matches: fm, matchIds: fmIds,
       rosters: rosters.filter(r => fmIds.has(r.match_id)),
       goalEvents: goalEvents.filter(g => fmIds.has(g.match_id)),
       teams: teams.filter(t => fmIds.has(t.match_id)),
       results: results.filter(r => fmIds.has(r.match_id)),
+      quarters: allQuarters.filter(q => fmIds.has(q.match_id)),
     };
-  }, [matches, teams, results, rosters, goalEvents, filterMode, selectedYear]);
+  }, [matches, teams, results, rosters, goalEvents, filterMode, selectedYear, allQuarters]);
 
   const handleFilterChange = (mode: FilterMode, year?: string) => {
     setFilterMode(mode);
@@ -74,7 +87,6 @@ const PlayerDetailPage = () => {
     else setSelectedYear("");
   };
 
-  // Player match list for "경기" tab
   const playerMatchList = useMemo(() => {
     if (!playerId) return [];
     const playerMatchIds = [...new Set(filtered.rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
@@ -91,14 +103,12 @@ const PlayerDetailPage = () => {
           a = goalEvents.filter(e => e.match_id === m.id && e.assist_player_id === playerId).length;
         } else {
           const r = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
-          g = r?.goals || 0;
-          a = r?.assists || 0;
+          g = r?.goals || 0; a = r?.assists || 0;
         }
         return { match: m, matchResult: mr, opponentName: oppTeam?.name || (m.is_custom ? "자체전" : "???"), goals: g, assists: a };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
 
-  // Opponent records for this player (맛집/천적)
   const playerOpponentRecords = useMemo(() => {
     if (filterMode === "custom" || !playerId) return [];
     const playerMatchIds = new Set(filtered.rosters.filter(r => r.player_id === playerId).map(r => r.match_id));
@@ -124,6 +134,20 @@ const PlayerDetailPage = () => {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [filtered.goalEvents, playerId]);
 
+  // Court stats
+  const courtStats = useMemo(() => {
+    if (!playerId || filtered.quarters.length === 0) return null;
+    const allMargins = computeAllCourtMargins(players, filtered.matches, filtered.quarters, filtered.goalEvents);
+    return allMargins.find(p => p.playerId === playerId) || null;
+  }, [playerId, players, filtered.matches, filtered.quarters, filtered.goalEvents]);
+
+  const positionDist = useMemo(() => getPlayerPositionDistribution(playerId, filtered.quarters), [playerId, filtered.quarters]);
+  const killerQuarter = useMemo(() => getKillerQuarter(playerId, filtered.goalEvents), [playerId, filtered.goalEvents]);
+  const defenseCont = useMemo(() => getDefenseContribution(playerId, filtered.quarters), [playerId, filtered.quarters]);
+  const ownGoalInducer = useMemo(() => getOwnGoalInducerCount(playerId, filtered.goalEvents, filtered.quarters), [playerId, filtered.goalEvents, filtered.quarters]);
+  const soloVsTeam = useMemo(() => getSoloVsTeamGoals(playerId, filtered.goalEvents), [playerId, filtered.goalEvents]);
+  const playerTraits = useMemo(() => computePlayerTraits(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, filtered.quarters), [playerId, players, filtered]);
+
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
@@ -148,7 +172,6 @@ const PlayerDetailPage = () => {
 
   const isConcacaf = getConcacafMode(playerId, matches, rosters, goalEvents);
 
-  // Player duos
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
     if (g.goal_player_id === playerId && g.assist_player_id) playerDuos.set(g.assist_player_id, (playerDuos.get(g.assist_player_id) || 0) + 1);
@@ -156,10 +179,7 @@ const PlayerDetailPage = () => {
   });
   const topDuos = [...playerDuos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
 
-  const bestOpponent = playerOpponentRecords.filter(r => r.matches >= 2).sort((a, b) => {
-    const aGoals = a.goalsFor; const bGoals = b.goalsFor;
-    return bGoals - aGoals || b.winRate - a.winRate;
-  })[0];
+  const bestOpponent = playerOpponentRecords.filter(r => r.matches >= 2).sort((a, b) => b.goalsFor - a.goalsFor || b.winRate - a.winRate)[0];
   const worstOpponent = playerOpponentRecords.filter(r => r.matches >= 2).sort((a, b) => a.winRate - b.winRate)[0];
 
   const trendIcon = scoutingReport.trend === "up" ? <TrendingUp size={16} className="text-primary" />
@@ -168,6 +188,16 @@ const PlayerDetailPage = () => {
     : <Minus size={16} className="text-muted-foreground" />;
 
   const filterLabel = filterMode === "all" ? "종합" : filterMode === "year" ? `${selectedYear}시즌` : "자체전";
+
+  const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" };
+
+  // Donut chart data
+  const goalTypeChartData = goalTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
+  const assistTypeChartData = assistTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
+  const soloTeamData = soloVsTeam.total > 0 ? [
+    { name: "솔로 골", value: soloVsTeam.solo },
+    { name: "팀 어시스트 골", value: soloVsTeam.team },
+  ] : [];
 
   const PartnerList = ({ title, data, subLabel }: { title: string; data: { partnerId: number; count: number }[]; subLabel: string }) => (
     data.length > 0 ? (
@@ -200,7 +230,7 @@ const PlayerDetailPage = () => {
         </div>
       </div>
 
-      {/* Profile Header Card - always visible */}
+      {/* Profile Header Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
           isConcacaf ? "border-emerald-500/50 bg-gradient-to-br from-emerald-900/30 via-card to-blue-900/20"
@@ -211,8 +241,7 @@ const PlayerDetailPage = () => {
         }`}
       >
         <div className={`relative p-6 ${
-          isConcacaf ? ""
-          : fireTier === "golden" ? "bg-gradient-to-br from-yellow-900/30 via-transparent to-amber-900/20"
+          isConcacaf ? "" : fireTier === "golden" ? "bg-gradient-to-br from-yellow-900/30 via-transparent to-amber-900/20"
           : fireTier === "red" ? "bg-gradient-to-br from-orange-900/30 via-transparent to-red-900/20"
           : fireTier === "blue" ? "bg-gradient-to-br from-blue-900/30 via-transparent to-cyan-900/20"
           : "bg-gradient-to-br from-primary/20 via-card to-card"
@@ -252,9 +281,7 @@ const PlayerDetailPage = () => {
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
-                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">
-                  🏆 북중미모드 🏆
-                </div>
+                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 🏆</div>
               )}
               {fireTier !== "none" && (
                 <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
@@ -262,8 +289,7 @@ const PlayerDetailPage = () => {
                   : fireTier === "red" ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
                   : "border-blue-400/40 bg-blue-400/10 text-blue-400"
                 }`}>
-                  {fireTier === "golden" ? "👑 LEGENDARY — " : fireTier === "red" ? "🔥 ON FIRE — " : "💎 HEATING UP — "}
-                  {fireInfo?.streak}연속 출석!
+                  {fireTier === "golden" ? "👑 LEGENDARY — " : fireTier === "red" ? "🔥 ON FIRE — " : "💎 HEATING UP — "}{fireInfo?.streak}연속 출석!
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">가입일: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
@@ -277,16 +303,14 @@ const PlayerDetailPage = () => {
                 badge.emoji === "🚨" ? "border-destructive/40 bg-destructive/10 text-destructive"
                 : badge.emoji === "🛡️" ? "border-green-500/40 bg-green-500/10 text-green-400"
                 : "border-primary/40 bg-primary/10 text-primary"
-              }`}>
-                <span>{badge.emoji}</span><span>{badge.label}</span>
-              </span>
+              }`}><span>{badge.emoji}</span><span>{badge.label}</span></span>
             ))}
           </div>
         )}
       </motion.div>
 
       {/* Summary stats bar */}
-      <div className="mx-4 mt-3 grid grid-cols-3 gap-2">
+      <div className="mx-4 mt-3 grid grid-cols-4 gap-2">
         {[
           { label: "골", value: stats.goals },
           { label: "도움", value: stats.assists },
@@ -294,10 +318,12 @@ const PlayerDetailPage = () => {
           { label: "G/경기", value: goalsPerGame },
           { label: "출전", value: stats.appearances },
           { label: "승률", value: `${stats.winRate}%` },
+          { label: "+/-", value: courtStats ? (courtStats.margin > 0 ? `+${courtStats.margin}` : `${courtStats.margin}`) : "-" },
+          { label: "PPQ", value: courtStats ? courtStats.ppq.toFixed(2) : "-" },
         ].map(s => (
-          <div key={s.label} className="rounded-lg border border-border bg-card p-2.5 text-center">
-            <div className="font-display text-xl text-primary text-glow">{s.value}</div>
-            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+          <div key={s.label} className="rounded-lg border border-border bg-card p-2 text-center">
+            <div className={`font-display text-lg ${s.label === "+/-" ? (courtStats && courtStats.margin > 0 ? "text-green-400" : courtStats && courtStats.margin < 0 ? "text-red-400" : "text-foreground") : "text-primary text-glow"}`}>{s.value}</div>
+            <div className="text-[9px] text-muted-foreground">{s.label}</div>
           </div>
         ))}
       </div>
@@ -314,7 +340,6 @@ const PlayerDetailPage = () => {
         </div>
       </div>
 
-      {/* Filter Tabs - for stats & matches tabs */}
       {(activeTab === "matches" || activeTab === "stats") && (
         <PlayerFilterTabs filterMode={filterMode} selectedYear={selectedYear} years={years} onFilterChange={handleFilterChange} />
       )}
@@ -326,6 +351,28 @@ const PlayerDetailPage = () => {
       {/* ===== PROFILE TAB ===== */}
       {activeTab === "profile" && (
         <div className="mx-4">
+          {/* FC Online Traits */}
+          {playerTraits.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/30 bg-card p-4">
+              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎮 선수 고유 특성</h3>
+              <div className="flex flex-wrap gap-2">
+                {playerTraits.map((t, i) => (
+                  <div key={i} className={`group relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all hover:scale-105 ${
+                    t.color === "red" ? "border-red-500/40 bg-red-500/10 text-red-400"
+                    : t.color === "yellow" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                    : "border-green-500/40 bg-green-500/10 text-green-400"
+                  }`}>
+                    <span>{t.emoji}</span>
+                    <span>{t.name}</span>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 rounded-lg border border-border bg-background p-2 text-[10px] text-muted-foreground shadow-xl z-50">
+                      {t.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Scouting Report */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
             <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">{trendIcon} 수석코치 AI 스카우팅 리포트</h3>
@@ -366,14 +413,11 @@ const PlayerDetailPage = () => {
             </motion.div>
           )}
 
-          {/* Activity Heatmap */}
           <ActivityHeatmap playerId={playerId} matches={matches} rosters={rosters} goalEvents={goalEvents} momVotes={momVotes}
             year={filterMode === "year" && selectedYear ? parseInt(selectedYear) : undefined} />
 
-          {/* Player Comments / Guestbook */}
           <PlayerComments playerId={playerId} />
 
-          {/* Season Wrapped Button */}
           {filterMode === "year" && selectedYear && parseInt(selectedYear) < new Date().getFullYear() && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
               <button onClick={() => setShowWrapped(true)}
@@ -447,6 +491,134 @@ const PlayerDetailPage = () => {
             </motion.div>
           )}
 
+          {/* Killer Quarter & Position */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {killerQuarter && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-primary/30 bg-card p-3 text-center">
+                <div className="text-xs font-bold text-primary mb-1">⚡ 킬러 쿼터</div>
+                <div className="font-display text-3xl text-primary text-glow">{killerQuarter.quarter}Q</div>
+                <div className="text-[10px] text-muted-foreground">{killerQuarter.ap} AP 기록</div>
+              </motion.div>
+            )}
+            {positionDist.total > 0 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs font-bold text-primary mb-2">📍 포지션 분포</div>
+                <div className="space-y-1">
+                  {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).map(pos => (
+                    <div key={pos} className="flex items-center justify-between text-[11px]">
+                      <span className="text-foreground font-medium">{pos}</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full gradient-pink rounded-full" style={{ width: `${(positionDist[pos] / positionDist.total) * 100}%` }} />
+                        </div>
+                        <span className="text-muted-foreground w-8 text-right">{positionDist[pos]}Q</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Defense Contribution */}
+          {defenseCont.quartersWithPlayer >= 5 && defenseCont.quartersWithoutPlayer >= 3 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">🛡️ 수비 기여도</h3>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">투입 시 실점</div>
+                  <div className="font-display text-lg text-foreground">{defenseCont.withPlayer.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">미투입 시 실점</div>
+                  <div className="font-display text-lg text-foreground">{defenseCont.withoutPlayer.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">차이</div>
+                  <div className={`font-display text-lg ${defenseCont.diff < 0 ? "text-green-400" : defenseCont.diff > 0 ? "text-red-400" : "text-foreground"}`}>
+                    {defenseCont.diff > 0 ? "+" : ""}{defenseCont.diff.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              {ownGoalInducer > 0 && (
+                <div className="mt-2 text-[10px] text-muted-foreground text-center">💥 자책골 유발 기여: {ownGoalInducer}회 (상대 자책골 시 필드 위)</div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Scoring Arsenal & Playmaking Style - Donut Charts */}
+          {(goalTypeChartData.length > 0 || assistTypeChartData.length > 0) && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 font-display text-lg text-primary">🎯 시그니처 무기</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {goalTypeChartData.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">⚽ 득점 루트</h4>
+                    <ResponsiveContainer width="100%" height={140}>
+                      <PieChart>
+                        <Pie data={goalTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
+                          {goalTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-0.5 mt-1">
+                      {goalTypeChartData.map((d, i) => (
+                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                          <span className="text-foreground truncate">{d.name}</span>
+                          <span className="text-muted-foreground ml-auto">{d.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {assistTypeChartData.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">🅰️ 어시스트 취향</h4>
+                    <ResponsiveContainer width="100%" height={140}>
+                      <PieChart>
+                        <Pie data={assistTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
+                          {assistTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-0.5 mt-1">
+                      {assistTypeChartData.map((d, i) => (
+                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[(i + 2) % CHART_COLORS.length] }} />
+                          <span className="text-foreground truncate">{d.name}</span>
+                          <span className="text-muted-foreground ml-auto">{d.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Solo vs Team Goals */}
+          {soloTeamData.length > 0 && soloVsTeam.total >= 3 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-2 font-display text-sm text-primary">🎯 골 의존도 (Solo vs Team)</h3>
+              <ResponsiveContainer width="100%" height={50}>
+                <BarChart data={[{ solo: soloVsTeam.solo, team: soloVsTeam.team }]} layout="vertical">
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" hide />
+                  <Bar dataKey="solo" stackId="a" fill="hsl(330, 100%, 71%)" name="솔로 골" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="team" stackId="a" fill="hsl(210, 100%, 60%)" name="팀 어시스트 골" radius={[0, 4, 4, 0]} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>솔로 {soloVsTeam.solo}골 ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.solo / soloVsTeam.total * 100) : 0}%)</span>
+                <span>팀 {soloVsTeam.team}골 ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.team / soloVsTeam.total * 100) : 0}%)</span>
+              </div>
+            </motion.div>
+          )}
+
           {/* Best Partners */}
           {topDuos.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
@@ -469,7 +641,6 @@ const PlayerDetailPage = () => {
           <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
           <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
 
-          {/* 맛집 / 천적 */}
           {filterMode !== "custom" && (bestOpponent || worstOpponent) && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
               {bestOpponent && (
@@ -489,62 +660,10 @@ const PlayerDetailPage = () => {
                 </div>
               )}
             </motion.div>
-           )}
-
-          {/* Signature Weapons */}
-          {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎯 나의 시그니처 무기</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {goalTypeStats.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-2">⚽ 골 유형</h4>
-                    <div className="space-y-1.5">
-                      {goalTypeStats.slice(0, 5).map(([type, count]) => {
-                        const max = goalTypeStats[0][1];
-                        return (
-                          <div key={type} className="space-y-0.5">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-foreground">{type}</span>
-                              <span className="text-primary font-bold">{count}</span>
-                            </div>
-                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
-                              <div className="h-full rounded-full gradient-pink" style={{ width: `${(count / max) * 100}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {assistTypeStats.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-2">🅰️ 어시스트 유형</h4>
-                    <div className="space-y-1.5">
-                      {assistTypeStats.slice(0, 5).map(([type, count]) => {
-                        const max = assistTypeStats[0][1];
-                        return (
-                          <div key={type} className="space-y-0.5">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-foreground">{type}</span>
-                              <span className="text-primary font-bold">{count}</span>
-                            </div>
-                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-blue-500" style={{ width: `${(count / max) * 100}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
           )}
         </div>
       )}
 
-      {/* Season Wrapped Modal */}
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />
       )}
