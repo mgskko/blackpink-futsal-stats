@@ -433,7 +433,7 @@ export function computePlayerTraits(
   if (isTopN(playerId, tapInRatioRanking, 2, 0.01)) {
     const tapIns = gtc(playerId, ...tapInTypes);
     const total = playerTotalGoals.get(playerId) || 0;
-    traits.push({ name: "인자기 헌정상", emoji: "🎯", description: `주워먹기/혼전골 비율 팀 내 1~2위 (${tapIns}/${total})`, category: "attack", color: "green" });
+    traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 비율 팀 내 1~2위 (${tapIns}/${total})`, category: "attack", color: "green" });
   }
 
   // 🤡 4. Dishonor Traits (top 1 ONLY)
