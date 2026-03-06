@@ -380,6 +380,42 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
           ))}
         </RankingCard>
       )}
+
+      {/* Hexagon Player */}
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🔷 멀티 플레이어</div>
+      {(() => {
+        // Players who played all 3 positions: FW, DF, GK
+        const hexPlayers = new Map<number, { fw: number; df: number; gk: number; margin: number; quarters: number }>();
+        allQuarters.forEach(q => {
+          if (!q.lineup) return;
+          const diff = (q.score_for || 0) - (q.score_against || 0);
+          const parsed = { GK: getPositionPlayers(q.lineup, "GK"), DF: getPositionPlayers(q.lineup, "DF"), FW: getPositionPlayers(q.lineup, "FW") };
+          Object.entries(parsed).forEach(([pos, pids]) => {
+            pids.forEach(pid => {
+              const cur = hexPlayers.get(pid) || { fw: 0, df: 0, gk: 0, margin: 0, quarters: 0 };
+              if (pos === "FW") cur.fw++;
+              else if (pos === "DF") cur.df++;
+              else if (pos === "GK") cur.gk++;
+              cur.margin += diff;
+              cur.quarters++;
+              hexPlayers.set(pid, cur);
+            });
+          });
+        });
+        const hexRanking = [...hexPlayers.entries()]
+          .filter(([, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10)
+          .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), margin: d.margin, quarters: d.quarters, fw: d.fw, df: d.df, gk: d.gk }))
+          .sort((a, b) => b.margin - a.margin)
+          .slice(0, 5);
+        if (hexRanking.length === 0) return null;
+        return (
+          <RankingCard title="헥사곤 플레이어" emoji="🔷" desc="FW/DF/GK 모든 포지션 소화 + 누적 마진 최고">
+            {hexRanking.map((d, i) => (
+              <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.margin > 0 ? "+" : ""}${d.margin}`} sub={`FW${d.fw} DF${d.df} GK${d.gk} (${d.quarters}Q)`} total={hexRanking.length} />
+            ))}
+          </RankingCard>
+        );
+      })()}
     </motion.div>
   );
 };
