@@ -96,11 +96,29 @@ const PlayerDetailPage = () => {
       .filter(m => playerMatchIds.includes(m.id))
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(m => {
-        const mr = getMatchResult(teams, results, m.id);
+      const mr = getMatchResult(teams, results, m.id);
         const mTeams = teams.filter(t => t.match_id === m.id);
-        const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
         const { goals: g, assists: a } = computeMatchAP(playerId, m, rosters, goalEvents);
-        return { match: m, matchResult: mr, opponentName: oppTeam?.name || (m.is_custom ? "자체전" : "???"), goals: g, assists: a };
+        
+        // For custom matches, find the player's team and the opposing team
+        let opponentName = "???";
+        let playerResult: string | undefined = mr?.ourResult.result;
+        if (m.is_custom) {
+          const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+          if (playerRoster) {
+            const playerTeam = mTeams.find(t => t.id === playerRoster.team_id);
+            const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
+            opponentName = oppTeam?.name || "자체전";
+            const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
+            playerResult = playerTeamResult?.result;
+          } else {
+            opponentName = "자체전";
+          }
+        } else {
+          const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
+          opponentName = oppTeam?.name || "???";
+        }
+        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
 
@@ -428,8 +446,8 @@ const PlayerDetailPage = () => {
       {activeTab === "matches" && (
         <div className="mx-4 mt-4 space-y-2">
           {playerMatchList.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">출전 기록이 없습니다</p>}
-          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists }) => {
-            const resultStr = mr?.ourResult.result;
+          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists, playerResult }) => {
+            const resultStr = m.is_custom ? playerResult : mr?.ourResult.result;
             const bgColor = resultStr === "승" ? "border-blue-500/30 bg-blue-500/5" : resultStr === "패" ? "border-red-500/30 bg-red-500/5" : resultStr === "무" ? "border-muted bg-muted/5" : "border-border bg-card";
             return (
               <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
@@ -629,6 +647,39 @@ const PlayerDetailPage = () => {
 
           <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
           <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
+
+          {/* Position Win Rate Comparison */}
+          {positionDist.total >= 5 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 font-display text-sm text-primary flex items-center gap-2">📊 포지션별 팀 승률</h3>
+              <div className="space-y-2">
+                {(["FW", "DF", "GK", "MF"] as const).map(pos => {
+                  const posQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === pos);
+                  if (posQ.length < 2) return null;
+                  const wins = posQ.filter(q => (q.score_for || 0) > (q.score_against || 0)).length;
+                  const winRate = Math.round((wins / posQ.length) * 100);
+                  const avgMargin = posQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / posQ.length;
+                  return (
+                    <div key={pos} className="flex items-center justify-between rounded-md bg-secondary/50 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-primary w-6">{pos}</span>
+                        <span className="text-[10px] text-muted-foreground">{posQ.length}Q</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full gradient-pink rounded-full" style={{ width: `${winRate}%` }} />
+                        </div>
+                        <span className={`text-xs font-bold ${winRate >= 50 ? "text-primary" : "text-muted-foreground"}`}>{winRate}%</span>
+                        <span className={`text-[10px] font-mono ${avgMargin > 0 ? "text-green-400" : avgMargin < 0 ? "text-red-400" : "text-foreground"}`}>
+                          {avgMargin > 0 ? "+" : ""}{avgMargin.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }).filter(Boolean)}
+              </div>
+            </motion.div>
+          )}
 
           {/* Attacking Contribution */}
           {courtStats && courtStats.quartersPlayed >= 3 && (
