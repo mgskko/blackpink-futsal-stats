@@ -349,7 +349,7 @@ export function computePlayerTraits(
   if (dfConcededRanking.length > 0) {
     const idx = dfConcededRanking.findIndex(r => r.id === playerId);
     if (idx >= 0 && idx < 2) {
-      traits.push({ name: "통곡의 벽", emoji: "🟡", description: `DF 출전 시 최소 실점 팀 내 1~2위`, category: "defense", color: "yellow" });
+      traits.push({ name: "비디치의 통곡의 벽", emoji: "🛡️", description: `DF 출전 시 최소 실점 팀 내 1~2위`, category: "defense", color: "yellow" });
     }
   }
 
