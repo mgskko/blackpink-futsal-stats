@@ -405,6 +405,34 @@ export function computePlayerTraits(
     traits.push({ name: "위기의 남자", emoji: "🟢", description: `클러치 득점 팀 내 1~2위`, category: "clutch", color: "green" });
   }
 
+  // 🧤 GK Wall: GK 무실점 쿼터 최다 1~2위
+  const gkCleanSheetMap = new Map<number, number>();
+  allQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const gks = parseLineup(q.lineup).GK;
+    if ((q.score_against || 0) === 0) {
+      gks.forEach(pid => gkCleanSheetMap.set(pid, (gkCleanSheetMap.get(pid) || 0) + 1));
+    }
+  });
+  const gkWallRanking = allPlayerIds.map(pid => ({ id: pid, value: gkCleanSheetMap.get(pid) || 0 })).sort((a, b) => b.value - a.value);
+  if (isTopN(playerId, gkWallRanking, 2, 2)) {
+    traits.push({ name: "최고의 야신", emoji: "🧤", description: `GK 무실점 쿼터 팀 내 1~2위 (${gkCleanSheetMap.get(playerId) || 0}회)`, category: "defense", color: "yellow" });
+  }
+
+  // 🎯 Tap-in Master (인자기 헌정상): 주워먹기/엉덩이골/혼전골 비율 최고 1~2위
+  const tapInTypes = ["주워먹기", "엉덩이골", "골문 앞 혼전골", "인자기골"];
+  const tapInRatioRanking = allPlayerIds.map(pid => {
+    const totalGoals = playerTotalGoals.get(pid) || 0;
+    if (totalGoals < 3) return { id: pid, value: -1 };
+    const tapIns = gtc(pid, ...tapInTypes);
+    return { id: pid, value: tapIns / totalGoals };
+  }).filter(r => r.value >= 0).sort((a, b) => b.value - a.value);
+  if (isTopN(playerId, tapInRatioRanking, 2, 0.01)) {
+    const tapIns = gtc(playerId, ...tapInTypes);
+    const total = playerTotalGoals.get(playerId) || 0;
+    traits.push({ name: "인자기 헌정상", emoji: "🎯", description: `주워먹기/혼전골 비율 팀 내 1~2위 (${tapIns}/${total})`, category: "attack", color: "green" });
+  }
+
   // 🤡 4. Dishonor Traits (top 1 ONLY)
 
   // 스탯 세탁기: 3점차+ 리드 시 기록 비율 팀 내 1위 (min 10 AP)
