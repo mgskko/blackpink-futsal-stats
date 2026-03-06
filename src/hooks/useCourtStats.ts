@@ -276,7 +276,7 @@ export function computePlayerTraits(
   // 제라드의 재림: 중거리골 count
   const longShotRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "중거리골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, longShotRanking, 2, 2)) {
-    traits.push({ name: "제라드의 재림", emoji: "🟢", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
+    traits.push({ name: "제라드의 강림", emoji: "⚽", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
   }
 
   // 위치 선정의 달인: 주워먹기+혼전골+인자기골
