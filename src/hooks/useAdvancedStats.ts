@@ -675,12 +675,12 @@ export function getVarianceBadge(playerId: number, matches: Match[], rosters: Ro
   return badges;
 }
 
-// ─── Hall of Fame ───
-export interface HallOfFameEntry { playerId: number; name: string; matchId: number; date: string; goals: number; assists: number; type: "hattrick" | "playmaker"; }
+// ─── Hall of Fame (AP >= 7 in a single match) ───
+export interface HallOfFameEntry { playerId: number; name: string; matchId: number; date: string; goals: number; assists: number; ap: number; type: "legendary"; }
 
 export function getHallOfFame(players: Player[], matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): HallOfFameEntry[] {
   const entries: HallOfFameEntry[] = [];
-  const matchIds = [...new Set(goalEvents.map(g => g.match_id))];
+  const matchIds = [...new Set([...goalEvents.map(g => g.match_id), ...rosters.map(r => r.match_id)])];
   for (const mid of matchIds) {
     const match = matches.find(m => m.id === mid);
     if (!match) continue;
@@ -694,22 +694,19 @@ export function getHallOfFame(players: Player[], matches: Match[], rosters: Rost
       if (r.goals) goalsMap.set(r.player_id, (goalsMap.get(r.player_id) || 0) + r.goals);
       if (r.assists) assistsMap.set(r.player_id, (assistsMap.get(r.player_id) || 0) + r.assists);
     });
-    goalsMap.forEach((goals, pid) => {
-      if (goals >= 3) {
+    // Collect all player IDs who participated
+    const allPlayerIds = new Set([...goalsMap.keys(), ...assistsMap.keys()]);
+    allPlayerIds.forEach(pid => {
+      const goals = goalsMap.get(pid) || 0;
+      const assists = assistsMap.get(pid) || 0;
+      const ap = goals + assists;
+      if (ap >= 7) {
         const p = players.find(p => p.id === pid);
-        entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: mid, date: match.date, goals, assists: assistsMap.get(pid) || 0, type: "hattrick" });
-      }
-    });
-    assistsMap.forEach((assists, pid) => {
-      if (assists >= 3) {
-        const p = players.find(p => p.id === pid);
-        if (!entries.find(e => e.playerId === pid && e.matchId === mid && e.type === "hattrick")) {
-          entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: mid, date: match.date, goals: goalsMap.get(pid) || 0, assists, type: "playmaker" });
-        }
+        entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: mid, date: match.date, goals, assists, ap, type: "legendary" });
       }
     });
   }
-  return entries.sort((a, b) => b.date.localeCompare(a.date));
+  return entries.sort((a, b) => b.ap - a.ap || b.date.localeCompare(a.date));
 }
 
 // ─── MOM Count ───

@@ -395,20 +395,20 @@ const StatisticsPage = () => {
             {hallOfFame.length > 0 && (
               <div className="mb-6">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> 명예의 전당</h3>
+                <p className="mb-2 text-xs text-muted-foreground">한 경기 공격포인트 7개 이상 달성</p>
                 <div className="space-y-2">
                   {hallOfFame.slice(0, 15).map((e, i) => (
-                    <div key={`${e.playerId}-${e.matchId}-${e.type}`} onClick={() => navigate(`/match/${e.matchId}`)}
+                    <div key={`${e.playerId}-${e.matchId}`} onClick={() => navigate(`/match/${e.matchId}`)}
                       className="cursor-pointer rounded-lg border border-primary/30 bg-card p-3 transition-colors hover:bg-secondary box-glow">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{e.type === "hattrick" ? "🎩" : "🎯"}</span>
+                          <span className="text-lg">🏆</span>
                           <span className="cursor-pointer text-sm font-bold text-foreground hover:text-primary" onClick={(ev) => { ev.stopPropagation(); navigate(`/player/${e.playerId}`); }}>{e.name}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">{e.date}</span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {e.type === "hattrick" ? `⚽ ${e.goals}골` : `🅰️ ${e.assists}어시`}
-                        {e.type === "hattrick" ? " 해트트릭!" : " 플레이메이커!"}
+                        ⚽ {e.goals}골 🅰️ {e.assists}어시 = <span className="text-primary font-bold">{e.ap}AP</span>
                       </div>
                     </div>
                   ))}
