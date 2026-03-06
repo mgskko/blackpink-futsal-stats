@@ -491,7 +491,7 @@ export function computePlayerTraits(
   if (greedRanking.length > 0) {
     const greedIdx = greedRanking.findIndex(r => r.id === playerId);
     if (greedIdx >= 0 && greedIdx < 2) {
-      traits.push({ name: "탐욕왕", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1~2위`, category: "pass", color: "red" });
+      traits.push({ name: "패스 버튼 고장난 로벤", emoji: "🤡", description: `어시스트 비율 최저 팀 내 1~2위`, category: "pass", color: "red" });
     }
   }
 
