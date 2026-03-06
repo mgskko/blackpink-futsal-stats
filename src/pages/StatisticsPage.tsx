@@ -120,6 +120,25 @@ const StatisticsPage = () => {
   const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
 
   const topGoals = [...allStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
+  const topAssists = [...allStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
+  const topAttackPoints = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 5);
+  const topAP10 = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 10);
+  const topAppearances = [...allStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
+
+  const apChartData = topAttackPoints.map(p => ({ name: p.name, 공격포인트: p.attackPoints, 골: p.goals, 도움: p.assists }));
+  const quarterData = getQuarterGoalDistribution(filteredGoalEvents, filteredQuarters);
+  const duos = getDeadlyDuos(filteredGoalEvents, 10);
+
+  // Court margins
+  const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
+  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
+
+  // Defense contribution ranking
+  const defenseRanking = players.map(p => {
+    const dc = getDefenseContribution(p.id, filteredQuarters);
+    return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
+  }).filter(p => p.quartersWithPlayer >= 5).sort((a, b) => a.diff - b.diff).slice(0, 10);
 
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
