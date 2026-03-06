@@ -14,6 +14,7 @@ import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swor
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import TotoStatsTab from "@/components/stats/TotoStatsTab";
+import FormationStatsTab from "@/components/stats/FormationStatsTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type FilterType = "all" | "custom" | string;
