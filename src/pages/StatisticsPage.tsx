@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, ComposedChart } from "recharts";
 import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribution } from "@/hooks/useFutsalData";
 import type { Player, Match, Result, Roster, GoalEvent } from "@/hooks/useFutsalData";
 import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
@@ -228,16 +228,17 @@ const StatisticsPage = () => {
 
             {/* Quarter trend */}
             <div className="mb-6">
-              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점 추이</h3>
+              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점/실점 추이</h3>
               <div className="rounded-lg border border-border bg-card p-4">
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={quarterData}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={quarterData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
                     <XAxis dataKey="quarter" stroke="hsl(0 0% 40%)" fontSize={11} tickFormatter={v => `${v}Q`} />
                     <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value}골`, "득점"]} />
-                    <Line type="monotone" dataKey="count" stroke="hsl(330 100% 71%)" strokeWidth={3} dot={{ fill: "hsl(330 100% 71%)", strokeWidth: 0, r: 5 }} activeDot={{ r: 8, fill: "hsl(345 80% 81%)" }} style={{ filter: "drop-shadow(0 0 6px hsl(330 100% 71% / 0.5))" }} />
-                  </LineChart>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar dataKey="goals" fill="hsl(330 100% 71%)" name="득점" radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="conceded" stroke="hsl(0 80% 60%)" strokeWidth={2.5} name="실점" dot={{ fill: "hsl(0 80% 60%)", r: 4 }} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -394,20 +395,20 @@ const StatisticsPage = () => {
             {hallOfFame.length > 0 && (
               <div className="mb-6">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> 명예의 전당</h3>
+                <p className="mb-2 text-xs text-muted-foreground">한 경기 공격포인트 7개 이상 달성</p>
                 <div className="space-y-2">
                   {hallOfFame.slice(0, 15).map((e, i) => (
-                    <div key={`${e.playerId}-${e.matchId}-${e.type}`} onClick={() => navigate(`/match/${e.matchId}`)}
+                    <div key={`${e.playerId}-${e.matchId}`} onClick={() => navigate(`/match/${e.matchId}`)}
                       className="cursor-pointer rounded-lg border border-primary/30 bg-card p-3 transition-colors hover:bg-secondary box-glow">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{e.type === "hattrick" ? "🎩" : "🎯"}</span>
+                          <span className="text-lg">🏆</span>
                           <span className="cursor-pointer text-sm font-bold text-foreground hover:text-primary" onClick={(ev) => { ev.stopPropagation(); navigate(`/player/${e.playerId}`); }}>{e.name}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">{e.date}</span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {e.type === "hattrick" ? `⚽ ${e.goals}골` : `🅰️ ${e.assists}어시`}
-                        {e.type === "hattrick" ? " 해트트릭!" : " 플레이메이커!"}
+                        ⚽ {e.goals}골 🅰️ {e.assists}어시 = <span className="text-primary font-bold">{e.ap}AP</span>
                       </div>
                     </div>
                   ))}

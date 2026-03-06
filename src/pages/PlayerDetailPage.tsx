@@ -3,11 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift, Skull, Shield } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
-import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits } from "@/hooks/useCourtStats";
+import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition } from "@/hooks/useCourtStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -547,51 +549,45 @@ const PlayerDetailPage = () => {
           )}
 
           {/* Scoring Arsenal & Playmaking Style - Donut Charts */}
-          {(goalTypeChartData.length > 0 || assistTypeChartData.length > 0) && (
+          {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
               <h3 className="mb-3 font-display text-lg text-primary">🎯 시그니처 무기</h3>
               <div className="grid grid-cols-2 gap-4">
-                {goalTypeChartData.length > 0 && (
+                {goalTypeStats.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">⚽ 득점 루트</h4>
-                    <ResponsiveContainer width="100%" height={140}>
-                      <PieChart>
-                        <Pie data={goalTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
-                          {goalTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-0.5 mt-1">
-                      {goalTypeChartData.map((d, i) => (
-                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                          <span className="text-foreground truncate">{d.name}</span>
-                          <span className="text-muted-foreground ml-auto">{d.value}</span>
-                        </div>
-                      ))}
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">⚽ 득점 루트 TOP 5</h4>
+                    <div className="space-y-1.5">
+                      {goalTypeStats.slice(0, 5).map(([name, value], i) => {
+                        const total = goalTypeStats.reduce((s, [, v]) => s + v, 0);
+                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return (
+                          <div key={name} className="flex items-center gap-2 text-[11px]">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                            <span className="text-foreground truncate flex-1">{name}</span>
+                            <span className="text-primary font-bold">{value}</span>
+                            <span className="text-muted-foreground text-[9px]">({pct}%)</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
-                {assistTypeChartData.length > 0 && (
+                {assistTypeStats.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">🅰️ 어시스트 취향</h4>
-                    <ResponsiveContainer width="100%" height={140}>
-                      <PieChart>
-                        <Pie data={assistTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
-                          {assistTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-0.5 mt-1">
-                      {assistTypeChartData.map((d, i) => (
-                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[(i + 2) % CHART_COLORS.length] }} />
-                          <span className="text-foreground truncate">{d.name}</span>
-                          <span className="text-muted-foreground ml-auto">{d.value}</span>
-                        </div>
-                      ))}
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">🅰️ 어시스트 취향 TOP 5</h4>
+                    <div className="space-y-1.5">
+                      {assistTypeStats.slice(0, 5).map(([name, value], i) => {
+                        const total = assistTypeStats.reduce((s, [, v]) => s + v, 0);
+                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return (
+                          <div key={name} className="flex items-center gap-2 text-[11px]">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                            <span className="text-foreground truncate flex-1">{name}</span>
+                            <span className="text-primary font-bold">{value}</span>
+                            <span className="text-muted-foreground text-[9px]">({pct}%)</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -641,24 +637,39 @@ const PlayerDetailPage = () => {
           <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
           <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
 
-          {filterMode !== "custom" && (bestOpponent || worstOpponent) && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
-              {bestOpponent && (
-                <div className="rounded-lg border border-primary/30 bg-card p-3">
-                  <div className="text-xs font-bold text-primary mb-1">😋 나의 맛집</div>
-                  <div className="text-sm font-bold text-foreground">{bestOpponent.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{bestOpponent.goalsFor}골 득점 | 승률 {bestOpponent.winRate}%</div>
-                  <div className="text-[10px] text-muted-foreground">{bestOpponent.matches}경기</div>
+          {/* Attacking Contribution */}
+          {courtStats && courtStats.quartersPlayed >= 3 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">⚔️ 공격 기여도</h3>
+              <div className="grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">팀 득점 관여율</div>
+                  <div className="font-display text-lg text-primary">{(() => {
+                    const playerQIds = new Set<string>();
+                    filtered.quarters.forEach(q => {
+                      if (!q.lineup) return;
+                      const field = [...(q.lineup?.GK || []), ...(q.lineup?.DF || []), ...(q.lineup?.MF || []), ...(q.lineup?.FW || [])];
+                      if (field.includes(playerId)) playerQIds.add(`${q.match_id}-${q.quarter}`);
+                    });
+                    let teamGoals = 0;
+                    filtered.quarters.forEach(q => { if (playerQIds.has(`${q.match_id}-${q.quarter}`)) teamGoals += (q.score_for || 0); });
+                    return teamGoals > 0 ? `${Math.round((courtStats.ap / teamGoals) * 100)}%` : "-";
+                  })()}</div>
                 </div>
-              )}
-              {worstOpponent && (
-                <div className="rounded-lg border border-destructive/30 bg-card p-3">
-                  <div className="text-xs font-bold text-destructive mb-1">☠️ 나의 천적</div>
-                  <div className="text-sm font-bold text-foreground">{worstOpponent.name}</div>
-                  <div className="text-[10px] text-muted-foreground">승률 {worstOpponent.winRate}%</div>
-                  <div className="text-[10px] text-muted-foreground">{worstOpponent.matches}경기</div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">FW 출전 시 마진</div>
+                  <div className={`font-display text-lg ${(() => {
+                    const fwQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW");
+                    const avg = fwQ.length > 0 ? fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / fwQ.length : 0;
+                    return avg > 0 ? "text-green-400" : avg < 0 ? "text-red-400" : "text-foreground";
+                  })()}`}>{(() => {
+                    const fwQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW");
+                    if (fwQ.length === 0) return "-";
+                    const avg = fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / fwQ.length;
+                    return avg > 0 ? `+${avg.toFixed(2)}` : avg.toFixed(2);
+                  })()}</div>
                 </div>
-              )}
+              </div>
             </motion.div>
           )}
         </div>

@@ -201,8 +201,13 @@ export function getDeadlyDuos(goalEvents: GoalEvent[], topN = 10) {
   return [...duoMap.values()].sort((a, b) => b.count - a.count).slice(0, topN);
 }
 
-export function getQuarterGoalDistribution(goalEvents: GoalEvent[]) {
-  const dist: Record<number, number> = {};
-  goalEvents.forEach(g => { dist[g.quarter] = (dist[g.quarter] || 0) + 1; });
-  return Object.entries(dist).map(([q, count]) => ({ quarter: Number(q), count })).sort((a, b) => a.quarter - b.quarter);
+export function getQuarterGoalDistribution(goalEvents: GoalEvent[], allQuarters?: MatchQuarter[]) {
+  const goalDist: Record<number, number> = {};
+  goalEvents.forEach(g => { goalDist[g.quarter] = (goalDist[g.quarter] || 0) + 1; });
+  const concededDist: Record<number, number> = {};
+  if (allQuarters) {
+    allQuarters.forEach(q => { concededDist[q.quarter] = (concededDist[q.quarter] || 0) + (q.score_against || 0); });
+  }
+  const allQs = new Set([...Object.keys(goalDist).map(Number), ...Object.keys(concededDist).map(Number)]);
+  return [...allQs].sort((a, b) => a - b).map(q => ({ quarter: q, goals: goalDist[q] || 0, conceded: concededDist[q] || 0 }));
 }

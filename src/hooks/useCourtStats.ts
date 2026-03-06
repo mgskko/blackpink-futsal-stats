@@ -258,13 +258,11 @@ export function computePlayerTraits(
 ): PlayerTrait[] {
   const traits: PlayerTrait[] = [];
   
-  // Player's goals from events only (for type analysis)
   const playerGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal);
   const playerAssists = goalEvents.filter(g => g.assist_player_id === playerId);
   const totalGoalsFromEvents = playerGoals.length;
   const totalAssistsFromEvents = playerAssists.length;
   
-  // All-source totals
   const rosterGoals = rosters.filter(r => r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
   const rosterAssists = rosters.filter(r => r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
   const totalGoals = totalGoalsFromEvents + rosterGoals;
@@ -273,102 +271,89 @@ export function computePlayerTraits(
   
   if (totalGoals === 0 && totalAssists === 0) return traits;
 
-  // Goal type counts
   const goalTypeCounts = new Map<string, number>();
-  playerGoals.forEach(g => {
-    if (g.goal_type) goalTypeCounts.set(g.goal_type, (goalTypeCounts.get(g.goal_type) || 0) + 1);
-  });
+  playerGoals.forEach(g => { if (g.goal_type) goalTypeCounts.set(g.goal_type, (goalTypeCounts.get(g.goal_type) || 0) + 1); });
   
-  // Assist type counts
   const assistTypeCounts = new Map<string, number>();
-  playerAssists.forEach(g => {
-    if (g.assist_type) assistTypeCounts.set(g.assist_type, (assistTypeCounts.get(g.assist_type) || 0) + 1);
-  });
-  
-  // Build up process counts
-  const buildUpCounts = new Map<string, number>();
-  playerGoals.forEach(g => {
-    if (g.build_up_process) buildUpCounts.set(g.build_up_process, (buildUpCounts.get(g.build_up_process) || 0) + 1);
-  });
+  playerAssists.forEach(g => { if (g.assist_type) assistTypeCounts.set(g.assist_type, (assistTypeCounts.get(g.assist_type) || 0) + 1); });
 
   // ⚽ 1. Attack traits
-  // Poacher
+  // Poacher (lowered from 20% to 10%)
   const pocherGoals = (goalTypeCounts.get("주워먹기") || 0) + (goalTypeCounts.get("골문 앞 혼전골") || 0) + (goalTypeCounts.get("인자기골") || 0);
-  if (totalGoalsFromEvents > 0 && pocherGoals / totalGoalsFromEvents >= 0.2) {
-    traits.push({ name: "위치 선정의 달인", emoji: "🟢", description: "주워먹기/혼전골 비율 20%+", category: "attack", color: "green" });
+  if (totalGoalsFromEvents > 0 && pocherGoals / totalGoalsFromEvents >= 0.10) {
+    traits.push({ name: "위치 선정의 달인", emoji: "🟢", description: "주워먹기/혼전골 비율 10%+", category: "attack", color: "green" });
   }
   
-  // Long Shot
+  // Long Shot (lowered from 10% to 5%)
   const longShots = goalTypeCounts.get("중거리골") || 0;
-  if (totalGoalsFromEvents > 0 && longShots / totalGoalsFromEvents >= 0.1) {
-    traits.push({ name: "중거리 난사", emoji: "🟢", description: "중거리골 비율 10%+", category: "attack", color: "green" });
+  if (totalGoalsFromEvents > 0 && longShots / totalGoalsFromEvents >= 0.05) {
+    traits.push({ name: "중거리 난사", emoji: "🟢", description: "중거리골 비율 5%+", category: "attack", color: "green" });
   }
   
-  // Acrobatic
+  // Acrobatic (lowered from 2 to 1)
   const acroTypes = ["발리골", "터닝골", "칩슛", "헤딩골", "파포스트골", "엉덩이골", "가슴골"];
   const acroCount = acroTypes.reduce((s, t) => s + (goalTypeCounts.get(t) || 0), 0);
-  if (acroCount >= 2) {
-    traits.push({ name: "아크로바틱", emoji: "🟢", description: "고난도 골 2+", category: "attack", color: "green" });
+  if (acroCount >= 1) {
+    traits.push({ name: "아크로바틱", emoji: "🟢", description: "고난도 골 1+", category: "attack", color: "green" });
   }
   
-  // Speed Dribbler
+  // Speed Dribbler (lowered from 3 to 2)
   const counterGoals = playerGoals.filter(g => g.build_up_process === "역습" || g.goal_type === "솔로 치달골" || g.goal_type === "드리블골").length;
-  if (counterGoals >= 3) {
-    traits.push({ name: "치달 장인", emoji: "🟢", description: "역습/솔로 치달 3+", category: "attack", color: "green" });
+  if (counterGoals >= 2) {
+    traits.push({ name: "치달 장인", emoji: "🟢", description: "역습/솔로 치달 2+", category: "attack", color: "green" });
   }
   
-  // Infiltrator
+  // Infiltrator (lowered from 2 to 1)
   const infiltGoals = goalTypeCounts.get("침투골") || 0;
-  if (infiltGoals >= 2) {
-    traits.push({ name: "침투의 귀재", emoji: "🟢", description: "침투골 2+", category: "attack", color: "green" });
+  if (infiltGoals >= 1) {
+    traits.push({ name: "침투의 귀재", emoji: "🟢", description: "침투골 1+", category: "attack", color: "green" });
   }
   
-  // Clinical Finisher (PPQ top 1 with 10+ quarters)
+  // Clinical Finisher (lowered from 10Q to 5Q)
   const posDist = getPlayerPositionDistribution(playerId, allQuarters);
-  if (posDist.total >= 10) {
+  if (posDist.total >= 5) {
     const allMargins = computeAllCourtMargins(players, matches, allQuarters, goalEvents);
-    const sorted = allMargins.filter(p => p.quartersPlayed >= 10).sort((a, b) => b.ppq - a.ppq);
+    const sorted = allMargins.filter(p => p.quartersPlayed >= 5).sort((a, b) => b.ppq - a.ppq);
     if (sorted.length > 0 && sorted[0].playerId === playerId) {
-      traits.push({ name: "원샷 원킬", emoji: "🟡", description: "PPQ 1위 (10Q+)", category: "attack", color: "yellow" });
+      traits.push({ name: "원샷 원킬", emoji: "🟡", description: "PPQ 1위 (5Q+)", category: "attack", color: "yellow" });
     }
   }
   
   // 🎯 2. Pass traits
-  // Playmaker
+  // Playmaker (lowered from 40%/5A to 20%/3A)
   const killPasses = assistTypeCounts.get("킬패스") || 0;
-  if (totalAssistsFromEvents >= 5 && totalAssistsFromEvents > 0 && killPasses / totalAssistsFromEvents >= 0.4) {
-    traits.push({ name: "대지를 가르는 패스", emoji: "🟢", description: "킬패스 40%+ (5A+)", category: "pass", color: "green" });
+  if (totalAssistsFromEvents >= 3 && totalAssistsFromEvents > 0 && killPasses / totalAssistsFromEvents >= 0.20) {
+    traits.push({ name: "대지를 가르는 패스", emoji: "🟢", description: "킬패스 20%+ (3A+)", category: "pass", color: "green" });
   }
   
-  // Cut-back Specialist
+  // Cut-back Specialist (lowered from 40% to 20%)
   const cutbacks = assistTypeCounts.get("컷백") || 0;
-  if (totalAssistsFromEvents > 0 && cutbacks / totalAssistsFromEvents >= 0.4) {
-    traits.push({ name: "컷백 마스터", emoji: "🟢", description: "컷백 비율 40%+", category: "pass", color: "green" });
+  if (totalAssistsFromEvents > 0 && cutbacks / totalAssistsFromEvents >= 0.20) {
+    traits.push({ name: "컷백 마스터", emoji: "🟢", description: "컷백 비율 20%+", category: "pass", color: "green" });
   }
   
-  // Assist King
-  if (totalAssists >= 8 && totalAP > 0 && totalAssists / totalAP >= 0.4) {
-    traits.push({ name: "어시스트 머신", emoji: "🟢", description: "어시스트 비율 40%+ (8A+)", category: "pass", color: "green" });
+  // Assist King (lowered from 40%/8A to 30%/5A)
+  if (totalAssists >= 5 && totalAP > 0 && totalAssists / totalAP >= 0.30) {
+    traits.push({ name: "어시스트 머신", emoji: "🟢", description: "어시스트 비율 30%+ (5A+)", category: "pass", color: "green" });
   }
   
-  // Selfish
-  if (totalAP >= 10 && totalAP > 0 && totalAssists / totalAP < 0.3) {
-    traits.push({ name: "탐욕왕", emoji: "🟢", description: "어시스트 비율 30% 미만", category: "pass", color: "green" });
+  // Selfish (lowered from 30%/10AP to 20%/5AP)
+  if (totalAP >= 5 && totalAP > 0 && totalAssists / totalAP < 0.20) {
+    traits.push({ name: "탐욕왕", emoji: "🟢", description: "어시스트 비율 20% 미만", category: "pass", color: "green" });
   }
   
-  // 💪 3. Physical traits
-  // Quarter-based AP analysis
+  // 💪 3. Physical traits (lowered from 20Q to 10Q)
   const earlyQAP = goalEvents.filter(g => (g.quarter <= 2) && ((g.goal_player_id === playerId && !g.is_own_goal) || g.assist_player_id === playerId)).length;
   const lateQAP = goalEvents.filter(g => (g.quarter >= 7) && ((g.goal_player_id === playerId && !g.is_own_goal) || g.assist_player_id === playerId)).length;
   const firstHalfAP = goalEvents.filter(g => (g.quarter <= 4) && ((g.goal_player_id === playerId && !g.is_own_goal) || g.assist_player_id === playerId)).length;
   const secondHalfAP = goalEvents.filter(g => (g.quarter >= 5) && ((g.goal_player_id === playerId && !g.is_own_goal) || g.assist_player_id === playerId)).length;
   
-  if (posDist.total >= 20) {
-    // Iron Lungs
+  if (posDist.total >= 10) {
+    // Iron Lungs (lowered to 20% diff)
     if (earlyQAP > 0 && lateQAP > 0) {
       const diff = Math.abs(earlyQAP - lateQAP) / Math.max(earlyQAP, lateQAP);
-      if (diff <= 0.1) {
-        traits.push({ name: "강철 체력", emoji: "🟡", description: "전후반 AP 차이 10% 이내", category: "physical", color: "yellow" });
+      if (diff <= 0.20) {
+        traits.push({ name: "강철 체력", emoji: "🟡", description: "전후반 AP 차이 20% 이내", category: "physical", color: "yellow" });
       }
     }
     // Early Fader
@@ -377,30 +362,29 @@ export function computePlayerTraits(
     }
   }
   
-  // 🛡️ 4. Defense traits
-  // The Wall
-  if (posDist.DF >= 5) {
+  // 🛡️ 4. Defense traits (lowered thresholds)
+  // The Wall (lowered from 5DF to 3DF, from 0.5 to 0.3)
+  if (posDist.DF >= 3) {
     const dfQuarters = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "DF");
     const avgConcededDF = dfQuarters.length > 0 ? dfQuarters.reduce((s, q) => s + (q.score_against || 0), 0) / dfQuarters.length : 999;
     const avgConcededAll = allQuarters.length > 0 ? allQuarters.reduce((s, q) => s + (q.score_against || 0), 0) / allQuarters.length : 0;
-    if (avgConcededDF < avgConcededAll - 0.5) {
-      traits.push({ name: "통곡의 벽", emoji: "🟡", description: "DF 시 실점 평균 0.5↓", category: "defense", color: "yellow" });
+    if (avgConcededDF < avgConcededAll - 0.3) {
+      traits.push({ name: "통곡의 벽", emoji: "🟡", description: "DF 시 실점 평균 0.3↓", category: "defense", color: "yellow" });
     }
   }
   
-  // Victory Totem (court margin #1)
-  if (posDist.total >= 15) {
+  // Victory Totem (lowered from 15Q to 8Q)
+  if (posDist.total >= 8) {
     const allMargins = computeAllCourtMargins(players, matches, allQuarters, goalEvents);
-    const sorted = allMargins.filter(p => p.quartersPlayed >= 15).sort((a, b) => b.margin - a.margin);
+    const sorted = allMargins.filter(p => p.quartersPlayed >= 8).sort((a, b) => b.margin - a.margin);
     if (sorted.length > 0 && sorted[0].playerId === playerId) {
-      traits.push({ name: "승리 부적", emoji: "🟡", description: "코트 마진 1위 (15Q+)", category: "defense", color: "yellow" });
+      traits.push({ name: "승리 부적", emoji: "🟡", description: "코트 마진 1위 (8Q+)", category: "defense", color: "yellow" });
     }
   }
   
-  // High Motor (압박 비율 highest)
+  // High Motor (lowered from 3 to 2)
   const pressureGoals = playerGoals.filter(g => g.build_up_process === "압박" || g.goal_type === "압박").length;
   if (pressureGoals > 0) {
-    // Check if highest ratio among all players
     const allPlayerPressure = new Map<number, { pressure: number; total: number }>();
     goalEvents.filter(g => g.goal_player_id && !g.is_own_goal).forEach(g => {
       const cur = allPlayerPressure.get(g.goal_player_id!) || { pressure: 0, total: 0 };
@@ -409,27 +393,27 @@ export function computePlayerTraits(
       allPlayerPressure.set(g.goal_player_id!, cur);
     });
     const sorted = [...allPlayerPressure.entries()]
-      .filter(([, v]) => v.total >= 3)
+      .filter(([, v]) => v.total >= 2)
       .sort((a, b) => (b[1].pressure / b[1].total) - (a[1].pressure / a[1].total));
     if (sorted.length > 0 && sorted[0][0] === playerId) {
       traits.push({ name: "미친 개", emoji: "🟢", description: "압박 기반 득점 비율 1위", category: "defense", color: "green" });
     }
   }
   
-  // GK Master
-  if (posDist.GK >= 5) {
+  // GK Master (lowered from 5GK/50% to 3GK/40%)
+  if (posDist.GK >= 3) {
     const gkQuarters = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "GK");
     const cleanSheets = gkQuarters.filter(q => (q.score_against || 0) === 0).length;
-    if (cleanSheets / gkQuarters.length >= 0.5) {
-      traits.push({ name: "클린시트 수호자", emoji: "🔴", description: "GK 무실점 50%+ (5Q+)", category: "defense", color: "red" });
+    if (cleanSheets / gkQuarters.length >= 0.4) {
+      traits.push({ name: "클린시트 수호자", emoji: "🔴", description: "GK 무실점 40%+ (3Q+)", category: "defense", color: "red" });
     }
   }
   
   // 👑 5. Clutch traits
   // First Blood
   const firstBloodCounts = new Map<number, number>();
-  const matchIds = [...new Set(goalEvents.map(g => g.match_id))];
-  matchIds.forEach(mid => {
+  const matchIdSet = [...new Set(goalEvents.map(g => g.match_id))];
+  matchIdSet.forEach(mid => {
     const matchEvents = goalEvents.filter(g => g.match_id === mid && !g.is_own_goal).sort((a, b) => a.quarter - b.quarter || a.id - b.id);
     if (matchEvents.length > 0 && matchEvents[0].goal_player_id) {
       firstBloodCounts.set(matchEvents[0].goal_player_id, (firstBloodCounts.get(matchEvents[0].goal_player_id) || 0) + 1);
@@ -440,14 +424,14 @@ export function computePlayerTraits(
     traits.push({ name: "퍼스트 블러드", emoji: "🟢", description: `팀 첫 골 ${fbSorted[0][1]}회 (1위)`, category: "clutch", color: "green" });
   }
   
-  // Buzzer Beater
+  // Buzzer Beater (lowered from 35% to 25%)
   const lateGoals = playerGoals.filter(g => g.quarter >= 7).length;
-  if (totalGoalsFromEvents > 0 && lateGoals / totalGoalsFromEvents >= 0.35) {
-    traits.push({ name: "버저비터", emoji: "🟢", description: "7-8Q 골 비율 35%+", category: "clutch", color: "green" });
+  if (totalGoalsFromEvents > 0 && lateGoals / totalGoalsFromEvents >= 0.25) {
+    traits.push({ name: "버저비터", emoji: "🟢", description: "7-8Q 골 비율 25%+", category: "clutch", color: "green" });
   }
   
-  // Stat Padder
-  let paddingGoals = 0;
+  // Stat Padder (TIGHTENED to 55% — includes assists in padding count)
+  let paddingAP = 0;
   playerGoals.forEach(g => {
     const mTeams = teams.filter(t => t.match_id === g.match_id);
     const ourTeamIds = new Set(mTeams.filter(t => t.is_ours).map(t => t.id));
@@ -458,11 +442,23 @@ export function computePlayerTraits(
       else if (ourTeamIds.has(e.team_id)) ourScore++;
       else oppScore++;
     });
-    if (ourScore - oppScore >= 3) paddingGoals++;
+    if (ourScore - oppScore >= 3) paddingAP++;
+  });
+  playerAssists.forEach(g => {
+    const mTeams = teams.filter(t => t.match_id === g.match_id);
+    const ourTeamIds = new Set(mTeams.filter(t => t.is_ours).map(t => t.id));
+    const priorEvents = goalEvents.filter(e => e.match_id === g.match_id && (e.quarter < g.quarter || (e.quarter === g.quarter && e.id < g.id)));
+    let ourScore = 0, oppScore = 0;
+    priorEvents.forEach(e => {
+      if (e.is_own_goal) oppScore++;
+      else if (ourTeamIds.has(e.team_id)) ourScore++;
+      else oppScore++;
+    });
+    if (ourScore - oppScore >= 3) paddingAP++;
   });
   const totalScoredWithAssists = totalGoalsFromEvents + totalAssistsFromEvents;
-  if (totalScoredWithAssists > 0 && paddingGoals / totalScoredWithAssists >= 0.4) {
-    traits.push({ name: "스탯 세탁기", emoji: "🟢", description: "3점차+ 리드 시 기록 40%+", category: "clutch", color: "green" });
+  if (totalScoredWithAssists >= 5 && paddingAP / totalScoredWithAssists >= 0.55) {
+    traits.push({ name: "스탯 세탁기", emoji: "🟢", description: "3점차+ 리드 시 기록 55%+", category: "clutch", color: "green" });
   }
   
   return traits;
