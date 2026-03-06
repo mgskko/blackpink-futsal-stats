@@ -476,7 +476,7 @@ export function computePlayerTraits(
     .filter(r => r.value >= 0)
     .sort((a, b) => b.value - a.value);
   if (paddingRanking.length > 0 && paddingRanking[0].id === playerId && paddingRanking[0].value >= 0.55) {
-    traits.push({ name: "공식 스탯 세탁기", emoji: "🤡", description: `3점차+ 리드 시 기록 비율 팀 내 1위`, category: "clutch", color: "red" });
+    traits.push({ name: "루카쿠의 양민학살", emoji: "🤡", description: `3점차+ 리드 시 기록 비율 팀 내 1위`, category: "clutch", color: "red" });
   }
 
   // 탐욕왕: 어시스트 비율 최저 1~2위 (min 10 AP)
