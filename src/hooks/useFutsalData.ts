@@ -168,21 +168,28 @@ export function getMatchGoalEvents(goalEvents: GoalEvent[], matchId: number): Go
 }
 
 export function getPlayerStats(players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], playerId: number) {
-  const { goals, assists } = computeNonDuplicatedAP(playerId, matches, rosters, goalEvents);
-  const appearances = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))].length;
+  const today = new Date().toISOString().slice(0, 10);
+  // Filter out scheduled (future) matches from stat calculations
+  const playedMatches = matches.filter(m => m.date <= today);
+  const playedMatchIds = new Set(playedMatches.map(m => m.id));
 
-  const playerRosters = rosters.filter(r => r.player_id === playerId);
+  const { goals, assists } = computeNonDuplicatedAP(playerId, playedMatches, rosters.filter(r => playedMatchIds.has(r.match_id)), goalEvents.filter(g => playedMatchIds.has(g.match_id)));
+  const appearances = [...new Set(rosters.filter(r => r.player_id === playerId && playedMatchIds.has(r.match_id)).map(r => r.match_id))].length;
+
+  const playerRosters = rosters.filter(r => r.player_id === playerId && playedMatchIds.has(r.match_id));
   let wins = 0, losses = 0, draws = 0;
 
   const matchIds = [...new Set(playerRosters.map(r => r.match_id))];
   matchIds.forEach(matchId => {
-    const playerTeamIds = playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id);
+    // Use only ONE team per match (the team the player is rostered on)
+    const playerTeamIds = [...new Set(playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id))];
     playerTeamIds.forEach(teamId => {
       const result = results.find(r => r.team_id === teamId && r.match_id === matchId);
       if (result) {
         if (result.result === "승") wins++;
         else if (result.result === "패") losses++;
-        else draws++;
+        else if (result.result === "무") draws++;
+        // Skip other/empty result values (scheduled matches)
       }
     });
   });

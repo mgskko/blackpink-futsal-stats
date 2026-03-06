@@ -279,7 +279,7 @@ const MatchDetailPage = () => {
               <div className="text-[9px] text-muted-foreground">종합 점수</div>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-4 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-md bg-secondary/50 p-2 text-center">
               <div className="text-[9px] text-muted-foreground">공격</div>
               <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.attack.toFixed(1)}</div>
@@ -287,10 +287,6 @@ const MatchDetailPage = () => {
             <div className="rounded-md bg-secondary/50 p-2 text-center">
               <div className="text-[9px] text-muted-foreground">수비</div>
               <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.defense.toFixed(1)}</div>
-            </div>
-            <div className="rounded-md bg-secondary/50 p-2 text-center">
-              <div className="text-[9px] text-muted-foreground">클러치</div>
-              <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.clutch.toFixed(1)}</div>
             </div>
             <div className="rounded-md bg-secondary/50 p-2 text-center">
               <div className="text-[9px] text-muted-foreground">감점</div>

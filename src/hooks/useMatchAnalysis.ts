@@ -148,26 +148,6 @@ export function computeDataMOM(
     }
   });
 
-  // Clutch scoring: decisive goals/assists
-  matchGoals.forEach(g => {
-    if (g.is_own_goal) return;
-    const priorEvents = matchGoals.filter(e => e.quarter < g.quarter || (e.quarter === g.quarter && e.id < g.id));
-    let ourScore = 0, oppScore = 0;
-    priorEvents.forEach(e => {
-      if (e.is_own_goal) oppScore++;
-      else if (ourTeamIds.has(e.team_id)) ourScore++;
-      else oppScore++;
-    });
-
-    const isOurGoal = ourTeamIds.has(g.team_id);
-    if (isOurGoal) {
-      if (ourScore <= oppScore) {
-        if (g.goal_player_id) initScore(g.goal_player_id).clutch += 2;
-        if (g.assist_player_id) initScore(g.assist_player_id).clutch += 2;
-      }
-    }
-  });
-
   // Calculate totals and find MOM
   const scored = [...playerScores.entries()].map(([pid, s]) => ({
     playerId: pid,

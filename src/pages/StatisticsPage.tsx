@@ -7,6 +7,7 @@ import type { Player, Match, Result, Roster, GoalEvent, MatchQuarter } from "@/h
 import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
 import { computeAllCourtMargins, getDefenseContribution } from "@/hooks/useCourtStats";
 import { computeDataMOM } from "@/hooks/useMatchAnalysis";
+import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
@@ -23,9 +24,10 @@ function getAvailableYears(matches: Match[]): string[] {
 }
 
 function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], filter: FilterType) {
-  let filteredMatches = matches;
-  if (filter === "custom") filteredMatches = matches.filter(m => m.is_custom);
-  else if (filter !== "all") filteredMatches = matches.filter(m => m.date.startsWith(filter));
+  const today = new Date().toISOString().slice(0, 10);
+  let filteredMatches = matches.filter(m => m.date <= today); // exclude scheduled
+  if (filter === "custom") filteredMatches = filteredMatches.filter(m => m.is_custom);
+  else if (filter !== "all") filteredMatches = filteredMatches.filter(m => m.date.startsWith(filter));
 
   const filteredMatchIds = new Set(filteredMatches.map(m => m.id));
   const { goals, assists } = computeNonDuplicatedAP(playerId, filteredMatches, rosters.filter(r => filteredMatchIds.has(r.match_id)), goalEvents.filter(g => filteredMatchIds.has(g.match_id)));
@@ -35,10 +37,14 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
   const appearances = matchIds.length;
   let wins = 0, losses = 0, draws = 0;
   matchIds.forEach(matchId => {
-    const teamIds = playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id);
+    const teamIds = [...new Set(playerRosters.filter(r => r.match_id === matchId).map(r => r.team_id))];
     teamIds.forEach(teamId => {
       const result = results.find(r => r.team_id === teamId && r.match_id === matchId);
-      if (result) { if (result.result === "승") wins++; else if (result.result === "패") losses++; else draws++; }
+      if (result) {
+        if (result.result === "승") wins++;
+        else if (result.result === "패") losses++;
+        else if (result.result === "무") draws++;
+      }
     });
   });
   const totalGames = wins + losses + draws;
@@ -52,7 +58,7 @@ const StatisticsPage = () => {
   const navigate = useNavigate();
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
-  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "toto">("player");
+  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "toto">("player");
   const [selectedRanking, setSelectedRanking] = useState<RankingOption>("ap");
 
   const { data: momVotes } = useQuery({
@@ -231,7 +237,9 @@ const StatisticsPage = () => {
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
           {([
             ["player", "👤 개인"] as const,
-            ...(!isCustomFilter ? [["team", "⚔️ 팀 전적"] as const] : []),
+            ...(!isCustomFilter ? [["team", "⚔️ 팀"] as const] : []),
+            ["chemistry", "🤝 케미"] as const,
+            ["fun", "📊 기록"] as const,
             ["fun", "📊 각종 기록"] as const,
             ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
@@ -352,6 +360,210 @@ const StatisticsPage = () => {
                 ))}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === "chemistry" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Death Lineup */}
+            {(() => {
+              const deathLineup = computeDeathLineup(players, filteredQuarters);
+              if (!deathLineup) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">💀 THE DEATH LINEUP</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 조합 (최소 3쿼터)</p>
+                  <div className="rounded-xl border border-primary/30 bg-card p-4 box-glow">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {deathLineup.names.map((name, i) => (
+                        <span key={i} className="rounded-full gradient-pink px-3 py-1 text-xs font-bold text-primary-foreground cursor-pointer" onClick={() => { const p = players.find(pp => pp.name === name); if (p) navigate(`/player/${p.id}`); }}>{name}</span>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary text-glow">{deathLineup.margin > 0 ? "+" : ""}{deathLineup.margin}</div><div className="text-[9px] text-muted-foreground">총 마진</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-foreground">{deathLineup.quarters}</div><div className="text-[9px] text-muted-foreground">쿼터</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary">{deathLineup.avgMargin > 0 ? "+" : ""}{deathLineup.avgMargin.toFixed(1)}</div><div className="text-[9px] text-muted-foreground">쿼터당 마진</div></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Pass Network */}
+            {(() => {
+              const passNet = computePassNetwork(players, filteredGoalEvents, 10);
+              if (passNet.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🎯 TELEPATHIC DUO</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수</p>
+                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                    {passNet.map((d, i) => (
+                      <div key={`${d.assisterId}-${d.scorerId}`} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < passNet.length - 1 ? "border-b border-border" : ""}`}>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                          <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.assisterId}`)}>{d.assisterName}</span>
+                          <span className="text-primary">→</span>
+                          <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.scorerId}`)}>{d.scorerName}</span>
+                        </div>
+                        <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.count}회</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Toxic Duo */}
+            {(() => {
+              const toxicDuos = computeToxicDuos(players, filteredQuarters, 5);
+              if (toxicDuos.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive">☠️ TOXIC DUO</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">같은 필드에 설 때 팀 실점률이 가장 높은 조합 (최소 5쿼터)</p>
+                  <div className="space-y-2">
+                    {toxicDuos.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💀</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
+                            <span className="text-destructive">×</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                          </div>
+                          <span className="font-display text-lg text-destructive">{d.concededPerQ.toFixed(1)}</span>
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 동안 {d.totalConceded}실점</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Best Defensive Line */}
+            {(() => {
+              const defLines = computeBestDefenseLine(players, filteredQuarters, 5);
+              if (defLines.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🛡️ BEST DEFENSIVE LINE</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">DF 포지션 최소 실점 조합 (최소 5쿼터)</p>
+                  <div className="space-y-2">
+                    {defLines.map((d, i) => (
+                      <div key={d.names.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🛡️</span>
+                            {d.names.map((n, ni) => (
+                              <span key={ni}>
+                                <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => { const p = players.find(pp => pp.name === n); if (p) navigate(`/player/${p.id}`); }}>{n}</span>
+                                {ni < d.names.length - 1 && <span className="text-primary mx-1">&</span>}
+                              </span>
+                            ))}
+                          </div>
+                          <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.concededPerQ.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | 쿼터당 실점</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Synergy Margin */}
+            {(() => {
+              const synergy = computeSynergyMargin(players, filteredQuarters, 5);
+              if (synergy.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">⚡ SYNERGY MARGIN</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">같이 뛸 때 vs 따로 뛸 때 마진 차이</p>
+                  <div className="space-y-2">
+                    {synergy.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">✨</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
+                            <span className="text-primary">×</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                          </div>
+                          <span className={`font-display text-lg ${d.synergy > 0 ? "text-primary text-glow" : "text-destructive"}`}>{d.synergy > 0 ? "+" : ""}{d.synergy.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
+                          <span>같이: <span className="text-primary">{d.togetherMarginPerQ > 0 ? "+" : ""}{d.togetherMarginPerQ.toFixed(2)}/Q</span> ({d.togetherQ}Q)</span>
+                          <span>따로: {d.apartMarginPerQ > 0 ? "+" : ""}{d.apartMarginPerQ.toFixed(2)}/Q</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Without You */}
+            {(() => {
+              const withoutYou = computeWithoutYou(players, filteredQuarters, 7);
+              if (withoutYou.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🫥 WITHOUT YOU</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">선수가 벤치에 앉을 때 팀 마진 변화</p>
+                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                    {withoutYou.map((d, i) => (
+                      <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < withoutYou.length - 1 ? "border-b border-border" : ""}`}>
+                        <div className="flex items-center gap-3">
+                          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
+                          <div>
+                            <span className="text-sm font-medium text-foreground">{d.name}</span>
+                            <div className="text-[10px] text-muted-foreground">출전 {d.onFieldQ}Q | 벤치 {d.benchQ}Q</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`font-display text-lg ${d.impact > 0 ? "text-primary" : "text-muted-foreground"}`}>{d.impact > 0 ? "+" : ""}{d.impact.toFixed(2)}</span>
+                          <div className="text-[9px] text-muted-foreground">임팩트</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* FW Duo */}
+            {(() => {
+              const fwDuos = computeFWDuos(players, filteredQuarters, filteredGoalEvents, 5);
+              if (fwDuos.length === 0) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">⚔️ BEST FW DUO</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">동시에 FW로 뛰었을 때 최강 투톱 (최소 3쿼터)</p>
+                  <div className="space-y-2">
+                    {fwDuos.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">⚔️</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
+                            <span className="text-primary">×</span>
+                            <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
+                          </div>
+                          <span className={`font-display text-lg ${d.marginPerQ > 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}</span>
+                        </div>
+                        <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
+                          <span>{d.quarters}쿼터</span>
+                          <span>합계 {d.totalGoals}골</span>
+                          <span>쿼터당 <span className="text-primary">{d.goalsPerQ.toFixed(1)}골</span></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
 
