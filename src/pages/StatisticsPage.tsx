@@ -14,6 +14,7 @@ import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swor
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import TotoStatsTab from "@/components/stats/TotoStatsTab";
+import FormationStatsTab from "@/components/stats/FormationStatsTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type FilterType = "all" | "custom" | string;
@@ -58,7 +59,7 @@ const StatisticsPage = () => {
   const navigate = useNavigate();
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
-  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "toto">("player");
+  const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "formation" | "toto">("player");
   const [selectedRanking, setSelectedRanking] = useState<RankingOption>("ap");
 
   const { data: momVotes } = useQuery({
@@ -239,12 +240,12 @@ const StatisticsPage = () => {
             ["player", "👤 개인"] as const,
             ...(!isCustomFilter ? [["team", "⚔️ 팀"] as const] : []),
             ["chemistry", "🤝 케미"] as const,
+            ["formation", "📋 포메이션"] as const,
             ["fun", "📊 기록"] as const,
-            ["fun", "📊 각종 기록"] as const,
             ["toto", "🎯 토토"] as const,
           ]).map(([key, label]) => (
-            <button key={key} onClick={() => setActiveTab(key as any)}
-              className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <button key={key + label} onClick={() => setActiveTab(key as any)}
+              className={`flex-1 py-2.5 text-[10px] font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
             </button>
           ))}
@@ -372,7 +373,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">💀 THE DEATH LINEUP</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 조합 (최소 3쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 5인 조합 (최소 5쿼터)</p>
                   <div className="rounded-xl border border-primary/30 bg-card p-4 box-glow">
                     <div className="flex flex-wrap gap-2 mb-3">
                       {deathLineup.names.map((name, i) => (
@@ -391,11 +392,11 @@ const StatisticsPage = () => {
 
             {/* Pass Network */}
             {(() => {
-              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 3);
+              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 10);
               if (passNet.length === 0) return null;
               return (
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 환상의 짝꿍 TOP 3</h3>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 환상의 짝꿍 TOP 10</h3>
                   <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수 (8경기 이상 함께 출전)</p>
                   <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {passNet.map((d, i) => (
