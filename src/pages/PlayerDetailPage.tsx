@@ -594,31 +594,6 @@ const PlayerDetailPage = () => {
               </div>
             </motion.div>
           )}
-                {assistTypeChartData.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-1 text-center">🅰️ 어시스트 취향</h4>
-                    <ResponsiveContainer width="100%" height={140}>
-                      <PieChart>
-                        <Pie data={assistTypeChartData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value">
-                          {assistTypeChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-0.5 mt-1">
-                      {assistTypeChartData.map((d, i) => (
-                        <div key={d.name} className="flex items-center gap-1.5 text-[9px]">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[(i + 2) % CHART_COLORS.length] }} />
-                          <span className="text-foreground truncate">{d.name}</span>
-                          <span className="text-muted-foreground ml-auto">{d.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
 
           {/* Solo vs Team Goals */}
           {soloTeamData.length > 0 && soloVsTeam.total >= 3 && (
