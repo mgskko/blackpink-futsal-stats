@@ -334,7 +334,7 @@ export function computePlayerTraits(
     return { id: pid, value: ap >= 5 ? assists / ap : 0 };
   }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, assistRatioRanking, 2, 0.01)) {
-    traits.push({ name: "최고의 도우미", emoji: "🟢", description: `어시스트 비율 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "마에스트로 외질", emoji: "🎯", description: `어시스트 비율 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 🛡️ 3. Defense/Other Traits (top 1-2)
