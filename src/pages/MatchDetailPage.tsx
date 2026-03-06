@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Youtube, Check, X, HelpCircle, Users } from "lucide-react";
@@ -12,6 +12,7 @@ import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import QuarterLineupViewer from "@/components/match/QuarterLineupViewer";
 import { useAuth } from "@/hooks/useAuth";
+import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
@@ -64,6 +65,14 @@ const MatchDetailPage = () => {
     };
     fetchAttendance();
   }, [matchId]);
+
+  // Court margins for this match
+  const courtMargins = useMemo(() => {
+    if (!matchQuarters || matchQuarters.length === 0) return null;
+    const sorted = [...matchQuarters].sort((a, b) => a.quarter - b.quarter);
+    const matchGoals = goalEvents.filter(g => g.match_id === matchId);
+    return computeMatchCourtMargins(sorted, matchGoals, players);
+  }, [matchQuarters, goalEvents, matchId, players]);
 
   if (isLoading) return <SplashScreen />;
 
@@ -129,11 +138,8 @@ const MatchDetailPage = () => {
         </div>
       </div>
 
-      {/* Match Prediction (for scheduled matches) - TOP POSITION */}
       {isScheduled && (
-        <div className="mx-4 mt-4">
-          <MatchPrediction matchId={matchId} />
-        </div>
+        <div className="mx-4 mt-4"><MatchPrediction matchId={matchId} /></div>
       )}
 
       {/* Score Card */}
@@ -238,31 +244,46 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Match Summary */}
+      {/* Match Summary with Court Margin */}
       {playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? "종합 기록" : "MATCH SUMMARY"}</h2>
           {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">쿼터별 상세 기록이 없는 경기입니다.</p>}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
-            {playerMatchStats.map((p, i) => (
-              <div key={p.playerId} onClick={() => navigate(`/player/${p.playerId}`)}
-                className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < playerMatchStats.length - 1 ? "border-b border-border" : ""}`}>
-                <span className="text-sm font-medium text-foreground">{getPlayerName(players, p.playerId)}</span>
-                <div className="flex items-center gap-3">
-                  {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
-                  {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
-                  {p.goals === 0 && p.assists === 0 && <span className="text-xs text-muted-foreground">-</span>}
+            {playerMatchStats.map((p, i) => {
+              const cm = courtMargins?.get(p.playerId);
+              const margin = cm?.margin ?? null;
+              const isSuperSub = cm?.isSuperSub ?? false;
+              return (
+                <div key={p.playerId} onClick={() => navigate(`/player/${p.playerId}`)}
+                  className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < playerMatchStats.length - 1 ? "border-b border-border" : ""}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{getPlayerName(players, p.playerId)}</span>
+                    {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 슈퍼 서브</span>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
+                    {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
+                    {p.goals === 0 && p.assists === 0 && margin === null && <span className="text-xs text-muted-foreground">-</span>}
+                    {margin !== null && (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        margin > 0 ? "bg-green-500/10 border border-green-500/30 text-green-400"
+                        : margin < 0 ? "bg-red-500/10 border border-red-500/30 text-red-400"
+                        : "bg-muted border border-border text-muted-foreground"
+                      }`}>
+                        {margin > 0 ? `+${margin}` : margin === 0 ? "0" : `${margin}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       )}
 
       {/* MOM Voting */}
-      <div className="mx-4 mt-4">
-        <MOMVoting matchId={matchId} />
-      </div>
+      <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>
 
       {/* Attendance */}
       {hasAttendanceData && (
@@ -293,20 +314,12 @@ const MatchDetailPage = () => {
 
       {/* Quarter Lineup Viewer */}
       {matchQuarters && matchQuarters.length > 0 && (
-        <div className="mx-4 mt-4">
-          <QuarterLineupViewer quarters={matchQuarters} players={players} />
-        </div>
+        <div className="mx-4 mt-4"><QuarterLineupViewer quarters={matchQuarters} players={players} /></div>
       )}
 
       {/* Formation Builder */}
       <div className="mx-4 mt-4">
-        <FormationBuilder
-          matchId={matchId}
-          players={players}
-          roster={roster}
-          matchTeams={matchTeams}
-          isAdmin={isAdmin}
-        />
+        <FormationBuilder matchId={matchId} players={players} roster={roster} matchTeams={matchTeams} isAdmin={isAdmin} />
       </div>
 
       {/* Roster */}
@@ -331,9 +344,7 @@ const MatchDetailPage = () => {
       </motion.div>
 
       {/* Match Comments */}
-      <div className="mx-4 mt-4">
-        <MatchComments matchId={matchId} />
-      </div>
+      <div className="mx-4 mt-4"><MatchComments matchId={matchId} /></div>
     </div>
   );
 };
