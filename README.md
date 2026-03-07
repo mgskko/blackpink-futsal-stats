@@ -1,73 +1,64 @@
-# Welcome to your Lovable project
+# 🐰 Bunnies FC Analytics (버니즈 풋살/축구 전력 분석 시스템)
 
-## Project info
+버니즈 FC Analytics는 단순한 동호회 출석체크를 넘어, 프로 스포츠 구단(FM, FC온라인 급)에서 사용하는 수준의 **심층 데이터 분석과 선수 평가 시스템**을 제공하는 아마추어 축구/풋살 구단 관리 애플리케이션입니다.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## ✨ 핵심 기능 (Key Features)
 
-There are several ways of editing your application.
+### 📊 1. 프로급 데이터 대시보드 (Advanced Analytics)
 
-**Use Lovable**
+- **정밀한 기여도 연산:** 선수가 실제 출전한 쿼터만을 모수(분모)로 삼아 공격/수비 기여도의 왜곡을 방지합니다.
+- **코트 마진 (+/-):** 선수가 필드에 출전해 있는 동안 팀의 득실차를 계산하여 실제 경기 영향력을 측정합니다.
+- **PPQ (공포 효율):** 출전 쿼터 대비 공격포인트 효율을 분석하여 진짜 에이스를 가려냅니다.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 👑 2. Data MOM (자동 MVP 산정 시스템)
 
-Changes made via Lovable will be committed automatically to this repo.
+주관적인 투표를 배제하고, 철저한 데이터 기반 알고리즘으로 경기 MVP를 선정합니다.
 
-**Use your preferred IDE**
+- **이타성 & 수비 헌신 우대:** 어시스트와 수비수/골키퍼의 클린시트 마진에 높은 가중치를 부여합니다.
+- **엄격한 감점(Penalty) 로직:** 자책골(-2점), 공격수 무득점 침묵(-3점), 수비수 대량 실점(-3점) 등 트롤링 지표를 도입하여 공정성을 높였습니다.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🔥 3. 선수 고유 특성 (Meme-based Traits)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+해외 축구 레전드와 밈(Meme)을 활용하여 팀 내 1~2위에게만 희소성 있는 뱃지를 수여합니다.
 
-Follow these steps:
+- `제라드의 강림`: 중거리골 팀 내 상위권
+- `루카쿠의 양민학살 (스탯 세탁기)`: 3점 차 이상 크게 이기고 있을 때 올린 스탯 비율 1위
+- `인자기의 환생`: 주워먹기 및 혼전 상황 득점 장인
+- `비디치의 통곡의 벽`: 수비수 출전 시 최소 실점률 달성
+- `패스 버튼 고장난 로벤 (탐욕왕)`: 어시스트 비율이 가장 낮은 공격수
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🤝 4. 라인업 & 케미스트리 분석 (Chemistry Stats)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **THE DEATH LINEUP:** 팀 내 득실 마진이 가장 압도적인 최강의 5인 조합.
+- **환상의 짝꿍 (Telepathic Duo):** 서로의 골을 가장 많이 어시스트한 영혼의 파트너 TOP 10.
+- **파멸의 듀오 (Toxic Duo):** 같이 뛰면 팀 실점률이 수직 상승하는 끔찍한 조합 (최소 10쿼터 기준).
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 🧤 5. 포지션별 심층 스탯 (Position-Specific Data)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+포메이션 데이터를 활용하여 각 포지션에 특화된 인사이트를 제공합니다.
 
-**Edit a file directly in GitHub**
+- **가짜 9번 (False 9):** 골보다 어시스트가 많은 이타적 공격수.
+- **빌드업 마스터:** 수비수(DF) 포지션에서 킬패스와 어시스트를 뿌리는 후방 사령관.
+- **유산소의 신 (Cardio FC):** 출전 시간은 길지만 코트 마진과 공격포인트가 없는 선수.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### ⚙️ 6. 완벽한 관리자 시스템 (Admin & Editor)
 
-**Use GitHub Codespaces**
+- **Creatable Select 도입:** 킬패스, 컷백 등 고정된 득점 루트뿐만 아니라 '엉덩이골', '가슴골' 등 기상천외한 상황을 관리자가 즉각 타이핑하여 추가할 수 있습니다.
+- **전술 에디터 (Tactics Board):** 팀의 새로운 포메이션과 세트피스 전술을 추가하고 팀원과 공유할 수 있습니다.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🛠 기술 스택 (Tech Stack)
 
-This project is built with:
+- **Frontend:** React / Vue (프론트엔드 상태 관리를 통한 즉각적인 렌더링)
+- **Backend:** RESTful API 기반의 복잡한 SQL Aggregation (카테시안 곱 방지 및 정밀 JOIN 구현)
+- **Database:** `match_quarters` (쿼터별 포메이션) & `goal_events` (상세 득점 타임라인) 관계형 데이터베이스
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 📖 디렉토리 구조 및 핵심 데이터베이스 스키마
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `goal_events`: 득점자, 도움자, 득점 유형, 어시스트 유형, 유튜브 타임라인, 자책골 여부 등을 기록.
+- `match_quarters`: 쿼터별 참가 선수의 포지션(FW, MF, DF, GK, Bench) 및 쿼터 스코어를 기록하여 코트 마진(+/-)과 포지션별 승률을 도출.
