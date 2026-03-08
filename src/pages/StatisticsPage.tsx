@@ -54,7 +54,7 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
   return { goals, assists, attackPoints: goals + assists, appearances, wins, losses, draws, winRate };
 }
 
-type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom" | "fun";
+type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom" | "fun" | "worst";
 
 const StatisticsPage = () => {
   const navigate = useNavigate();
@@ -213,6 +213,14 @@ const StatisticsPage = () => {
         return momRanking.length > 0
           ? <GenericRanking data={momRanking.slice(0, 10).map(d => ({ id: d.playerId, name: d.name, count: d.count }))} valueLabel="MOM" valueFn={(d: any) => `${d.count}회`} />
           : <p className="text-center text-sm text-muted-foreground py-4">MOM 투표 데이터가 없습니다</p>;
+      case "worst": {
+        const worstCounts = new Map<number, number>();
+        (worstVotesAll || []).forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
+        const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).sort((a, b) => b.count - a.count).slice(0, 10);
+        return worstRanking.length > 0
+          ? <GenericRanking data={worstRanking} valueLabel="워스트" valueFn={(d: any) => `${d.count}표`} />
+          : <p className="text-center text-sm text-muted-foreground py-4">워스트 투표 데이터가 없습니다</p>;
+      }
       default:
         return null;
     }
@@ -332,6 +340,7 @@ const StatisticsPage = () => {
                   <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
                   <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
                   <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
+                  <SelectItem value="worst">👎 워스트 누적 랭킹</SelectItem>
                   <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
                 </SelectContent>
               </Select>

@@ -10,6 +10,14 @@ import { toast } from "@/hooks/use-toast";
 import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
+import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
+
+const AGE_CATEGORIES = [
+  "20대 초반", "20대 중반", "20대 후반",
+  "2030 혼합", "30대 초반", "30대 중반", "30대 후반",
+  "3040 혼합", "30대초중반", "30대중~40대",
+  "정보없음",
+];
 
 const GOAL_TYPE_OPTIONS = ["주워먹기", "중거리골", "발리골", "헤딩골", "칩슛", "드리블골", "터닝골", "아크로바틱", "파포스트골", "엉덩이골", "가슴골", "프리킥골", "페널티킥", "코너킥직접골"];
 const ASSIST_TYPE_OPTIONS = ["킬패스", "컷백", "크로스", "스루패스", "숏패스", "롱패스", "코너킥", "프리킥", "헤더패스", "드리블돌파", "GK어시"];
@@ -145,7 +153,7 @@ const AdminMatchEdit = () => {
       const { error } = await supabase.from("goal_events").update({
         quarter: editGoalQuarter,
         is_own_goal: editGoalIsOwnGoal,
-        goal_player_id: editGoalIsOwnGoal ? null : (editGoalPlayerId ? Number(editGoalPlayerId) : null),
+        goal_player_id: editGoalPlayerId ? Number(editGoalPlayerId) : null,
         assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId && editGoalAssistId !== "none" ? Number(editGoalAssistId) : null),
         video_timestamp: editGoalTimestamp || null,
         goal_type: editGoalType || null,
@@ -169,7 +177,7 @@ const AdminMatchEdit = () => {
         match_id: matchId,
         team_id: ourTeam?.id || matchTeams[0]?.id,
         quarter: addQuarter,
-        goal_player_id: addIsOwnGoal ? null : (addGoalPlayerId ? Number(addGoalPlayerId) : null),
+        goal_player_id: addGoalPlayerId ? Number(addGoalPlayerId) : null,
         assist_player_id: addIsOwnGoal ? null : (addAssistPlayerId && addAssistPlayerId !== "none" ? Number(addAssistPlayerId) : null),
         is_own_goal: addIsOwnGoal,
         video_timestamp: addTimestamp || null,
@@ -412,6 +420,15 @@ const AdminMatchEdit = () => {
                     <label className="text-xs text-muted-foreground">자책골</label>
                   </div>
                 </div>
+                {addIsOwnGoal && (
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">자책골 선수 (우리 팀)</label>
+                    <Select value={addGoalPlayerId} onValueChange={setAddGoalPlayerId}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="자책골 선수" /></SelectTrigger>
+                      <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {!addIsOwnGoal && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -461,6 +478,15 @@ const AdminMatchEdit = () => {
                           <label className="text-xs text-muted-foreground">자책골</label>
                         </div>
                       </div>
+                      {editGoalIsOwnGoal && (
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">자책골 선수 (우리 팀)</label>
+                          <Select value={editGoalPlayerId} onValueChange={setEditGoalPlayerId}>
+                            <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="자책골 선수" /></SelectTrigger>
+                            <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       {!editGoalIsOwnGoal && (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
@@ -537,6 +563,30 @@ const AdminMatchEdit = () => {
               </div>
             )}
           </div>
+
+          {/* Opponent Age Category */}
+          {(() => {
+            const oppTeam = matchTeams.find(t => !t.is_ours);
+            if (!oppTeam) return null;
+            return (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <h3 className="text-sm font-bold text-primary mb-2">상대팀 연령대</h3>
+                <div className="flex gap-2">
+                  <Select value={oppTeam.age_category || ""} onValueChange={async (v) => {
+                    await supabase.from("teams").update({ age_category: v, original_age_desc: v }).eq("id", oppTeam.id);
+                    invalidateAll();
+                    toast({ title: "연령대가 수정되었습니다 ✅" });
+                  }}>
+                    <SelectTrigger className="h-8 text-xs bg-background border-border flex-1"><SelectValue placeholder="연령대 선택" /></SelectTrigger>
+                    <SelectContent>{AGE_CATEGORIES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Quarter Editor */}
+          <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />
 
           {/* Delete Match */}
           <Button variant="destructive" onClick={() => setDeleteTarget({ type: "match", id: matchId })} className="w-full">

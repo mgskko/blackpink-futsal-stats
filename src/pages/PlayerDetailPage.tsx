@@ -20,17 +20,56 @@ import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 
-function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): boolean {
-  const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
-  const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
-  const recent3 = sortedMatches.slice(0, 3);
-  if (recent3.length < 3) return false;
-  const r3Ids = new Set(recent3.map(m => m.id));
-  const goals = goalEvents.filter(g => r3Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal).length;
-  const assists = goalEvents.filter(g => r3Ids.has(g.match_id) && g.assist_player_id === playerId).length;
-  const rGoals = rosters.filter(r => r3Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.goals || 0), 0);
-  const rAssists = rosters.filter(r => r3Ids.has(r.match_id) && r.player_id === playerId).reduce((s, r) => s + (r.assists || 0), 0);
-  return (goals + assists + rGoals + rAssists) >= 6;
+function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): { active: boolean; country: string; text: string } {
+  // Must have 15+ quarters played
+  const quartersPlayed = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) && getPlayerPosition(q.lineup, playerId) !== "Bench").length;
+  if (quartersPlayed < 15) return { active: false, country: "", text: "" };
+  
+  // Must be top 3 in combined court margin + AP
+  const allPlayerIds = [...new Set(rosters.map(r => r.player_id))];
+  const playerScores = allPlayerIds.map(pid => {
+    const qPlayed = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, pid) && getPlayerPosition(q.lineup, pid) !== "Bench").length;
+    if (qPlayed < 10) return { pid, score: -999 };
+    let margin = 0;
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const pos = getPlayerPosition(q.lineup, pid);
+      if (pos && pos !== "Bench") margin += (q.score_for || 0) - (q.score_against || 0);
+    });
+    const goals = goalEvents.filter(g => g.goal_player_id === pid && !g.is_own_goal).length;
+    const assists = goalEvents.filter(g => g.assist_player_id === pid).length;
+    return { pid, score: margin + goals + assists };
+  }).sort((a, b) => b.score - a.score);
+  
+  const rank = playerScores.findIndex(p => p.pid === playerId);
+  if (rank < 0 || rank >= 3) return { active: false, country: "", text: "" };
+
+  // Determine country by player strengths
+  const myGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
+  const myAssists = goalEvents.filter(g => g.assist_player_id === playerId).length;
+  let myMargin = 0;
+  allQuarters.forEach(q => { if (q.lineup && getPlayerPosition(q.lineup, playerId) && getPlayerPosition(q.lineup, playerId) !== "Bench") myMargin += (q.score_for || 0) - (q.score_against || 0); });
+  const myMom = momVotes ? momVotes.filter(v => v.voted_player_id === playerId).length : 0;
+  const fwQ = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW").length;
+  const dfQ = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "DF").length;
+  const dfConceded = allQuarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "DF").reduce((s, q) => s + (q.score_against || 0), 0);
+  const attendRate = matches.length > 0 ? [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))].length / matches.length : 0;
+
+  type CountryDef = { flag: string; country: string; text: string; score: number };
+  const countries: CountryDef[] = [
+    { flag: "🇧🇷", country: "브라질", text: "브라질 삼바 축구급 폼으로 매 경기 진심을 다해 팀을 캐리 중입니다.", score: myGoals * 3 + myAssists },
+    { flag: "🇫🇷", country: "프랑스", text: "장난 0%, 진심 100%! 프랑스 아트 사커를 연상케 하는 플레이!", score: myAssists * 4 },
+    { flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", country: "잉글랜드", text: "잉글랜드 국대급 폼! 피지컬과 전술 이해도로 최고 마진 기록 중!", score: myMargin * 3 },
+    { flag: "🇰🇷", country: "한국", text: "대한민국 국대급 꺾이지 않는 투혼! 엄청난 활동량의 진심 모드!", score: (attendRate * 100) + quartersPlayed },
+    { flag: "🇪🇸", country: "스페인", text: "스페인의 무적함대급 패스워크! 동호회에서 무자비한 티키타카 시전!", score: myAssists * 3 + (goalEvents.filter(g => g.assist_player_id === playerId && (g.assist_type === "숏패스" || g.assist_type === "스루패스")).length * 5) },
+    { flag: "🇩🇪", country: "독일", text: "독일 전차군단의 냉혹함! 기계 같은 효율성으로 매 경기 진심 100%!", score: attendRate * 150 },
+    { flag: "🇮🇹", country: "이탈리아", text: "이탈리아의 카테나치오 강림! 국대급 빗장수비로 실점을 지워버립니다.", score: dfQ > 5 ? (dfQ * 5 - dfConceded * 3) : 0 },
+    { flag: "🇦🇷", country: "아르헨티나", text: "아르헨티나 탱고 군단 빙의! 위기마다 구세주처럼 팀을 하드캐리!", score: myMom * 10 },
+    { flag: "🇳🇱", country: "네덜란드", text: "네덜란드 토탈 사커의 교과서! 필드 전역을 지배하는 멀티 플레이어!", score: (fwQ > 3 && dfQ > 3) ? (fwQ + dfQ) * 3 : 0 },
+  ];
+  
+  const best = countries.sort((a, b) => b.score - a.score)[0];
+  return { active: true, country: `${best.flag} ${best.country}`, text: best.text };
 }
 
 const CHART_COLORS = ["hsl(330, 100%, 71%)", "hsl(210, 100%, 60%)", "hsl(150, 80%, 50%)", "hsl(45, 100%, 60%)", "hsl(280, 80%, 60%)", "hsl(0, 80%, 60%)", "hsl(180, 70%, 50%)"];
@@ -54,6 +93,14 @@ const PlayerDetailPage = () => {
     queryKey: ["mom_votes_all"],
     queryFn: async () => {
       const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
+
+  const { data: worstVotes } = useQuery({
+    queryKey: ["worst_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("worst_votes").select("match_id, voted_player_id");
       return (data ?? []) as { match_id: number; voted_player_id: number }[];
     },
   });
@@ -179,11 +226,12 @@ const PlayerDetailPage = () => {
 
   const formGuide = getPlayerFormGuide(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
   const scoutingReport = getDeepScoutingReport(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
-  const tier = getPlayerTier(playerId, matches, rosters, goalEvents, momVotes);
+  const tier = getPlayerTier(playerId, matches, rosters, goalEvents, momVotes, worstVotes, allQuarters);
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const isConcacaf = getConcacafMode(playerId, matches, rosters, goalEvents);
+  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, momVotes, players);
+  const isConcacaf = concacafInfo.active;
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
@@ -294,7 +342,10 @@ const PlayerDetailPage = () => {
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
-                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 🏆</div>
+                <div className="mt-1 space-y-1">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {concacafInfo.country} 🏆</div>
+                  <p className="text-[10px] text-emerald-400/80 leading-snug">{concacafInfo.text}</p>
+                </div>
               )}
               {fireTier !== "none" && (
                 <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
@@ -386,7 +437,7 @@ const PlayerDetailPage = () => {
             </motion.div>
           )}
 
-          {/* Scouting Report */}
+          {/* Scouting Report - Position Based */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
             <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">{trendIcon} 수석코치 AI 스카우팅 리포트</h3>
             <div className="flex items-start gap-4 rounded-lg bg-secondary/30 border border-primary/20 p-4">
@@ -396,6 +447,55 @@ const PlayerDetailPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
               </div>
             </div>
+            {/* Position-based 3-line report */}
+            {positionDist.total >= 5 && (
+              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground border-t border-border pt-3">
+                {(() => {
+                  const fwQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW");
+                  const dfQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "DF");
+                  const fwWinRate = fwQ.length >= 3 ? Math.round(fwQ.filter(q => (q.score_for || 0) > (q.score_against || 0)).length / fwQ.length * 100) : null;
+                  const dfWinRate = dfQ.length >= 3 ? Math.round(dfQ.filter(q => (q.score_for || 0) > (q.score_against || 0)).length / dfQ.length * 100) : null;
+                  const fwMargin = fwQ.length >= 3 ? fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / fwQ.length : 0;
+                  const dfMargin = dfQ.length >= 3 ? dfQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / dfQ.length : 0;
+                  
+                  // Line 1: Best/Worst position
+                  let posLine = "";
+                  if (fwWinRate !== null && dfWinRate !== null) {
+                    if (fwMargin > dfMargin && fwMargin > 0.3) posLine = "📋 전방 배치 권장 — FW 출전 시 팀 성적이 돋보입니다.";
+                    else if (dfMargin > fwMargin && dfMargin > 0.3) posLine = "📋 후방 수비/빌드업 핵심 — DF 배치 시 안정감이 극대화됩니다.";
+                    else if (fwMargin > 0 && dfMargin > 0) posLine = "📋 완벽한 헥사곤 멀티 플레이어 — 어디를 서도 팀에 기여합니다.";
+                    else posLine = `📋 FW 승률 ${fwWinRate}% / DF 승률 ${dfWinRate}% — 포지션 최적화가 필요합니다.`;
+                  }
+                  
+                  // Line 2: Playstyle
+                  const totalGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
+                  const totalAssists = goalEvents.filter(g => g.assist_player_id === playerId).length;
+                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골")).length;
+                  const counterGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.build_up_process === "역습" || g.goal_type === "드리블골")).length;
+                  let styleLine = "";
+                  if (totalGoals > 0 && totalAssists > totalGoals) styleLine = "⚽ 이타적 폴스 나인(False 9) — 골보다 동료 살리기에 능한 플레이메이커.";
+                  else if (totalGoals > 0 && pocherGoals / totalGoals >= 0.5) styleLine = "⚽ 타겟맨/포쳐 — 골문 앞 혼전과 주워먹기에 특화된 스트라이커.";
+                  else if (counterGoals >= 3) styleLine = "⚽ 역습의 선봉장 — 빠른 전환 공격의 마무리를 책임지는 스피드스터.";
+                  else if (totalGoals >= 3) styleLine = `⚽ 균형잡힌 스트라이커 — ${totalGoals}골 ${totalAssists}도움의 만능형 공격수.`;
+                  else styleLine = "⚽ 아직 충분한 득점 데이터가 쌓이지 않았습니다.";
+                  
+                  // Line 3: Synergy partner
+                  let synergyLine = "";
+                  if (topDuos.length > 0) {
+                    const [topPartnerId, topCount] = topDuos[0];
+                    synergyLine = `🤝 베스트 시너지: ${getPlayerName(players, topPartnerId)} (${topCount}회 합작)`;
+                  }
+                  
+                  return (
+                    <>
+                      {posLine && <p>{posLine}</p>}
+                      {styleLine && <p>{styleLine}</p>}
+                      {synergyLine && <p>{synergyLine}</p>}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </motion.div>
 
           {/* W/D/L */}
