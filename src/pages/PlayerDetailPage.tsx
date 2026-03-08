@@ -244,7 +244,7 @@ const PlayerDetailPage = () => {
   const assistGiven = getPlayerAssistGiven(filtered.goalEvents, playerId, 7);
   const assistReceived = getPlayerAssistReceived(filtered.goalEvents, playerId, 7);
   const badges = getPlayerBadges(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
-  const varianceBadges = getVarianceBadge(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
+  const varianceBadges = getVarianceBadge(playerId, filtered.matches, filtered.rosters, filtered.goalEvents, filtered.quarters);
   const allBadges = [...badges, ...varianceBadges];
 
   const winFairyAll = getWinFairyData(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters);
