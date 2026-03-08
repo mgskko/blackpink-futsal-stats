@@ -489,7 +489,7 @@ const PlayerDetailPage = () => {
                   // Line 2: Playstyle
                   const totalGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
                   const totalAssists = goalEvents.filter(g => g.assist_player_id === playerId).length;
-                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골")).length;
+                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골" || g.goal_type === "골문앞혼전")).length;
                   const counterGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.build_up_process === "역습" || g.goal_type === "드리블골")).length;
                   let styleLine = "";
                   if (totalGoals > 0 && totalAssists > totalGoals) styleLine = "⚽ 이타적 폴스 나인(False 9) — 골보다 동료 살리기에 능한 플레이메이커.";

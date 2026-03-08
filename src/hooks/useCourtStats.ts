@@ -279,8 +279,8 @@ export function computePlayerTraits(
     traits.push({ name: "제라드의 강림", emoji: "⚽", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
   }
 
-  // 위치 선정의 달인: 주워먹기+혼전골+인자기골
-  const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "인자기골") })).sort((a, b) => b.value - a.value);
+  // 위치 선정의 달인: 주워먹기+골문 앞 혼전골+인자기골
+  const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "골문앞혼전", "인자기골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pocherRanking, 2, 1)) {
     traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
   }
