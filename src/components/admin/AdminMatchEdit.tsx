@@ -10,6 +10,14 @@ import { toast } from "@/hooks/use-toast";
 import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
+import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
+
+const AGE_CATEGORIES = [
+  "20대 초반", "20대 중반", "20대 후반",
+  "2030 혼합", "30대 초반", "30대 중반", "30대 후반",
+  "3040 혼합", "30대초중반", "30대중~40대",
+  "정보없음",
+];
 
 const GOAL_TYPE_OPTIONS = ["주워먹기", "중거리골", "발리골", "헤딩골", "칩슛", "드리블골", "터닝골", "아크로바틱", "파포스트골", "엉덩이골", "가슴골", "프리킥골", "페널티킥", "코너킥직접골"];
 const ASSIST_TYPE_OPTIONS = ["킬패스", "컷백", "크로스", "스루패스", "숏패스", "롱패스", "코너킥", "프리킥", "헤더패스", "드리블돌파", "GK어시"];
