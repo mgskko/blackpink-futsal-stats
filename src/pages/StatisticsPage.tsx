@@ -696,7 +696,7 @@ const StatisticsPage = () => {
             {hallOfFame.length > 0 && (
               <div className="mb-6">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> 명예의 전당</h3>
-                <p className="mb-2 text-xs text-muted-foreground">한 경기 공격포인트 7개 이상 달성</p>
+                <p className="mb-2 text-xs text-muted-foreground">한 경기 공격포인트 10개 이상 달성</p>
                 <div className="space-y-2">
                   {hallOfFame.slice(0, 15).map((e) => (
                     <div key={`${e.playerId}-${e.matchId}`} onClick={() => navigate(`/match/${e.matchId}`)} className="cursor-pointer rounded-lg border border-primary/30 bg-card p-3 transition-colors hover:bg-secondary box-glow">
