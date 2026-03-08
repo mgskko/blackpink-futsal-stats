@@ -535,36 +535,85 @@ const StatisticsPage = () => {
               );
             })()}
 
-            {/* FW Duo */}
+            {/* Position Duos by Win Rate */}
             {(() => {
-              const fwDuos = computeFWDuos(players, filteredQuarters, filteredGoalEvents, 5);
-              if (fwDuos.length === 0) return null;
-              return (
+              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, false);
+              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, true);
+              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, false);
+              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, true);
+              const DuoSection = ({ title, emoji, data, isWorst }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">⚔️ BEST FW DUO</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">동시에 FW로 뛰었을 때 최강 투톱 (최소 3쿼터)</p>
+                  <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 5쿼터)</p>
                   <div className="space-y-2">
-                    {fwDuos.map((d, i) => (
-                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
+                    {data.map((d, i) => (
+                      <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${!isWorst && i === 0 ? "border-primary/50 box-glow" : isWorst && i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">⚔️</span>
                             <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span>
-                            <span className="text-primary">×</span>
+                            <span className={isWorst ? "text-destructive" : "text-primary"}>×</span>
                             <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
                           </div>
-                          <span className={`font-display text-lg ${d.marginPerQ > 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}</span>
+                          <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{d.winRate}%</span>
                         </div>
-                        <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
-                          <span>{d.quarters}쿼터</span>
-                          <span>합계 {d.totalGoals}골</span>
-                          <span>쿼터당 <span className="text-primary">{d.goalsPerQ.toFixed(1)}골</span></span>
-                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | 쿼터당 마진 {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               );
+              return (<>
+                <DuoSection title="BEST FW DUO" emoji="⚔️" data={bestFW} />
+                <DuoSection title="WORST FW DUO" emoji="💀" data={worstFW} isWorst />
+                <DuoSection title="BEST DF DUO" emoji="🛡️" data={bestDF} />
+                <DuoSection title="WORST DF DUO" emoji="☠️" data={worstDF} isWorst />
+              </>);
+            })()}
+
+            {/* Trios */}
+            {(() => {
+              const bestTrios = computeTriosByWinRate(players, filteredQuarters, 3, false);
+              const worstTrios = computeTriosByWinRate(players, filteredQuarters, 5, true);
+              return (<>
+                {bestTrios.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">✨ 황금 삼각편대 (Best Trio)</h3>
+                    <p className="mb-2 text-xs text-muted-foreground">3명 동시 출전 시 팀 승률 TOP (최소 10쿼터)</p>
+                    <div className="space-y-2">
+                      {bestTrios.map((d, i) => (
+                        <div key={d.ids.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {d.names.map((n, ni) => (<span key={ni}><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => { const p = players.find(pp => pp.name === n); if (p) navigate(`/player/${p.id}`); }}>{n}</span>{ni < d.names.length - 1 && <span className="text-primary mx-1">×</span>}</span>))}
+                            </div>
+                            <span className="font-display text-lg text-primary text-glow">{d.winRate}%</span>
+                          </div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | {d.wins}승</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {worstTrios.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive">☠️ 버뮤다 삼각지대 (Worst Trio)</h3>
+                    <p className="mb-2 text-xs text-muted-foreground">3명 동시 출전 시 팀 승률 최하위 (최소 10쿼터)</p>
+                    <div className="space-y-2">
+                      {worstTrios.map((d, i) => (
+                        <div key={d.ids.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {d.names.map((n, ni) => (<span key={ni}><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => { const p = players.find(pp => pp.name === n); if (p) navigate(`/player/${p.id}`); }}>{n}</span>{ni < d.names.length - 1 && <span className="text-destructive mx-1">×</span>}</span>))}
+                            </div>
+                            <span className="font-display text-lg text-destructive">{d.winRate}%</span>
+                          </div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | {d.wins}승</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>);
             })()}
           </motion.div>
         )}
