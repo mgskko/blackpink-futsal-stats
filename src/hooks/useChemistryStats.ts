@@ -387,6 +387,8 @@ export interface PositionDuoWinRate {
   wins: number;
   quarters: number;
   marginPerQ: number;
+  combinedGoals: number;
+  cleanSheetQuarters: number;
 }
 
 export function computePositionDuosByWinRate(
@@ -394,9 +396,10 @@ export function computePositionDuosByWinRate(
   allQuarters: MatchQuarter[],
   position: "FW" | "DF",
   topN: number = 5,
-  worst: boolean = false
+  worst: boolean = false,
+  goalEvents?: GoalEvent[]
 ): PositionDuoWinRate[] {
-  const duoMap = new Map<string, { p1: number; p2: number; wins: number; quarters: number; margin: number }>();
+  const duoMap = new Map<string, { p1: number; p2: number; wins: number; quarters: number; margin: number; combinedGoals: number; cleanSheetQuarters: number }>();
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
@@ -404,13 +407,20 @@ export function computePositionDuosByWinRate(
     if (posPlayers.length < 2) return;
     const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
     const diff = (q.score_for || 0) - (q.score_against || 0);
+    const isCleanSheet = (q.score_against || 0) === 0 ? 1 : 0;
     for (let i = 0; i < posPlayers.length; i++) {
       for (let j = i + 1; j < posPlayers.length; j++) {
         const key = `${posPlayers[i]}-${posPlayers[j]}`;
-        const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0 };
+        const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
         cur.wins += won;
         cur.quarters++;
         cur.margin += diff;
+        cur.cleanSheetQuarters += isCleanSheet;
+        // Count combined goals from goal events
+        if (goalEvents) {
+          const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === posPlayers[i] || g.goal_player_id === posPlayers[j])).length;
+          cur.combinedGoals += qGoals;
+        }
         duoMap.set(key, cur);
       }
     }
@@ -425,6 +435,8 @@ export function computePositionDuosByWinRate(
       wins: d.wins,
       quarters: d.quarters,
       marginPerQ: d.margin / d.quarters,
+      combinedGoals: d.combinedGoals,
+      cleanSheetQuarters: d.cleanSheetQuarters,
     }))
     .sort((a, b) => worst ? a.winRate - b.winRate : b.winRate - a.winRate)
     .slice(0, topN);
