@@ -437,7 +437,7 @@ const PlayerDetailPage = () => {
             </motion.div>
           )}
 
-          {/* Scouting Report */}
+          {/* Scouting Report - Position Based */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
             <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">{trendIcon} 수석코치 AI 스카우팅 리포트</h3>
             <div className="flex items-start gap-4 rounded-lg bg-secondary/30 border border-primary/20 p-4">
@@ -447,6 +447,55 @@ const PlayerDetailPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
               </div>
             </div>
+            {/* Position-based 3-line report */}
+            {positionDist.total >= 5 && (
+              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground border-t border-border pt-3">
+                {(() => {
+                  const fwQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW");
+                  const dfQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "DF");
+                  const fwWinRate = fwQ.length >= 3 ? Math.round(fwQ.filter(q => (q.score_for || 0) > (q.score_against || 0)).length / fwQ.length * 100) : null;
+                  const dfWinRate = dfQ.length >= 3 ? Math.round(dfQ.filter(q => (q.score_for || 0) > (q.score_against || 0)).length / dfQ.length * 100) : null;
+                  const fwMargin = fwQ.length >= 3 ? fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / fwQ.length : 0;
+                  const dfMargin = dfQ.length >= 3 ? dfQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / dfQ.length : 0;
+                  
+                  // Line 1: Best/Worst position
+                  let posLine = "";
+                  if (fwWinRate !== null && dfWinRate !== null) {
+                    if (fwMargin > dfMargin && fwMargin > 0.3) posLine = "📋 전방 배치 권장 — FW 출전 시 팀 성적이 돋보입니다.";
+                    else if (dfMargin > fwMargin && dfMargin > 0.3) posLine = "📋 후방 수비/빌드업 핵심 — DF 배치 시 안정감이 극대화됩니다.";
+                    else if (fwMargin > 0 && dfMargin > 0) posLine = "📋 완벽한 헥사곤 멀티 플레이어 — 어디를 서도 팀에 기여합니다.";
+                    else posLine = `📋 FW 승률 ${fwWinRate}% / DF 승률 ${dfWinRate}% — 포지션 최적화가 필요합니다.`;
+                  }
+                  
+                  // Line 2: Playstyle
+                  const totalGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
+                  const totalAssists = goalEvents.filter(g => g.assist_player_id === playerId).length;
+                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골")).length;
+                  const counterGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.build_up_process === "역습" || g.goal_type === "드리블골")).length;
+                  let styleLine = "";
+                  if (totalGoals > 0 && totalAssists > totalGoals) styleLine = "⚽ 이타적 폴스 나인(False 9) — 골보다 동료 살리기에 능한 플레이메이커.";
+                  else if (totalGoals > 0 && pocherGoals / totalGoals >= 0.5) styleLine = "⚽ 타겟맨/포쳐 — 골문 앞 혼전과 주워먹기에 특화된 스트라이커.";
+                  else if (counterGoals >= 3) styleLine = "⚽ 역습의 선봉장 — 빠른 전환 공격의 마무리를 책임지는 스피드스터.";
+                  else if (totalGoals >= 3) styleLine = `⚽ 균형잡힌 스트라이커 — ${totalGoals}골 ${totalAssists}도움의 만능형 공격수.`;
+                  else styleLine = "⚽ 아직 충분한 득점 데이터가 쌓이지 않았습니다.";
+                  
+                  // Line 3: Synergy partner
+                  let synergyLine = "";
+                  if (topDuos.length > 0) {
+                    const [topPartnerId, topCount] = topDuos[0];
+                    synergyLine = `🤝 베스트 시너지: ${getPlayerName(players, topPartnerId)} (${topCount}회 합작)`;
+                  }
+                  
+                  return (
+                    <>
+                      {posLine && <p>{posLine}</p>}
+                      {styleLine && <p>{styleLine}</p>}
+                      {synergyLine && <p>{synergyLine}</p>}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </motion.div>
 
           {/* W/D/L */}
