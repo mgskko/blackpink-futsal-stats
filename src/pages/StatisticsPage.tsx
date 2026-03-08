@@ -569,6 +569,10 @@ const StatisticsPage = () => {
           </motion.div>
         )}
 
+        {activeTab === "formation" && (
+          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+        )}
+
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* 이색/예능 기록 랭킹보드 */}

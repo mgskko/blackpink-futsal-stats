@@ -415,6 +415,9 @@ const MatchDetailPage = () => {
       {/* MOM Voting */}
       <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>
 
+      {/* Worst Voting */}
+      <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>
+
       {/* Attendance */}
       {hasAttendanceData && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mx-4 mt-4">
