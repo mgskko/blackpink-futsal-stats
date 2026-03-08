@@ -54,7 +54,7 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
   return { goals, assists, attackPoints: goals + assists, appearances, wins, losses, draws, winRate };
 }
 
-type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom";
+type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom" | "fun";
 
 const StatisticsPage = () => {
   const navigate = useNavigate();
@@ -332,6 +332,7 @@ const StatisticsPage = () => {
                   <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
                   <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
                   <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
+                  <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
                 </SelectContent>
               </Select>
             </div>
