@@ -378,3 +378,103 @@ export function computeFWDuos(
     .sort((a, b) => b.marginPerQ - a.marginPerQ)
     .slice(0, topN);
 }
+
+// ─── 8. Position Duo by Win Rate (FW/DF) ───
+export interface PositionDuoWinRate {
+  p1: number; name1: string;
+  p2: number; name2: string;
+  winRate: number;
+  wins: number;
+  quarters: number;
+  marginPerQ: number;
+}
+
+export function computePositionDuosByWinRate(
+  players: Player[],
+  allQuarters: MatchQuarter[],
+  position: "FW" | "DF",
+  topN: number = 5,
+  worst: boolean = false
+): PositionDuoWinRate[] {
+  const duoMap = new Map<string, { p1: number; p2: number; wins: number; quarters: number; margin: number }>();
+
+  allQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const posPlayers = getPositionPlayers(q.lineup, position).sort((a, b) => a - b);
+    if (posPlayers.length < 2) return;
+    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
+    const diff = (q.score_for || 0) - (q.score_against || 0);
+    for (let i = 0; i < posPlayers.length; i++) {
+      for (let j = i + 1; j < posPlayers.length; j++) {
+        const key = `${posPlayers[i]}-${posPlayers[j]}`;
+        const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0 };
+        cur.wins += won;
+        cur.quarters++;
+        cur.margin += diff;
+        duoMap.set(key, cur);
+      }
+    }
+  });
+
+  return [...duoMap.values()]
+    .filter(d => d.quarters >= 5)
+    .map(d => ({
+      p1: d.p1, name1: getPlayerName(players, d.p1),
+      p2: d.p2, name2: getPlayerName(players, d.p2),
+      winRate: Math.round((d.wins / d.quarters) * 100),
+      wins: d.wins,
+      quarters: d.quarters,
+      marginPerQ: d.margin / d.quarters,
+    }))
+    .sort((a, b) => worst ? a.winRate - b.winRate : b.winRate - a.winRate)
+    .slice(0, topN);
+}
+
+// ─── 9. Trios by Win Rate ───
+export interface TrioWinRate {
+  ids: number[];
+  names: string[];
+  winRate: number;
+  wins: number;
+  quarters: number;
+}
+
+export function computeTriosByWinRate(
+  players: Player[],
+  allQuarters: MatchQuarter[],
+  topN: number = 5,
+  worst: boolean = false
+): TrioWinRate[] {
+  const trioMap = new Map<string, { ids: number[]; wins: number; quarters: number }>();
+
+  allQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
+    if (field.length < 3) return;
+    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
+    for (let i = 0; i < field.length; i++) {
+      for (let j = i + 1; j < field.length; j++) {
+        for (let k = j + 1; k < field.length; k++) {
+          const ids = [field[i], field[j], field[k]];
+          const key = ids.join(",");
+          const cur = trioMap.get(key) || { ids, wins: 0, quarters: 0 };
+          cur.wins += won;
+          cur.quarters++;
+          trioMap.set(key, cur);
+        }
+      }
+    }
+  });
+
+  return [...trioMap.values()]
+    .filter(d => d.quarters >= 10)
+    .map(d => ({
+      ids: d.ids,
+      names: d.ids.map(pid => getPlayerName(players, pid)),
+      winRate: Math.round((d.wins / d.quarters) * 100),
+      wins: d.wins,
+      quarters: d.quarters,
+    }))
+    .sort((a, b) => worst ? a.winRate - b.winRate : b.winRate - a.winRate)
+    .slice(0, topN);
+}
