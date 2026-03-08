@@ -546,6 +546,30 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
+          {/* Opponent Age Category */}
+          {(() => {
+            const oppTeam = matchTeams.find(t => !t.is_ours);
+            if (!oppTeam) return null;
+            return (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <h3 className="text-sm font-bold text-primary mb-2">상대팀 연령대</h3>
+                <div className="flex gap-2">
+                  <Select value={oppTeam.age_category || ""} onValueChange={async (v) => {
+                    await supabase.from("teams").update({ age_category: v, original_age_desc: v }).eq("id", oppTeam.id);
+                    invalidateAll();
+                    toast({ title: "연령대가 수정되었습니다 ✅" });
+                  }}>
+                    <SelectTrigger className="h-8 text-xs bg-background border-border flex-1"><SelectValue placeholder="연령대 선택" /></SelectTrigger>
+                    <SelectContent>{AGE_CATEGORIES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Quarter Editor */}
+          <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />
+
           {/* Delete Match */}
           <Button variant="destructive" onClick={() => setDeleteTarget({ type: "match", id: matchId })} className="w-full">
             <Trash2 size={14} /> 경기 전체 삭제
