@@ -321,10 +321,10 @@ export function computePlayerTraits(
     traits.push({ name: "덕배의 택배기사", emoji: "🎯", description: `킬패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
-  // 컷백 마스터
-  const cutbackRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "컷백") })).sort((a, b) => b.value - a.value);
+  // 컷백패스 마스터
+  const cutbackRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "컷백패스", "컷백") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, cutbackRanking, 2, 1)) {
-    traits.push({ name: "펩이 사랑한 컷백", emoji: "🎯", description: `컷백 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "펩이 사랑한 컷백", emoji: "🎯", description: `컷백패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 최고의 도우미: 어시스트 비율 최고 1-2위
