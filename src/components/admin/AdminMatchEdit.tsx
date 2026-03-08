@@ -177,7 +177,7 @@ const AdminMatchEdit = () => {
         match_id: matchId,
         team_id: ourTeam?.id || matchTeams[0]?.id,
         quarter: addQuarter,
-        goal_player_id: addIsOwnGoal ? null : (addGoalPlayerId ? Number(addGoalPlayerId) : null),
+        goal_player_id: addGoalPlayerId ? Number(addGoalPlayerId) : null,
         assist_player_id: addIsOwnGoal ? null : (addAssistPlayerId && addAssistPlayerId !== "none" ? Number(addAssistPlayerId) : null),
         is_own_goal: addIsOwnGoal,
         video_timestamp: addTimestamp || null,
