@@ -70,10 +70,11 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
     // Only count finished matches (past date with results)
     const finishedMatchMap = new Map<number, string>(); // matchId -> actual result ("win"|"draw"|"loss")
     matches.forEach(match => {
-      if (match.date >= today) return;
+      if (match.date > today) return; // include today's matches as finished
       const mr = getMatchResult(teams, results, match.id);
       if (!mr) return;
       const r = mr.ourResult.result;
+      if (!r || (r !== "승" && r !== "패" && r !== "무")) return; // skip if no result yet
       finishedMatchMap.set(match.id, r === "승" ? "win" : r === "패" ? "loss" : "draw");
     });
 
