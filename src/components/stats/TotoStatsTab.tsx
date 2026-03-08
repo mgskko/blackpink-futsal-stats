@@ -135,10 +135,12 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
 
     const finishedMatchMap = new Map<number, string>();
     matches.forEach(match => {
-      if (match.date >= today) return;
+      if (match.date > today) return;
       const mr = getMatchResult(teams, results, match.id);
       if (!mr) return;
-      finishedMatchMap.set(match.id, mr.ourResult.result === "승" ? "win" : mr.ourResult.result === "패" ? "loss" : "draw");
+      const r = mr.ourResult.result;
+      if (!r || (r !== "승" && r !== "패" && r !== "무")) return;
+      finishedMatchMap.set(match.id, r === "승" ? "win" : r === "패" ? "loss" : "draw");
     });
 
     // Find matches where majority predicted loss
