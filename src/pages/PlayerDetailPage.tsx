@@ -34,8 +34,15 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   let r5Margin = 0;
   r5Quarters.forEach(q => { r5Margin += (q.score_for || 0) - (q.score_against || 0); });
 
-  // 🇧🇷 Brazil: AP >= 15
-  if (r5AP >= 15) return { active: true, country: "🇧🇷 브라질", text: "브라질 삼바 축구급 폼! 최근 5경기 공포 15개 이상으로 팀을 지배 중입니다." };
+  // 🇧🇷 Brazil: AP >= 30 in last 10 matches
+  const recent10 = sortedMatches.slice(0, 10);
+  if (recent10.length >= 10) {
+    const r10Ids = new Set(recent10.map(m => m.id));
+    const r10Goals = goalEvents.filter(g => r10Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal);
+    const r10Assists = goalEvents.filter(g => r10Ids.has(g.match_id) && g.assist_player_id === playerId);
+    const r10AP = r10Goals.length + r10Assists.length;
+    if (r10AP >= 30) return { active: true, country: "🇧🇷 브라질", text: "브라질 삼바 축구급 폼! 최근 10경기 공포 30개 이상으로 팀을 지배 중입니다." };
+  }
 
   // 🇫🇷 France: Assists >= 10
   if (r5Assists.length >= 10) return { active: true, country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." };
@@ -237,7 +244,7 @@ const PlayerDetailPage = () => {
   const assistGiven = getPlayerAssistGiven(filtered.goalEvents, playerId, 7);
   const assistReceived = getPlayerAssistReceived(filtered.goalEvents, playerId, 7);
   const badges = getPlayerBadges(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
-  const varianceBadges = getVarianceBadge(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
+  const varianceBadges = getVarianceBadge(playerId, filtered.matches, filtered.rosters, filtered.goalEvents, filtered.quarters);
   const allBadges = [...badges, ...varianceBadges];
 
   const winFairyAll = getWinFairyData(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters);
@@ -489,7 +496,7 @@ const PlayerDetailPage = () => {
                   // Line 2: Playstyle
                   const totalGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal).length;
                   const totalAssists = goalEvents.filter(g => g.assist_player_id === playerId).length;
-                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골")).length;
+                  const pocherGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.goal_type === "주워먹기" || g.goal_type === "골문 앞 혼전골" || g.goal_type === "골문앞혼전")).length;
                   const counterGoals = goalEvents.filter(g => g.goal_player_id === playerId && !g.is_own_goal && (g.build_up_process === "역습" || g.goal_type === "드리블골")).length;
                   let styleLine = "";
                   if (totalGoals > 0 && totalAssists > totalGoals) styleLine = "⚽ 이타적 폴스 나인(False 9) — 골보다 동료 살리기에 능한 플레이메이커.";

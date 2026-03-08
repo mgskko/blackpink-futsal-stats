@@ -554,11 +554,11 @@ const StatisticsPage = () => {
 
             {/* Position Duos by Win Rate */}
             {(() => {
-              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, false);
-              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, true);
-              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, false);
-              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, true);
-              const DuoSection = ({ title, emoji, data, isWorst }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean }) => data.length === 0 ? null : (
+              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, false, filteredGoalEvents);
+              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, true, filteredGoalEvents);
+              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, false, filteredGoalEvents);
+              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, true, filteredGoalEvents);
+              const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
                   <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 5쿼터)</p>
@@ -573,15 +573,20 @@ const StatisticsPage = () => {
                           </div>
                           <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{d.winRate}%</span>
                         </div>
-                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | 쿼터당 마진 {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}</div>
+                        <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+                          <span>{d.quarters}쿼터</span>
+                          <span>마진 {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}/Q</span>
+                          {isFW && !isWorst && <span className="text-primary font-bold">⚽ 합작 {d.combinedGoals}골</span>}
+                          {!isFW && !isWorst && <span className="text-primary font-bold">🛡️ 합작 무실점 {d.cleanSheetQuarters}Q</span>}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               );
               return (<>
-                <DuoSection title="BEST FW DUO" emoji="⚔️" data={bestFW} />
-                <DuoSection title="WORST FW DUO" emoji="💀" data={worstFW} isWorst />
+                <DuoSection title="BEST FW DUO" emoji="⚔️" data={bestFW} isFW />
+                <DuoSection title="WORST FW DUO" emoji="💀" data={worstFW} isWorst isFW />
                 <DuoSection title="BEST DF DUO" emoji="🛡️" data={bestDF} />
                 <DuoSection title="WORST DF DUO" emoji="☠️" data={worstDF} isWorst />
               </>);

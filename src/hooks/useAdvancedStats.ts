@@ -484,8 +484,8 @@ export function getScoutingReport(playerId: number, matches: Match[], rosters: R
   return { trend: "stable", comment: "기복 없는 국밥형 플레이어. 팀의 든든한 기둥입니다. 🍚" };
 }
 
-// ─── Variance Badge (FIXED) ───
-export function getVarianceBadge(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[]): PlayerBadge[] {
+// ─── Variance Badge (FIXED + Position-Based Form Warning) ───
+export function getVarianceBadge(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters?: any[]): PlayerBadge[] {
   const badges: PlayerBadge[] = [];
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
@@ -495,12 +495,62 @@ export function getVarianceBadge(playerId: number, matches: Match[], rosters: Ro
     const variance = goalsPerMatch.reduce((s, g) => s + (g - mean) ** 2, 0) / goalsPerMatch.length;
     if (Math.sqrt(variance) > 1.5 && mean > 0.5) badges.push({ label: "주사위형 선수", emoji: "🎲" });
   }
-  const recent3 = sortedMatches.slice(0, 3);
-  if (recent3.length === 3) {
-    let totalAP = 0;
-    recent3.forEach(m => { const { goals, assists } = computeMatchAP(playerId, m, rosters, goalEvents); totalAP += goals + assists; });
-    if (totalAP === 0) badges.push({ label: "폼 저하 및 방출 위기", emoji: "🚨" });
+
+  // Position-based form warning (last 5 matches, quarter-level)
+  if (allQuarters && sortedMatches.length >= 5) {
+    const recent5Ids = new Set(sortedMatches.slice(0, 5).map(m => m.id));
+    const r5Quarters = (allQuarters as any[]).filter((q: any) => recent5Ids.has(q.match_id) && q.lineup);
+
+    // Helper to get position
+    const getPos = (lineup: any, pid: number): string | null => {
+      if (!lineup || typeof lineup !== "object") return null;
+      for (const pos of ["GK", "DF", "MF", "FW"]) {
+        const arr = lineup[pos];
+        if (!arr) continue;
+        const ids = (Array.isArray(arr) ? arr : [arr]).map(Number);
+        if (ids.includes(pid)) return pos;
+      }
+      return null;
+    };
+
+    const fwQuarters = r5Quarters.filter((q: any) => getPos(q.lineup, playerId) === "FW");
+    const dfGkQuarters = r5Quarters.filter((q: any) => {
+      const pos = getPos(q.lineup, playerId);
+      return pos === "DF" || pos === "GK";
+    });
+
+    // Check FW: AP near 0 AND FW margin is worst in team
+    if (fwQuarters.length >= 3) {
+      const fwAP = goalEvents.filter(g => {
+        if (!recent5Ids.has(g.match_id)) return false;
+        const q = fwQuarters.find((q: any) => q.match_id === g.match_id && q.quarter === g.quarter);
+        if (!q) return false;
+        return (!g.is_own_goal && g.goal_player_id === playerId) || g.assist_player_id === playerId;
+      }).length;
+      const fwMargin = fwQuarters.reduce((s: number, q: any) => s + (q.score_for || 0) - (q.score_against || 0), 0);
+      if (fwAP <= 1 && fwMargin < 0) {
+        badges.push({ label: "폼 저하 및 방출 위기", emoji: "🚨" });
+      }
+    }
+
+    // Check DF/GK: worst conceded rate in team
+    if (dfGkQuarters.length >= 3) {
+      const avgConceded = dfGkQuarters.reduce((s: number, q: any) => s + (q.score_against || 0), 0) / dfGkQuarters.length;
+      if (avgConceded >= 2.0) {
+        badges.push({ label: "폼 저하 및 방출 위기", emoji: "🚨" });
+      }
+    }
+  } else {
+    // Fallback: old simple check
+    const recent3 = sortedMatches.slice(0, 3);
+    if (recent3.length === 3) {
+      let totalAP = 0;
+      recent3.forEach(m => { const { goals, assists } = computeMatchAP(playerId, m, rosters, goalEvents); totalAP += goals + assists; });
+      if (totalAP === 0) badges.push({ label: "폼 저하 및 방출 위기", emoji: "🚨" });
+    }
   }
+
+  const recent3 = sortedMatches.slice(0, 3);
   if (recent3.length > 0) {
     for (const m of recent3) {
       const { goals } = computeMatchAP(playerId, m, rosters, goalEvents);

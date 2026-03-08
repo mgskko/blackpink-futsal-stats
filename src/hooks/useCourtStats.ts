@@ -279,8 +279,8 @@ export function computePlayerTraits(
     traits.push({ name: "제라드의 강림", emoji: "⚽", description: `중거리골 팀 내 1~2위 (${gtc(playerId, "중거리골")}골)`, category: "attack", color: "green" });
   }
 
-  // 위치 선정의 달인: 주워먹기+혼전골+인자기골
-  const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "인자기골") })).sort((a, b) => b.value - a.value);
+  // 위치 선정의 달인: 주워먹기+골문 앞 혼전골+인자기골
+  const pocherRanking = allPlayerIds.map(pid => ({ id: pid, value: gtc(pid, "주워먹기", "골문 앞 혼전골", "골문앞혼전", "인자기골") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, pocherRanking, 2, 1)) {
     traits.push({ name: "인자기의 환생", emoji: "🎯", description: `주워먹기/혼전골 팀 내 1~2위`, category: "attack", color: "green" });
   }
@@ -321,10 +321,10 @@ export function computePlayerTraits(
     traits.push({ name: "덕배의 택배기사", emoji: "🎯", description: `킬패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
-  // 컷백 마스터
-  const cutbackRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "컷백") })).sort((a, b) => b.value - a.value);
+  // 컷백패스 마스터
+  const cutbackRanking = allPlayerIds.map(pid => ({ id: pid, value: atc(pid, "컷백패스", "컷백") })).sort((a, b) => b.value - a.value);
   if (isTopN(playerId, cutbackRanking, 2, 1)) {
-    traits.push({ name: "펩이 사랑한 컷백", emoji: "🎯", description: `컷백 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
+    traits.push({ name: "펩이 사랑한 컷백", emoji: "🎯", description: `컷백패스 어시스트 팀 내 1~2위`, category: "pass", color: "green" });
   }
 
   // 최고의 도우미: 어시스트 비율 최고 1-2위
