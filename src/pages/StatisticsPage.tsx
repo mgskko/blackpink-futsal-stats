@@ -624,7 +624,12 @@ const StatisticsPage = () => {
                             </div>
                             <span className="font-display text-lg text-destructive">{d.winRate}%</span>
                           </div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | {d.wins}승</div>
+                          <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                            <span>{d.quarters}쿼터 동시 출격</span>
+                            <span>합산 마진 <span className="text-destructive font-bold">{d.margin > 0 ? "+" : ""}{d.margin}</span></span>
+                            <span>쿼터당 <span className="text-destructive font-bold">{(d.totalConceded / d.quarters).toFixed(1)}</span>실점</span>
+                            <span>쿼터당 <span className="text-foreground">{(d.totalScored / d.quarters).toFixed(1)}</span>득점</span>
+                          </div>
                         </div>
                       ))}
                     </div>
