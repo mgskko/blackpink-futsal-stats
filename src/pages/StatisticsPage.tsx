@@ -221,6 +221,7 @@ const StatisticsPage = () => {
           ? <GenericRanking data={worstRanking} valueLabel="워스트" valueFn={(d: any) => `${d.count}표`} />
           : <p className="text-center text-sm text-muted-foreground py-4">워스트 투표 데이터가 없습니다</p>;
       }
+      default:
         return null;
     }
   };
