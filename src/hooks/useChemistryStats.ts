@@ -437,6 +437,9 @@ export interface TrioWinRate {
   winRate: number;
   wins: number;
   quarters: number;
+  totalScored: number;
+  totalConceded: number;
+  margin: number;
 }
 
 export function computeTriosByWinRate(
