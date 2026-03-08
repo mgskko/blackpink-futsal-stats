@@ -38,22 +38,36 @@ export function computeDeathLineup(
   players: Player[],
   allQuarters: MatchQuarter[]
 ): DeathLineup | null {
-  // Group quarters by their exact 5-player field combo
+  // Generate all 5-player subsets from field players per quarter
   const comboMap = new Map<string, { playerIds: number[]; margin: number; quarters: number }>();
+
+  function getCombinations(arr: number[], size: number): number[][] {
+    if (size === arr.length) return [arr];
+    if (size === 1) return arr.map(x => [x]);
+    const result: number[][] = [];
+    for (let i = 0; i <= arr.length - size; i++) {
+      const rest = getCombinations(arr.slice(i + 1), size - 1);
+      rest.forEach(combo => result.push([arr[i], ...combo]));
+    }
+    return result;
+  }
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 5) return; // need at least 5 players
-    const key = field.join(",");
+    if (field.length < 5) return;
     const diff = (q.score_for || 0) - (q.score_against || 0);
-    const cur = comboMap.get(key) || { playerIds: field, margin: 0, quarters: 0 };
-    cur.margin += diff;
-    cur.quarters++;
-    comboMap.set(key, cur);
+    // Generate all 5-player subsets
+    const combos5 = field.length === 5 ? [field] : getCombinations(field, 5);
+    combos5.forEach(combo => {
+      const key = combo.join(",");
+      const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
+      cur.margin += diff;
+      cur.quarters++;
+      comboMap.set(key, cur);
+    });
   });
 
-  // Find best combo with at least 3 quarters
   const combos = [...comboMap.values()]
     .filter(c => c.quarters >= 5)
     .sort((a, b) => (b.margin / b.quarters) - (a.margin / a.quarters));
