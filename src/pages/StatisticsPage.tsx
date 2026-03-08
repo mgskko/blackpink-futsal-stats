@@ -332,6 +332,7 @@ const StatisticsPage = () => {
                   <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
                   <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
                   <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
+                  <SelectItem value="worst">👎 워스트 누적 랭킹</SelectItem>
                   <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
                 </SelectContent>
               </Select>
