@@ -342,7 +342,10 @@ const PlayerDetailPage = () => {
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
-                <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 🏆</div>
+                <div className="mt-1 space-y-1">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {concacafInfo.country} 🏆</div>
+                  <p className="text-[10px] text-emerald-400/80 leading-snug">{concacafInfo.text}</p>
+                </div>
               )}
               {fireTier !== "none" && (
                 <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
