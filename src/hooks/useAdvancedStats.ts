@@ -158,7 +158,7 @@ export function getDuoSynergyWinRate(players: Player[], matches: Match[], teams:
       }
     }
   });
-  const all = [...duoMap.values()].filter(d => d.together >= 5);
+  const all = [...duoMap.values()].filter(d => d.together >= 10);
   all.forEach(d => { d.winRate = Math.round((d.wins / d.together) * 100); });
   const sorted = [...all].sort((a, b) => b.winRate - a.winRate);
   return { best: sorted.slice(0, 3), worst: [...all].sort((a, b) => a.winRate - b.winRate).slice(0, 3) };

@@ -745,7 +745,7 @@ const StatisticsPage = () => {
               <>
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Users size={18} /> 환상의 짝꿍 TOP 3</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">5경기 이상 함께 출전한 듀오 기준</p>
+                  <p className="mb-2 text-xs text-muted-foreground">10경기 이상 함께 출전한 듀오 기준</p>
                   <div className="space-y-2">
                     {duoSynergy.best.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border bg-card p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"}`}>
