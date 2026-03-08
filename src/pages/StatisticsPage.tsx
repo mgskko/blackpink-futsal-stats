@@ -655,14 +655,14 @@ const StatisticsPage = () => {
               if (TRIO_IDS.length < 3) return null;
               const trioMatchIds = [...new Set(filteredRosters.filter(r => TRIO_IDS.includes(r.player_id)).map(r => r.match_id))].filter(mid => TRIO_IDS.every(pid => filteredRosters.some(r => r.match_id === mid && r.player_id === pid)));
               const nonCustomTrioMatches = filteredMatches.filter(m => trioMatchIds.includes(m.id) && !m.is_custom);
-              let trioWins = 0, trioTotal = 0, trioAP = 0, trioNoLoss = 0;
+              let trioWins = 0, trioTotal = 0, trioAP = 0;
               nonCustomTrioMatches.forEach(m => {
                 const mTeams = filteredTeams.filter(t => t.match_id === m.id);
                 const ourTeam = mTeams.find(t => t.is_ours);
                 if (!ourTeam) return;
                 const r = filteredResults.find(r => r.team_id === ourTeam.id && r.match_id === m.id);
                 if (!r) return;
-                trioTotal++; if (r.result === "승") trioWins++; if (r.result !== "패") trioNoLoss++;
+                trioTotal++; if (r.result === "승") trioWins++;
               });
               TRIO_IDS.forEach(pid => {
                 filteredMatches.filter(m => trioMatchIds.includes(m.id)).forEach(m => {
@@ -670,8 +670,18 @@ const StatisticsPage = () => {
                   trioAP += goals + assists;
                 });
               });
+              // Compute conceded/scored from quarters where all 3 are on field
+              let trioQCount = 0, trioScored = 0, trioConceded = 0, trioMargin = 0;
+              filteredQuarters.filter(q => trioMatchIds.includes(q.match_id) && q.lineup).forEach(q => {
+                const field = q.lineup ? Object.values(q.lineup as Record<string, any>).flat().map(Number) : [];
+                if (TRIO_IDS.every(pid => field.includes(pid))) {
+                  trioQCount++;
+                  trioScored += q.score_for || 0;
+                  trioConceded += q.score_against || 0;
+                  trioMargin += (q.score_for || 0) - (q.score_against || 0);
+                }
+              });
               const trioWinRate = trioTotal > 0 ? Math.round((trioWins / trioTotal) * 100) : 0;
-              const trioNoLossRate = trioTotal > 0 ? Math.round((trioNoLoss / trioTotal) * 100) : 0;
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🚧 방해꾼 트리오</h3>
@@ -688,10 +698,10 @@ const StatisticsPage = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-3 text-center">
                       <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-primary text-glow">{trioWinRate}%</div><div className="text-[10px] text-muted-foreground">동시출전 승률</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-foreground">{trioAP}</div><div className="text-[10px] text-muted-foreground">합작 AP</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-primary">{trioNoLossRate}%</div><div className="text-[10px] text-muted-foreground">무패율</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-destructive">{trioQCount > 0 ? (trioConceded / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">쿼터당 실점</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-foreground">{trioQCount > 0 ? (trioScored / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">쿼터당 득점</div></div>
                     </div>
-                    <p className="mt-3 text-center text-[10px] text-muted-foreground">총 {trioMatchIds.length}경기 동시 출격 (외부전 {trioTotal}경기)</p>
+                    <p className="mt-3 text-center text-[10px] text-muted-foreground">총 {trioMatchIds.length}경기 동시 출격 (외부전 {trioTotal}경기) | 합산 마진 <span className="text-destructive font-bold">{trioMargin > 0 ? "+" : ""}{trioMargin}</span></p>
                   </div>
                 </div>
               );
