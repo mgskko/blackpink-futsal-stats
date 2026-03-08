@@ -187,7 +187,7 @@ const PlayerDetailPage = () => {
 
   const formGuide = getPlayerFormGuide(playerId, filtered.matches, filtered.rosters, filtered.goalEvents);
   const scoutingReport = getDeepScoutingReport(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, momVotes);
-  const tier = getPlayerTier(playerId, matches, rosters, goalEvents, momVotes);
+  const tier = getPlayerTier(playerId, matches, rosters, goalEvents, momVotes, worstVotes, allQuarters);
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
