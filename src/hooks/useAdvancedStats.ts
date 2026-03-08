@@ -532,7 +532,7 @@ export function getHallOfFame(players: Player[], matches: Match[], rosters: Rost
 
     playerAPMap.forEach(({ goals, assists }, pid) => {
       const ap = goals + assists;
-      if (ap >= 7) {
+      if (ap >= 10) {
         const p = players.find(p => p.id === pid);
         entries.push({ playerId: pid, name: p?.name || `#${pid}`, matchId: match.id, date: match.date, goals, assists, ap, type: "legendary" });
       }
