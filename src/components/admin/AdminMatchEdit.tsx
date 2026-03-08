@@ -153,7 +153,7 @@ const AdminMatchEdit = () => {
       const { error } = await supabase.from("goal_events").update({
         quarter: editGoalQuarter,
         is_own_goal: editGoalIsOwnGoal,
-        goal_player_id: editGoalIsOwnGoal ? null : (editGoalPlayerId ? Number(editGoalPlayerId) : null),
+        goal_player_id: editGoalPlayerId ? Number(editGoalPlayerId) : null,
         assist_player_id: editGoalIsOwnGoal ? null : (editGoalAssistId && editGoalAssistId !== "none" ? Number(editGoalAssistId) : null),
         video_timestamp: editGoalTimestamp || null,
         goal_type: editGoalType || null,
