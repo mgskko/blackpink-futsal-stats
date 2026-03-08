@@ -478,6 +478,15 @@ const AdminMatchEdit = () => {
                           <label className="text-xs text-muted-foreground">자책골</label>
                         </div>
                       </div>
+                      {editGoalIsOwnGoal && (
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">자책골 선수 (우리 팀)</label>
+                          <Select value={editGoalPlayerId} onValueChange={setEditGoalPlayerId}>
+                            <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="자책골 선수" /></SelectTrigger>
+                            <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       {!editGoalIsOwnGoal && (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
