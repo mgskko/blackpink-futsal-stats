@@ -6,6 +6,7 @@ import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMat
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import MOMVoting from "@/components/MOMVoting";
+import WorstVoting from "@/components/match/WorstVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
@@ -413,6 +414,9 @@ const MatchDetailPage = () => {
 
       {/* MOM Voting */}
       <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>
+
+      {/* Worst Voting */}
+      <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>
 
       {/* Attendance */}
       {hasAttendanceData && (
