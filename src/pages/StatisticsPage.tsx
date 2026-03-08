@@ -54,7 +54,7 @@ function getFilteredPlayerStats(playerId: number, matches: Match[], results: Res
   return { goals, assists, attackPoints: goals + assists, appearances, wins, losses, draws, winRate };
 }
 
-type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom";
+type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defense" | "dataMom" | "deadlyDuos" | "appearances" | "mom" | "fun";
 
 const StatisticsPage = () => {
   const navigate = useNavigate();
