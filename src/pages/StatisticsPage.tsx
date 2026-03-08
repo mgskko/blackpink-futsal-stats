@@ -71,6 +71,14 @@ const StatisticsPage = () => {
     },
   });
 
+  const { data: worstVotesAll } = useQuery({
+    queryKey: ["worst_votes_all"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("worst_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
+
   const { data: allQuartersRaw } = useQuery({
     queryKey: ["all_match_quarters"],
     queryFn: async () => {
