@@ -230,7 +230,8 @@ const PlayerDetailPage = () => {
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const isConcacaf = getConcacafMode(playerId, matches, rosters, goalEvents);
+  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, momVotes, players);
+  const isConcacaf = concacafInfo.active;
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
