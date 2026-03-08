@@ -58,6 +58,14 @@ const PlayerDetailPage = () => {
     },
   });
 
+  const { data: worstVotes } = useQuery({
+    queryKey: ["worst_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("worst_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
+
   // Fetch ALL quarters for court stats
   const { data: allQuartersRaw } = useQuery({
     queryKey: ["all_match_quarters"],
