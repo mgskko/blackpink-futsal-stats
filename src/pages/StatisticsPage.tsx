@@ -148,7 +148,7 @@ const StatisticsPage = () => {
   const defenseRanking = players.map(p => {
     const dc = getDefenseContribution(p.id, filteredQuarters);
     return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
-  }).filter(p => p.quartersWithPlayer >= 5).sort((a, b) => a.diff - b.diff).slice(0, 10);
+  }).filter(p => p.quartersWithPlayer >= 10).sort((a, b) => a.diff - b.diff).slice(0, 10);
 
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
