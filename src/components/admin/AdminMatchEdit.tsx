@@ -11,6 +11,7 @@ import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
+import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
 
 const AGE_CATEGORIES = [
   "20대 초반", "20대 중반", "20대 후반",
@@ -585,8 +586,22 @@ const AdminMatchEdit = () => {
             );
           })()}
 
-          {/* Quarter Editor */}
-          <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />
+          {/* Quarter Editor - conditional for custom/normal matches */}
+          {(() => {
+            const currentMatch = matches.find(m => m.id === matchId);
+            if (currentMatch?.is_custom) {
+              return (
+                <AdminCustomQuarterEditor
+                  matchId={matchId}
+                  matchTeams={matchTeams}
+                  rosterPlayerIds={[...rosterPlayerIds]}
+                  players={players}
+                  rosters={matchRoster.map(r => ({ player_id: r.player_id, team_id: r.team_id }))}
+                />
+              );
+            }
+            return <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />;
+          })()}
 
           {/* Delete Match */}
           <Button variant="destructive" onClick={() => setDeleteTarget({ type: "match", id: matchId })} className="w-full">
