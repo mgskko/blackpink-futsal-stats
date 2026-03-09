@@ -57,9 +57,9 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
         const teams = rosters.filter(ro => ro.match_id === m.id && ro.team_id === r.team_id);
         return teams.length > 0;
       });
-      // Check if final margin >= 2
+      // Check if final margin >= 3
       if (ourResult && ourResult.score_for != null && ourResult.score_against != null) {
-        if ((ourResult.score_for - ourResult.score_against) >= 2) {
+        if ((ourResult.score_for - ourResult.score_against) >= 3) {
           blowoutMatchIds.add(m.id);
         }
       }
