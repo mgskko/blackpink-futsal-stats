@@ -243,14 +243,23 @@ export interface SynergyMargin {
 export function computeSynergyMargin(
   players: Player[],
   allQuarters: MatchQuarter[],
+  rosters: Roster[],
   topN: number = 5
 ): SynergyMargin[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const duoMap = new Map<string, { p1: number; p2: number; togetherMargin: number; togetherQ: number; apartMargin: number; apartQ: number }>();
 
-  // Get all player pairs who have played together
+  // Get all player pairs who have played together (with 10+ all-time matches)
   const allFieldPlayerIds = new Set<number>();
   allQuarters.forEach(q => { if (q.lineup) getFieldPlayers(q.lineup).forEach(pid => allFieldPlayerIds.add(pid)); });
-  const playerIds = [...allFieldPlayerIds];
+  const playerIds = [...allFieldPlayerIds].filter(has10Matches);
 
   // For each pair, compute together vs apart margin
   for (let i = 0; i < playerIds.length; i++) {
