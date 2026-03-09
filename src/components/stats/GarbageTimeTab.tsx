@@ -59,7 +59,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
       });
       // Check if final margin >= 3
       if (ourResult && ourResult.score_for != null && ourResult.score_against != null) {
-        if ((ourResult.score_for - ourResult.score_against) >= 3) {
+        if ((ourResult.score_for - ourResult.score_against) >= 4) {
           blowoutMatchIds.add(m.id);
         }
       }
