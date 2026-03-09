@@ -13,7 +13,6 @@ interface Props {
   allQuarters: MatchQuarter[];
 }
 
-// Helper: parse lineup to get players by position
 function getPositionPlayers(lineup: any, pos: string): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   if (!lineup[pos]) return [];
@@ -53,7 +52,6 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
         gkMap.set(pid, cur);
       });
     });
-    // AP during GK quarters
     goalEvents.forEach(g => {
       if (g.is_own_goal) return;
       const q = allQuarters.find(mq => mq.match_id === g.match_id && mq.quarter === g.quarter);
@@ -86,14 +84,6 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       .filter(([, d]) => d.total >= 3)
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgConceded: d.conceded / d.total, total: d.total }))
       .sort((a, b) => b.avgConceded - a.avgConceded)
-      .slice(0, 5),
-  [gkStats, players]);
-
-  const sweeperKeeperRanking = useMemo(() =>
-    [...gkStats.entries()]
-      .filter(([, d]) => d.ap > 0)
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, total: d.total }))
-      .sort((a, b) => b.ap - a.ap)
       .slice(0, 5),
   [gkStats, players]);
 
@@ -209,7 +199,6 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       const prevMargin = (prev.score_for || 0) - (prev.score_against || 0);
       const currMargin = (curr.score_for || 0) - (curr.score_against || 0);
       const swing = currMargin - prevMargin;
-      // Players who went from bench to field
       prevBench.forEach(pid => {
         if (currField.includes(pid)) {
           const cur = changerMap.get(pid) || { bestSwing: -999, totalSwings: 0, count: 0 };
@@ -249,6 +238,185 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       .filter(([, streak]) => streak >= 2)
       .map(([pid, streak]) => ({ id: pid, name: getPlayerName(players, pid), streak }))
       .sort((a, b) => b.streak - a.streak)
+      .slice(0, 5);
+  }, [allQuarters, players]);
+
+  // ─── NEW: 6 spicy formation rankings ───
+
+  // 1. 전방 캠핑족: FW AP high but team conceded rate highest
+  const campingRanking = useMemo(() => {
+    const fwData = new Map<number, { ap: number; conceded: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const fws = getPositionPlayers(q.lineup, "FW");
+      fws.forEach(pid => {
+        const cur = fwData.get(pid) || { ap: 0, conceded: 0, quarters: 0 };
+        cur.conceded += q.score_against || 0;
+        cur.quarters++;
+        fwData.set(pid, cur);
+      });
+    });
+    goalEvents.forEach(g => {
+      if (g.is_own_goal) return;
+      const q = allQuarters.find(mq => mq.match_id === g.match_id && mq.quarter === g.quarter);
+      if (!q?.lineup) return;
+      [g.goal_player_id, g.assist_player_id].forEach(pid => {
+        if (!pid) return;
+        if (getPlayerPosition(q.lineup, pid) === "FW") {
+          const cur = fwData.get(pid);
+          if (cur) cur.ap++;
+        }
+      });
+    });
+    return [...fwData.entries()]
+      .filter(([, d]) => d.quarters >= 5 && d.ap >= 3)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
+      .sort((a, b) => b.concededPerQ - a.concededPerQ)
+      .slice(0, 5);
+  }, [allQuarters, goalEvents, players]);
+
+  // 2. 수비형 공격수: FW AP ≈ 0 but lowest conceded
+  const defensiveFWRanking = useMemo(() => {
+    const fwData = new Map<number, { ap: number; conceded: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const fws = getPositionPlayers(q.lineup, "FW");
+      fws.forEach(pid => {
+        const cur = fwData.get(pid) || { ap: 0, conceded: 0, quarters: 0 };
+        cur.conceded += q.score_against || 0;
+        cur.quarters++;
+        fwData.set(pid, cur);
+      });
+    });
+    goalEvents.forEach(g => {
+      if (g.is_own_goal) return;
+      const q = allQuarters.find(mq => mq.match_id === g.match_id && mq.quarter === g.quarter);
+      if (!q?.lineup) return;
+      [g.goal_player_id, g.assist_player_id].forEach(pid => {
+        if (!pid) return;
+        if (getPlayerPosition(q.lineup, pid) === "FW") {
+          const cur = fwData.get(pid);
+          if (cur) cur.ap++;
+        }
+      });
+    });
+    return [...fwData.entries()]
+      .filter(([, d]) => d.quarters >= 5 && d.ap <= 2)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
+      .sort((a, b) => a.concededPerQ - b.concededPerQ)
+      .slice(0, 5);
+  }, [allQuarters, goalEvents, players]);
+
+  // 3. 수트라이커: DF goals
+  const strikerDFRanking = useMemo(() => {
+    const dfGoals = new Map<number, { goals: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const dfs = getPositionPlayers(q.lineup, "DF");
+      dfs.forEach(pid => {
+        const cur = dfGoals.get(pid) || { goals: 0, quarters: 0 };
+        cur.quarters++;
+        dfGoals.set(pid, cur);
+      });
+    });
+    goalEvents.forEach(g => {
+      if (g.is_own_goal || !g.goal_player_id) return;
+      const q = allQuarters.find(mq => mq.match_id === g.match_id && mq.quarter === g.quarter);
+      if (!q?.lineup) return;
+      if (getPlayerPosition(q.lineup, g.goal_player_id) === "DF") {
+        const cur = dfGoals.get(g.goal_player_id);
+        if (cur) cur.goals++;
+      }
+    });
+    return [...dfGoals.entries()]
+      .filter(([, d]) => d.goals >= 1)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, quarters: d.quarters }))
+      .sort((a, b) => b.goals - a.goals)
+      .slice(0, 5);
+  }, [allQuarters, goalEvents, players]);
+
+  // 4. 무임승차 VIP: FW AP=0 but win rate 80%+
+  const freeRiderRanking = useMemo(() => {
+    const fwData = new Map<number, { ap: number; wins: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const fws = getPositionPlayers(q.lineup, "FW");
+      const won = (q.score_for || 0) > (q.score_against || 0);
+      fws.forEach(pid => {
+        const cur = fwData.get(pid) || { ap: 0, wins: 0, quarters: 0 };
+        cur.quarters++;
+        if (won) cur.wins++;
+        fwData.set(pid, cur);
+      });
+    });
+    goalEvents.forEach(g => {
+      if (g.is_own_goal) return;
+      const q = allQuarters.find(mq => mq.match_id === g.match_id && mq.quarter === g.quarter);
+      if (!q?.lineup) return;
+      [g.goal_player_id, g.assist_player_id].forEach(pid => {
+        if (!pid) return;
+        if (getPlayerPosition(q.lineup, pid) === "FW") {
+          const cur = fwData.get(pid);
+          if (cur) cur.ap++;
+        }
+      });
+    });
+    return [...fwData.entries()]
+      .filter(([, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
+      .sort((a, b) => b.winRate - a.winRate)
+      .slice(0, 5);
+  }, [allQuarters, goalEvents, players]);
+
+  // 5. 소년가장 키퍼: GK clean sheet when team scored 0-1
+  const boyBreadwinnerRanking = useMemo(() => {
+    const gkData = new Map<number, { saves: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const gks = getPositionPlayers(q.lineup, "GK");
+      const teamScored = q.score_for || 0;
+      const conceded = q.score_against || 0;
+      if (teamScored <= 1 && conceded === 0) {
+        gks.forEach(pid => {
+          const cur = gkData.get(pid) || { saves: 0, quarters: 0 };
+          cur.saves++;
+          cur.quarters++;
+          gkData.set(pid, cur);
+        });
+      } else {
+        gks.forEach(pid => {
+          const cur = gkData.get(pid) || { saves: 0, quarters: 0 };
+          cur.quarters++;
+          gkData.set(pid, cur);
+        });
+      }
+    });
+    return [...gkData.entries()]
+      .filter(([, d]) => d.saves >= 1)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), saves: d.saves, quarters: d.quarters }))
+      .sort((a, b) => b.saves - a.saves)
+      .slice(0, 5);
+  }, [allQuarters, players]);
+
+  // 6. 빙하기 메이커: lowest combined score when on field (FW/DF)
+  const iceAgeRanking = useMemo(() => {
+    const data = new Map<number, { totalScore: number; quarters: number }>();
+    allQuarters.forEach(q => {
+      if (!q.lineup) return;
+      const fws = getPositionPlayers(q.lineup, "FW");
+      const dfs = getPositionPlayers(q.lineup, "DF");
+      const combined = (q.score_for || 0) + (q.score_against || 0);
+      [...fws, ...dfs].forEach(pid => {
+        const cur = data.get(pid) || { totalScore: 0, quarters: 0 };
+        cur.totalScore += combined;
+        cur.quarters++;
+        data.set(pid, cur);
+      });
+    });
+    return [...data.entries()]
+      .filter(([, d]) => d.quarters >= 10)
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
+      .sort((a, b) => a.avgScore - b.avgScore)
       .slice(0, 5);
   }, [allQuarters, players]);
 
@@ -294,10 +462,10 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
         </RankingCard>
       )}
 
-      {sweeperKeeperRanking.length > 0 && (
-        <RankingCard title="골 넣는 키퍼" emoji="⚡" desc="GK 출전 쿼터 중 공격포인트 기록">
-          {sweeperKeeperRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.ap}AP`} sub={`${d.total} 쿼터 출전`} total={sweeperKeeperRanking.length} />
+      {boyBreadwinnerRanking.length > 0 && (
+        <RankingCard title="소년가장 키퍼 — 최후의 보루" emoji="🧤" desc="앞에서 똥을 싸도 묵묵히 치워냅니다. 빈공 상황 속에서 팀을 멱살 잡고 캐리한 최고의 거미손입니다.">
+          {boyBreadwinnerRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.saves}회`} sub={`GK ${d.quarters}쿼터 출전`} total={boyBreadwinnerRanking.length} />
           ))}
         </RankingCard>
       )}
@@ -343,6 +511,14 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
         </RankingCard>
       )}
 
+      {strikerDFRanking.length > 0 && (
+        <RankingCard title="수트라이커 — 라모스 빙의" emoji="⚔️" desc="수비하라고 뒤에 뒀더니 기어코 올라가서 골을 박아 넣습니다. 버니즈 최고의 수트라이커입니다.">
+          {strikerDFRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.goals}골`} sub={`DF ${d.quarters}쿼터 출전`} total={strikerDFRanking.length} />
+          ))}
+        </RankingCard>
+      )}
+
       {/* FW Section */}
       <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">⚔️ 공격수 (FW)</div>
 
@@ -358,6 +534,30 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
         <RankingCard title="독박 공격수" emoji="💪" desc="FW 출전 시 팀 골 중 본인 직접 득점 비율">
           {highUsageRanking.map((d, i) => (
             <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.usage}%`} sub={`${d.ownGoals}/${d.teamGoals} 팀골`} total={highUsageRanking.length} />
+          ))}
+        </RankingCard>
+      )}
+
+      {campingRanking.length > 0 && (
+        <RankingCard title="전방 캠핑족 — 수비 알러지" emoji="⛺" desc="상대 골대 앞에 텐트를 치고 돌아오지 않습니다! 골은 넣지만 수비 가담을 절대 하지 않아 수비수들을 과로사하게 만드는 이기적인 공격수입니다.">
+          {campingRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(1)} sub={`AP ${d.ap} | FW ${d.quarters}Q | 쿼터당 실점`} total={campingRanking.length} />
+          ))}
+        </RankingCard>
+      )}
+
+      {defensiveFWRanking.length > 0 && (
+        <RankingCard title="수비형 공격수 — 전방의 미친개" emoji="🛡️" desc="골은 안 넣고 상대 수비수들 발목만 물어뜯습니다. 득점보다 전방 압박과 수비에 진심인 수비형 공격수입니다.">
+          {defensiveFWRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(2)} sub={`AP ${d.ap} | FW ${d.quarters}Q | 쿼터당 실점`} total={defensiveFWRanking.length} />
+          ))}
+        </RankingCard>
+      )}
+
+      {freeRiderRanking.length > 0 && (
+        <RankingCard title="무임승차 VIP — 승리 토템" emoji="🚌" desc="필드 위에서 숨만 쉬어도 팀이 이깁니다! 존재 자체가 승리를 부르는 완벽한 승리 토템이자 무임승차 VIP입니다.">
+          {freeRiderRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.quarters}Q 승 | AP 0`} total={freeRiderRanking.length} />
           ))}
         </RankingCard>
       )}
@@ -381,10 +581,20 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
         </RankingCard>
       )}
 
+      {/* Special */}
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🧊 특수 지표</div>
+
+      {iceAgeRanking.length > 0 && (
+        <RankingCard title="빙하기 메이커 — 수면제 축구" emoji="🧊" desc="이 선수가 서는 순간 구장의 온도가 떨어집니다. 보는 사람을 숨 막히게 만드는 수면제 축구의 창시자입니다.">
+          {iceAgeRanking.map((d, i) => (
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.avgScore.toFixed(2)} sub={`${d.quarters}Q 출전 | 쿼터당 양팀 합산`} total={iceAgeRanking.length} />
+          ))}
+        </RankingCard>
+      )}
+
       {/* Hexagon Player */}
       <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🔷 멀티 플레이어</div>
       {(() => {
-        // Players who played all 3 positions: FW, DF, GK
         const hexPlayers = new Map<number, { fw: number; df: number; gk: number; margin: number; quarters: number }>();
         allQuarters.forEach(q => {
           if (!q.lineup) return;

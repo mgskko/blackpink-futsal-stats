@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import TotoStatsTab from "@/components/stats/TotoStatsTab";
 import FormationStatsTab from "@/components/stats/FormationStatsTab";
 import FunStatsTab from "@/components/stats/FunStatsTab";
+import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type FilterType = "all" | "custom" | string;
@@ -140,14 +141,14 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.margin - a.margin).slice(0, 10);
-  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
+  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
   // Defense contribution ranking
   const defenseRanking = players.map(p => {
     const dc = getDefenseContribution(p.id, filteredQuarters);
     return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
-  }).filter(p => p.quartersWithPlayer >= 5).sort((a, b) => a.diff - b.diff).slice(0, 10);
+  }).filter(p => p.quartersWithPlayer >= 10).sort((a, b) => a.diff - b.diff).slice(0, 10);
 
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
@@ -651,6 +652,9 @@ const StatisticsPage = () => {
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* 민생지원금 수령자 */}
+            <GarbageTimeTab players={players} matches={filteredMatches} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
             {/* 이색/예능 기록 랭킹보드 */}
             <FunStatsTab players={players} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
