@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import TotoStatsTab from "@/components/stats/TotoStatsTab";
 import FormationStatsTab from "@/components/stats/FormationStatsTab";
 import FunStatsTab from "@/components/stats/FunStatsTab";
+import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type FilterType = "all" | "custom" | string;
