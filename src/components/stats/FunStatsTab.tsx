@@ -189,7 +189,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       </div>
 
       {jinxRanking.length > 0 && (
-        <Section title="패배 요정 (The Jinx)" emoji="🤡" desc="AP를 기록한 경기의 팀 승률이 유독 낮은 선수 (최소 AP 5경기)">
+        <Section title="패배 요정 (The Jinx)" emoji="🤡" desc="AP를 기록한 경기의 팀 승률이 유독 낮은 선수 (최소 AP 10경기)">
           {jinxRanking.map((d, i) => (
             <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.total} 경기 승리`} total={jinxRanking.length} />
           ))}
