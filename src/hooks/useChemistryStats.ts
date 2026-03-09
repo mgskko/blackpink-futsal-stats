@@ -147,8 +147,17 @@ export interface ToxicDuo {
 export function computeToxicDuos(
   players: Player[],
   allQuarters: MatchQuarter[],
+  rosters: Roster[],
   topN: number = 5
 ): ToxicDuo[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const duoMap = new Map<string, { p1: number; p2: number; conceded: number; quarters: number }>();
 
   allQuarters.forEach(q => {
