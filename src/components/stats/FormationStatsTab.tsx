@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import type { Player, Match, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
+import type { Player, Match, GoalEvent, MatchQuarter, Roster } from "@/hooks/useFutsalData";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import { getPlayerPosition } from "@/hooks/useCourtStats";
 import { computeBestDefenseLine } from "@/hooks/useChemistryStats";
@@ -11,6 +11,7 @@ interface Props {
   matches: Match[];
   goalEvents: GoalEvent[];
   allQuarters: MatchQuarter[];
+  rosters: Roster[];
 }
 
 function getPositionPlayers(lineup: any, pos: string): number[] {
