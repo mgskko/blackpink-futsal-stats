@@ -407,7 +407,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       }
     });
     return [...gkData.entries()]
-      .filter(([, d]) => d.saves >= 1)
+      .filter(([pid, d]) => d.saves >= 1 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), saves: d.saves, quarters: d.quarters }))
       .sort((a, b) => b.saves - a.saves)
       .slice(0, 5);
