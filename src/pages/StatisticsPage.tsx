@@ -652,6 +652,9 @@ const StatisticsPage = () => {
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* 민생지원금 수령자 */}
+            <GarbageTimeTab players={players} matches={filteredMatches} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
             {/* 이색/예능 기록 랭킹보드 */}
             <FunStatsTab players={players} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
