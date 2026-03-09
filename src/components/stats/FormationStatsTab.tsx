@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import type { Player, Match, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
+import type { Player, Match, GoalEvent, MatchQuarter, Roster } from "@/hooks/useFutsalData";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import { getPlayerPosition } from "@/hooks/useCourtStats";
 import { computeBestDefenseLine } from "@/hooks/useChemistryStats";
@@ -11,6 +11,7 @@ interface Props {
   matches: Match[];
   goalEvents: GoalEvent[];
   allQuarters: MatchQuarter[];
+  rosters: Roster[];
 }
 
 function getPositionPlayers(lineup: any, pos: string): number[] {
@@ -34,8 +35,22 @@ function getBenchPlayers(lineup: any): number[] {
   return (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
 }
 
-const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props) => {
+const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters }: Props) => {
   const navigate = useNavigate();
+
+  // Compute all-time match count per player (for global 10-match filter)
+  const playerMatchCount = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    rosters.forEach(r => {
+      if (!map.has(r.player_id)) map.set(r.player_id, new Set());
+      map.get(r.player_id)!.add(r.match_id);
+    });
+    const result = new Map<number, number>();
+    map.forEach((matchSet, pid) => result.set(pid, matchSet.size));
+    return result;
+  }, [rosters]);
+
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
 
   // ─── GK Stats ───
   const gkStats = useMemo(() => {
@@ -73,19 +88,19 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
 
   const cleanSheetRanking = useMemo(() =>
     [...gkStats.entries()]
-      .filter(([, d]) => d.total >= 3)
+      .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.cleanSheet / d.total) * 100), cleanSheet: d.cleanSheet, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 10),
-  [gkStats, players]);
+  [gkStats, players, playerMatchCount]);
 
   const openDoorRanking = useMemo(() =>
     [...gkStats.entries()]
-      .filter(([, d]) => d.total >= 3)
+      .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgConceded: d.conceded / d.total, total: d.total }))
       .sort((a, b) => b.avgConceded - a.avgConceded)
       .slice(0, 5),
-  [gkStats, players]);
+  [gkStats, players, playerMatchCount]);
 
   // ─── DF Stats ───
   const dfAssistRanking = useMemo(() => {
@@ -117,11 +132,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       });
     });
     return [...dfMap.entries()]
-      .filter(([, d]) => d.total >= 5)
+      .filter(([pid, d]) => d.total >= 5 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.total) * 100), wins: d.wins, total: d.total }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   const cbPartnership = useMemo(() => computeBestDefenseLine(players, allQuarters, 5), [players, allQuarters]);
 
@@ -150,11 +165,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       }
     });
     return [...fwMap.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.assists > d.goals)
+      .filter(([pid, d]) => d.quarters >= 5 && d.assists > d.goals && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, assists: d.assists, quarters: d.quarters }))
       .sort((a, b) => (b.assists - b.goals) - (a.assists - a.goals))
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   const highUsageRanking = useMemo(() => {
     const fwGoalMap = new Map<number, { ownGoals: number; teamGoals: number; quarters: number }>();
@@ -179,11 +194,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       }
     });
     return [...fwGoalMap.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.teamGoals >= 3)
+      .filter(([pid, d]) => d.quarters >= 5 && d.teamGoals >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), usage: Math.round((d.ownGoals / d.teamGoals) * 100), ownGoals: d.ownGoals, teamGoals: d.teamGoals }))
       .sort((a, b) => b.usage - a.usage)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // ─── Bench / Physical Stats ───
   const gameChangerRanking = useMemo(() => {
@@ -269,11 +284,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap >= 3)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => b.concededPerQ - a.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 2. 수비형 공격수: FW AP ≈ 0 but lowest conceded
   const defensiveFWRanking = useMemo(() => {
@@ -301,11 +316,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap <= 2)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap <= 2 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.concededPerQ - b.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 3. 수트라이커: DF goals
   const strikerDFRanking = useMemo(() => {
@@ -329,7 +344,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       }
     });
     return [...dfGoals.entries()]
-      .filter(([, d]) => d.goals >= 1)
+      .filter(([pid, d]) => d.goals >= 1 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, quarters: d.quarters }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
@@ -362,11 +377,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 5. 소년가장 키퍼: GK clean sheet when team scored 0-1
   const boyBreadwinnerRanking = useMemo(() => {
@@ -392,11 +407,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       }
     });
     return [...gkData.entries()]
-      .filter(([, d]) => d.saves >= 1)
+      .filter(([pid, d]) => d.saves >= 1 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), saves: d.saves, quarters: d.quarters }))
       .sort((a, b) => b.saves - a.saves)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   // 6. 빙하기 메이커: lowest combined score when on field (FW/DF)
   const iceAgeRanking = useMemo(() => {
@@ -414,11 +429,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
       });
     });
     return [...data.entries()]
-      .filter(([, d]) => d.quarters >= 10)
+      .filter(([pid, d]) => d.quarters >= 10 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.avgScore - b.avgScore)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   const RankingCard = ({ title, emoji, desc, children }: { title: string; emoji: string; desc: string; children: React.ReactNode }) => (
     <div className="mb-6">
@@ -613,7 +628,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props)
           });
         });
         const hexRanking = [...hexPlayers.entries()]
-          .filter(([, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10)
+          .filter(([pid, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10 && has10Matches(pid))
           .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), margin: d.margin, quarters: d.quarters, fw: d.fw, df: d.df, gk: d.gk }))
           .sort((a, b) => b.margin - a.margin)
           .slice(0, 5);

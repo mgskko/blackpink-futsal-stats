@@ -416,7 +416,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 환상의 짝꿍 TOP 10</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수 (8경기 이상 함께 출전)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수 (10경기 이상 함께 출전)</p>
                   <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {passNet.map((d, i) => (
                       <div key={`${d.assisterId}-${d.scorerId}`} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < passNet.length - 1 ? "border-b border-border" : ""}`}>
@@ -562,7 +562,7 @@ const StatisticsPage = () => {
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 5쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 10쿼터)</p>
                   <div className="space-y-2">
                     {data.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${!isWorst && i === 0 ? "border-primary/50 box-glow" : isWorst && i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
@@ -647,7 +647,7 @@ const StatisticsPage = () => {
         )}
 
         {activeTab === "formation" && (
-          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
         )}
 
         {activeTab === "fun" && (
