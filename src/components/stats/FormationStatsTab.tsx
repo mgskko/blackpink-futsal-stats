@@ -165,11 +165,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       }
     });
     return [...fwMap.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.assists > d.goals)
+      .filter(([pid, d]) => d.quarters >= 5 && d.assists > d.goals && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, assists: d.assists, quarters: d.quarters }))
       .sort((a, b) => (b.assists - b.goals) - (a.assists - a.goals))
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   const highUsageRanking = useMemo(() => {
     const fwGoalMap = new Map<number, { ownGoals: number; teamGoals: number; quarters: number }>();
