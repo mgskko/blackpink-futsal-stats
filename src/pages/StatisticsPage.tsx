@@ -647,7 +647,7 @@ const StatisticsPage = () => {
         )}
 
         {activeTab === "formation" && (
-          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
         )}
 
         {activeTab === "fun" && (
