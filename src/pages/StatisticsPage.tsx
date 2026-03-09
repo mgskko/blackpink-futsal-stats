@@ -555,10 +555,10 @@ const StatisticsPage = () => {
 
             {/* Position Duos by Win Rate */}
             {(() => {
-              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, false, filteredGoalEvents);
-              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", 5, true, filteredGoalEvents);
-              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, false, filteredGoalEvents);
-              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", 5, true, filteredGoalEvents);
+              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 5, false, filteredGoalEvents);
+              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 5, true, filteredGoalEvents);
+              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, false, filteredGoalEvents);
+              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, true, filteredGoalEvents);
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
