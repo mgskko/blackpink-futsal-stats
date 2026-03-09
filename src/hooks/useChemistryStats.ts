@@ -427,7 +427,7 @@ export function computePositionDuosByWinRate(
   });
 
   return [...duoMap.values()]
-    .filter(d => d.quarters >= 5)
+    .filter(d => d.quarters >= 10)
     .map(d => ({
       p1: d.p1, name1: getPlayerName(players, d.p1),
       p2: d.p2, name2: getPlayerName(players, d.p2),

@@ -562,7 +562,7 @@ const StatisticsPage = () => {
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 5쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">승률 기준 (최소 10쿼터)</p>
                   <div className="space-y-2">
                     {data.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${!isWorst && i === 0 ? "border-primary/50 box-glow" : isWorst && i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>

@@ -136,7 +136,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : i === 1 ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
               <div>
                 <span className="text-sm font-medium text-foreground">{d.name}</span>
-                <div className="text-[10px] text-muted-foreground">대승경기 AP {d.blowoutAP}개({d.blowoutRate}%) | 가비지타임 {d.garbageAP}AP</div>
+                <div className="text-[10px] text-muted-foreground">대승경기 AP {d.blowoutAP}개({d.blowoutRate}%) | 가비지타임 {d.garbageAP}AP (3골차+)</div>
               </div>
             </div>
             <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.score}pt</span>
