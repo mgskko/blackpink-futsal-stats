@@ -424,10 +424,19 @@ export function computePositionDuosByWinRate(
   players: Player[],
   allQuarters: MatchQuarter[],
   position: "FW" | "DF",
+  rosters: Roster[],
   topN: number = 5,
   worst: boolean = false,
   goalEvents?: GoalEvent[]
 ): PositionDuoWinRate[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const duoMap = new Map<string, { p1: number; p2: number; wins: number; quarters: number; margin: number; combinedGoals: number; cleanSheetQuarters: number }>();
 
   allQuarters.forEach(q => {
