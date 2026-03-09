@@ -11,6 +11,7 @@ import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
+import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
 
 const AGE_CATEGORIES = [
   "20대 초반", "20대 중반", "20대 후반",
