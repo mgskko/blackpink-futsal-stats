@@ -132,11 +132,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       });
     });
     return [...dfMap.entries()]
-      .filter(([, d]) => d.total >= 5)
+      .filter(([pid, d]) => d.total >= 5 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.total) * 100), wins: d.wins, total: d.total }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   const cbPartnership = useMemo(() => computeBestDefenseLine(players, allQuarters, 5), [players, allQuarters]);
 
