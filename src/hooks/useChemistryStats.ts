@@ -147,8 +147,17 @@ export interface ToxicDuo {
 export function computeToxicDuos(
   players: Player[],
   allQuarters: MatchQuarter[],
+  rosters: Roster[],
   topN: number = 5
 ): ToxicDuo[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const duoMap = new Map<string, { p1: number; p2: number; conceded: number; quarters: number }>();
 
   allQuarters.forEach(q => {
@@ -157,7 +166,9 @@ export function computeToxicDuos(
     const conceded = q.score_against || 0;
     // All pairs
     for (let i = 0; i < field.length; i++) {
+      if (!has10Matches(field[i])) continue;
       for (let j = i + 1; j < field.length; j++) {
+        if (!has10Matches(field[j])) continue;
         const key = `${Math.min(field[i], field[j])}-${Math.max(field[i], field[j])}`;
         const cur = duoMap.get(key) || { p1: Math.min(field[i], field[j]), p2: Math.max(field[i], field[j]), conceded: 0, quarters: 0 };
         cur.conceded += conceded;
@@ -415,10 +426,19 @@ export function computePositionDuosByWinRate(
   players: Player[],
   allQuarters: MatchQuarter[],
   position: "FW" | "DF",
+  rosters: Roster[],
   topN: number = 5,
   worst: boolean = false,
   goalEvents?: GoalEvent[]
 ): PositionDuoWinRate[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const duoMap = new Map<string, { p1: number; p2: number; wins: number; quarters: number; margin: number; combinedGoals: number; cleanSheetQuarters: number }>();
 
   allQuarters.forEach(q => {
@@ -429,7 +449,9 @@ export function computePositionDuosByWinRate(
     const diff = (q.score_for || 0) - (q.score_against || 0);
     const isCleanSheet = (q.score_against || 0) === 0 ? 1 : 0;
     for (let i = 0; i < posPlayers.length; i++) {
+      if (!has10Matches(posPlayers[i])) continue;
       for (let j = i + 1; j < posPlayers.length; j++) {
+        if (!has10Matches(posPlayers[j])) continue;
         const key = `${posPlayers[i]}-${posPlayers[j]}`;
         const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
         cur.wins += won;
