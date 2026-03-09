@@ -449,7 +449,9 @@ export function computePositionDuosByWinRate(
     const diff = (q.score_for || 0) - (q.score_against || 0);
     const isCleanSheet = (q.score_against || 0) === 0 ? 1 : 0;
     for (let i = 0; i < posPlayers.length; i++) {
+      if (!has10Matches(posPlayers[i])) continue;
       for (let j = i + 1; j < posPlayers.length; j++) {
+        if (!has10Matches(posPlayers[j])) continue;
         const key = `${posPlayers[i]}-${posPlayers[j]}`;
         const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
         cur.wins += won;
