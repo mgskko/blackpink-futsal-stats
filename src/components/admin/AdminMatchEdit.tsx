@@ -86,7 +86,6 @@ const AdminMatchEdit = () => {
   // For custom matches: group roster by team
   const teamA = isCustomMatch ? matchTeams[0] : null;
   const teamB = isCustomMatch ? matchTeams[1] : null;
-  const [addToTeamId, setAddToTeamId] = useState<number | null>(null);
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
