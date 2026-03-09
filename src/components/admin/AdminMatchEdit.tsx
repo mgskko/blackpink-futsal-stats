@@ -586,8 +586,22 @@ const AdminMatchEdit = () => {
             );
           })()}
 
-          {/* Quarter Editor */}
-          <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />
+          {/* Quarter Editor - conditional for custom/normal matches */}
+          {(() => {
+            const currentMatch = matches.find(m => m.id === matchId);
+            if (currentMatch?.is_custom) {
+              return (
+                <AdminCustomQuarterEditor
+                  matchId={matchId}
+                  matchTeams={matchTeams}
+                  rosterPlayerIds={[...rosterPlayerIds]}
+                  players={players}
+                  rosters={matchRoster.map(r => ({ player_id: r.player_id, team_id: r.team_id }))}
+                />
+              );
+            }
+            return <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />;
+          })()}
 
           {/* Delete Match */}
           <Button variant="destructive" onClick={() => setDeleteTarget({ type: "match", id: matchId })} className="w-full">
