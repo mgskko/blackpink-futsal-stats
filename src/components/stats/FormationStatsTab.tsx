@@ -316,11 +316,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap <= 2)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap <= 2 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.concededPerQ - b.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 3. 수트라이커: DF goals
   const strikerDFRanking = useMemo(() => {
