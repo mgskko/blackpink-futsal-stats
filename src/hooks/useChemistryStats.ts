@@ -191,14 +191,25 @@ export interface DefenseLine {
 export function computeBestDefenseLine(
   players: Player[],
   allQuarters: MatchQuarter[],
+  rosters: Roster[],
   topN: number = 5
 ): DefenseLine[] {
+  // Build all-time match count per player
+  const playerMatchCount = new Map<number, Set<number>>();
+  rosters.forEach(r => {
+    if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
+    playerMatchCount.get(r.player_id)!.add(r.match_id);
+  });
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid)?.size || 0) >= 10;
+
   const comboMap = new Map<string, { playerIds: number[]; conceded: number; quarters: number }>();
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const dfs = getPositionPlayers(q.lineup, "DF").sort((a, b) => a - b);
     if (dfs.length < 2) return;
+    // Filter: all players in combo must have 10+ all-time matches
+    if (!dfs.every(has10Matches)) return;
     const key = dfs.join(",");
     const conceded = q.score_against || 0;
     const cur = comboMap.get(key) || { playerIds: dfs, conceded: 0, quarters: 0 };
