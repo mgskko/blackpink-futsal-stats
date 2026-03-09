@@ -377,11 +377,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 5. 소년가장 키퍼: GK clean sheet when team scored 0-1
   const boyBreadwinnerRanking = useMemo(() => {
