@@ -464,7 +464,7 @@ const StatisticsPage = () => {
 
             {/* Best Defensive Line */}
             {(() => {
-              const defLines = computeBestDefenseLine(players, filteredQuarters, 5);
+              const defLines = computeBestDefenseLine(players, filteredQuarters, rosters, 5);
               if (defLines.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -495,7 +495,7 @@ const StatisticsPage = () => {
 
             {/* Synergy Margin */}
             {(() => {
-              const synergy = computeSynergyMargin(players, filteredQuarters, 5);
+              const synergy = computeSynergyMargin(players, filteredQuarters, rosters, 5);
               if (synergy.length === 0) return null;
               return (
                 <div className="mb-6">

@@ -59,7 +59,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
       });
       // Check if final margin >= 3
       if (ourResult && ourResult.score_for != null && ourResult.score_against != null) {
-        if ((ourResult.score_for - ourResult.score_against) >= 3) {
+        if ((ourResult.score_for - ourResult.score_against) >= 4) {
           blowoutMatchIds.add(m.id);
         }
       }
@@ -88,7 +88,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
         if (mq.quarter >= g.quarter) break;
         cumMargin += (mq.score_for || 0) - (mq.score_against || 0);
       }
-      if (cumMargin >= 3) {
+      if (cumMargin >= 4) {
         [g.goal_player_id, g.assist_player_id].forEach(pid => {
           if (!pid) return;
           garbageAP.set(pid, (garbageAP.get(pid) || 0) + 1);
@@ -126,7 +126,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
     <div className="mb-6">
       <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">💸 민생지원금 수령자</h3>
       <p className="mb-2 text-[10px] text-muted-foreground">
-        팀이 위기일 땐 안 보이지만, 3점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.
+        팀이 위기일 땐 안 보이지만, 4점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.
       </p>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         {ranking.map((d, i) => (
@@ -136,7 +136,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : i === 1 ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
               <div>
                 <span className="text-sm font-medium text-foreground">{d.name}</span>
-                <div className="text-[10px] text-muted-foreground">대승경기 AP {d.blowoutAP}개({d.blowoutRate}%) | 가비지타임 {d.garbageAP}AP (3골차+)</div>
+                <div className="text-[10px] text-muted-foreground">대승경기 AP {d.blowoutAP}개({d.blowoutRate}%) | 가비지타임 {d.garbageAP}AP (4골차+)</div>
               </div>
             </div>
             <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.score}pt</span>

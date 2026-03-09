@@ -138,7 +138,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .slice(0, 5);
   }, [allQuarters, players, playerMatchCount]);
 
-  const cbPartnership = useMemo(() => computeBestDefenseLine(players, allQuarters, 5), [players, allQuarters]);
+  const cbPartnership = useMemo(() => computeBestDefenseLine(players, allQuarters, rosters, 5), [players, allQuarters, rosters]);
 
   // ─── FW Stats ───
   const false9Ranking = useMemo(() => {
