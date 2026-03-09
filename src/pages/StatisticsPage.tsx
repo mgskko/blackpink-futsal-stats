@@ -495,7 +495,7 @@ const StatisticsPage = () => {
 
             {/* Synergy Margin */}
             {(() => {
-              const synergy = computeSynergyMargin(players, filteredQuarters, 5);
+              const synergy = computeSynergyMargin(players, filteredQuarters, rosters, 5);
               if (synergy.length === 0) return null;
               return (
                 <div className="mb-6">
