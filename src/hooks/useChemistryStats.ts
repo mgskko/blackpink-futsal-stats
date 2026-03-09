@@ -120,7 +120,7 @@ export function computePassNetwork(
     if (!g.assist_player_id || !g.goal_player_id || g.is_own_goal) return;
     const duoKey = `${Math.min(g.assist_player_id, g.goal_player_id)}-${Math.max(g.assist_player_id, g.goal_player_id)}`;
     const coCount = coAppearanceMap.get(duoKey) || 0;
-    if (coCount < 8) return; // Must have played together in 8+ matches
+    if (coCount < 10) return; // Must have played together in 10+ matches
     const key = `${g.assist_player_id}->${g.goal_player_id}`;
     const cur = map.get(key);
     if (cur) cur.count++;

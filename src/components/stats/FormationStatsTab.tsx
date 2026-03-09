@@ -35,8 +35,22 @@ function getBenchPlayers(lineup: any): number[] {
   return (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
 }
 
-const FormationStatsTab = ({ players, matches, goalEvents, allQuarters }: Props) => {
+const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters }: Props) => {
   const navigate = useNavigate();
+
+  // Compute all-time match count per player (for global 10-match filter)
+  const playerMatchCount = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    rosters.forEach(r => {
+      if (!map.has(r.player_id)) map.set(r.player_id, new Set());
+      map.get(r.player_id)!.add(r.match_id);
+    });
+    const result = new Map<number, number>();
+    map.forEach((matchSet, pid) => result.set(pid, matchSet.size));
+    return result;
+  }, [rosters]);
+
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
 
   // ─── GK Stats ───
   const gkStats = useMemo(() => {
