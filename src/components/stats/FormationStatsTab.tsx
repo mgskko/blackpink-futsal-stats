@@ -284,11 +284,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       });
     });
     return [...fwData.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.ap >= 3)
+      .filter(([pid, d]) => d.quarters >= 5 && d.ap >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => b.concededPerQ - a.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // 2. 수비형 공격수: FW AP ≈ 0 but lowest conceded
   const defensiveFWRanking = useMemo(() => {
