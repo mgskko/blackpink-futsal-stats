@@ -98,7 +98,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     });
     const ranking: { id: number; name: string; winRate: number; wins: number; total: number }[] = [];
     playerMatchAP.forEach((matchIds, pid) => {
-      if (matchIds.size < 5) return;
+      if (matchIds.size < 10) return;
       let wins = 0;
       matchIds.forEach(mid => {
         const pRoster = rosters.find(r => r.player_id === pid && r.match_id === mid);
