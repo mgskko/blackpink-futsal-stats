@@ -62,6 +62,7 @@ const AdminMatchEdit = () => {
 
   // Roster add
   const [showAddRoster, setShowAddRoster] = useState(false);
+  const [addToTeamId, setAddToTeamId] = useState<number | null>(null);
 
   // Manual MOM
   const [showMOM, setShowMOM] = useState(false);
@@ -73,12 +74,18 @@ const AdminMatchEdit = () => {
   const matchResults = matchId ? results.filter(r => r.match_id === matchId) : [];
   const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
   const matchGoals = matchId ? goalEvents.filter(g => g.match_id === matchId).sort((a, b) => a.quarter - b.quarter) : [];
+  const selectedMatch = matchId ? matches.find(m => m.id === matchId) : null;
+  const isCustomMatch = selectedMatch?.is_custom ?? false;
   const ourTeam = matchTeams.find(t => t.is_ours);
   const ourResult = ourTeam ? matchResults.find(r => r.team_id === ourTeam.id) : null;
   const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
   const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
   const nonRosterPlayers = players.filter(p => p.is_active && !rosterPlayerIds.has(p.id));
   const allSelectablePlayers = [...rosterPlayers, ...nonRosterPlayers];
+
+  // For custom matches: group roster by team
+  const teamA = isCustomMatch ? matchTeams[0] : null;
+  const teamB = isCustomMatch ? matchTeams[1] : null;
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
@@ -197,11 +204,13 @@ const AdminMatchEdit = () => {
     } finally { setSaving(false); }
   };
 
-  const handleAddPlayerToRoster = async (pid: number) => {
-    if (!matchId || !ourTeam) return;
+  const handleAddPlayerToRoster = async (pid: number, teamId?: number) => {
+    if (!matchId) return;
+    const targetTeamId = teamId || ourTeam?.id;
+    if (!targetTeamId) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("rosters").insert({ match_id: matchId, team_id: ourTeam.id, player_id: pid });
+      const { error } = await supabase.from("rosters").insert({ match_id: matchId, team_id: targetTeamId, player_id: pid });
       if (error) throw error;
       invalidateAll();
       toast({ title: `${getPlayerName(players, pid)} 추가됨` });
@@ -370,27 +379,85 @@ const AdminMatchEdit = () => {
                 <UserPlus size={12} /> {showAddRoster ? "닫기" : "추가/제거"}
               </Button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {matchRoster.map(r => (
-                <span key={r.id} className="group relative rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-foreground">
-                  {getPlayerName(players, r.player_id)}
-                  {showAddRoster && (
-                    <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
-                  )}
-                </span>
-              ))}
-            </div>
+            {isCustomMatch && teamA && teamB ? (
+              /* 자체전: show roster grouped by team */
+              <div className="space-y-3">
+                {[teamA, teamB].map((team, tIdx) => {
+                  const teamRoster = matchRoster.filter(r => r.team_id === team.id);
+                  const label = tIdx === 0 ? "🅰️" : "🅱️";
+                  const borderColor = tIdx === 0 ? "border-blue-500/40" : "border-orange-500/40";
+                  const bgColor = tIdx === 0 ? "bg-blue-500/10" : "bg-orange-500/10";
+                  return (
+                    <div key={team.id} className={`rounded-md border ${borderColor} ${bgColor} p-2`}>
+                      <span className="text-[10px] font-bold text-muted-foreground mb-1 block">{label} {team.name} ({teamRoster.length}명)</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {teamRoster.map(r => (
+                          <span key={r.id} className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-foreground">
+                            {getPlayerName(players, r.player_id)}
+                            {showAddRoster && (
+                              <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
+                            )}
+                          </span>
+                        ))}
+                        {teamRoster.length === 0 && <span className="text-[10px] text-muted-foreground">없음</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* 일반 경기 */
+              <div className="flex flex-wrap gap-1.5">
+                {matchRoster.map(r => (
+                  <span key={r.id} className="group relative rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-foreground">
+                    {getPlayerName(players, r.player_id)}
+                    {showAddRoster && (
+                      <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
             {showAddRoster && nonRosterPlayers.length > 0 && (
               <div className="mt-3 border-t border-border pt-3">
-                <p className="text-[10px] text-muted-foreground mb-2">클릭하여 추가:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {nonRosterPlayers.map(p => (
-                    <button key={p.id} onClick={() => handleAddPlayerToRoster(p.id)} disabled={saving}
-                      className="rounded-full border border-dashed border-primary/30 px-2.5 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors">
-                      + {p.name}
-                    </button>
-                  ))}
-                </div>
+                {isCustomMatch && teamA && teamB ? (
+                  <>
+                    <p className="text-[10px] text-muted-foreground mb-2">팀을 선택한 후 선수를 클릭하여 추가:</p>
+                    <div className="flex gap-2 mb-2">
+                      <Button size="sm" variant={addToTeamId === teamA.id ? "default" : "outline"} onClick={() => setAddToTeamId(teamA.id)}
+                        className={`h-6 text-[10px] ${addToTeamId === teamA.id ? "bg-blue-500 text-white" : "border-blue-500/40 text-blue-500"}`}>
+                        🅰️ {teamA.name}
+                      </Button>
+                      <Button size="sm" variant={addToTeamId === teamB.id ? "default" : "outline"} onClick={() => setAddToTeamId(teamB.id)}
+                        className={`h-6 text-[10px] ${addToTeamId === teamB.id ? "bg-orange-500 text-white" : "border-orange-500/40 text-orange-500"}`}>
+                        🅱️ {teamB.name}
+                      </Button>
+                    </div>
+                    {!addToTeamId && <p className="text-[10px] text-destructive">⬆️ 먼저 팀을 선택하세요</p>}
+                    <div className="flex flex-wrap gap-1.5">
+                      {nonRosterPlayers.map(p => (
+                        <button key={p.id} onClick={() => addToTeamId && handleAddPlayerToRoster(p.id, addToTeamId)} disabled={saving || !addToTeamId}
+                          className={`rounded-full border border-dashed px-2.5 py-0.5 text-xs transition-colors ${
+                            addToTeamId ? "border-primary/30 text-primary hover:bg-primary/10" : "border-muted text-muted-foreground cursor-not-allowed"
+                          }`}>
+                          + {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-muted-foreground mb-2">클릭하여 추가:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {nonRosterPlayers.map(p => (
+                        <button key={p.id} onClick={() => handleAddPlayerToRoster(p.id)} disabled={saving}
+                          className="rounded-full border border-dashed border-primary/30 px-2.5 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors">
+                          + {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
