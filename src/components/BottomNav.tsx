@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Users, BarChart3, UserCircle, Shield, ClipboardList, BookOpen } from "lucide-react";
+import { Trophy, Users, BarChart3, UserCircle, Shield, ClipboardList, Landmark } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const BottomNav = () => {
