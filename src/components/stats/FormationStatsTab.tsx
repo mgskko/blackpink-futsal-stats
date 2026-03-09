@@ -344,7 +344,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       }
     });
     return [...dfGoals.entries()]
-      .filter(([, d]) => d.goals >= 1)
+      .filter(([pid, d]) => d.goals >= 1 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, quarters: d.quarters }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
