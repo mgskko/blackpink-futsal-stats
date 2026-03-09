@@ -88,7 +88,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
         if (mq.quarter >= g.quarter) break;
         cumMargin += (mq.score_for || 0) - (mq.score_against || 0);
       }
-      if (cumMargin >= 3) {
+      if (cumMargin >= 4) {
         [g.goal_player_id, g.assist_player_id].forEach(pid => {
           if (!pid) return;
           garbageAP.set(pid, (garbageAP.get(pid) || 0) + 1);
