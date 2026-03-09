@@ -73,12 +73,19 @@ const AdminMatchEdit = () => {
   const matchResults = matchId ? results.filter(r => r.match_id === matchId) : [];
   const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
   const matchGoals = matchId ? goalEvents.filter(g => g.match_id === matchId).sort((a, b) => a.quarter - b.quarter) : [];
+  const selectedMatch = matchId ? matches.find(m => m.id === matchId) : null;
+  const isCustomMatch = selectedMatch?.is_custom ?? false;
   const ourTeam = matchTeams.find(t => t.is_ours);
   const ourResult = ourTeam ? matchResults.find(r => r.team_id === ourTeam.id) : null;
   const rosterPlayerIds = new Set(matchRoster.map(r => r.player_id));
   const rosterPlayers = players.filter(p => rosterPlayerIds.has(p.id));
   const nonRosterPlayers = players.filter(p => p.is_active && !rosterPlayerIds.has(p.id));
   const allSelectablePlayers = [...rosterPlayers, ...nonRosterPlayers];
+
+  // For custom matches: group roster by team
+  const teamA = isCustomMatch ? matchTeams[0] : null;
+  const teamB = isCustomMatch ? matchTeams[1] : null;
+  const [addToTeamId, setAddToTeamId] = useState<number | null>(null);
 
   const invalidateAll = () => {
     ["matches", "teams", "results", "rosters", "goal_events", "match_attendance", "mom_votes"].forEach(k =>
