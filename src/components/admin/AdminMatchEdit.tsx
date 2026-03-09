@@ -62,6 +62,7 @@ const AdminMatchEdit = () => {
 
   // Roster add
   const [showAddRoster, setShowAddRoster] = useState(false);
+  const [addToTeamId, setAddToTeamId] = useState<number | null>(null);
 
   // Manual MOM
   const [showMOM, setShowMOM] = useState(false);
