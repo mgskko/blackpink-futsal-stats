@@ -436,7 +436,7 @@ const StatisticsPage = () => {
 
             {/* Toxic Duo */}
             {(() => {
-              const toxicDuos = computeToxicDuos(players, filteredQuarters, 5);
+              const toxicDuos = computeToxicDuos(players, filteredQuarters, rosters, 5);
               if (toxicDuos.length === 0) return null;
               return (
                 <div className="mb-6">
