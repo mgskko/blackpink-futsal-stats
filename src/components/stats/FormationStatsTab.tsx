@@ -88,19 +88,19 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
 
   const cleanSheetRanking = useMemo(() =>
     [...gkStats.entries()]
-      .filter(([, d]) => d.total >= 3)
+      .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.cleanSheet / d.total) * 100), cleanSheet: d.cleanSheet, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 10),
-  [gkStats, players]);
+  [gkStats, players, playerMatchCount]);
 
   const openDoorRanking = useMemo(() =>
     [...gkStats.entries()]
-      .filter(([, d]) => d.total >= 3)
+      .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgConceded: d.conceded / d.total, total: d.total }))
       .sort((a, b) => b.avgConceded - a.avgConceded)
       .slice(0, 5),
-  [gkStats, players]);
+  [gkStats, players, playerMatchCount]);
 
   // ─── DF Stats ───
   const dfAssistRanking = useMemo(() => {
