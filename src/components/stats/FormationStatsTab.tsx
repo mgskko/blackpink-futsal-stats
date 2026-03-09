@@ -628,7 +628,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
           });
         });
         const hexRanking = [...hexPlayers.entries()]
-          .filter(([, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10)
+          .filter(([pid, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10 && has10Matches(pid))
           .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), margin: d.margin, quarters: d.quarters, fw: d.fw, df: d.df, gk: d.gk }))
           .sort((a, b) => b.margin - a.margin)
           .slice(0, 5);
