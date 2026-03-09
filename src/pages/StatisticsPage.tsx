@@ -141,8 +141,8 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.margin - a.margin).slice(0, 10);
-  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 5).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
+  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
   // Defense contribution ranking
   const defenseRanking = players.map(p => {
