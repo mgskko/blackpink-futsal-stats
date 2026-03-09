@@ -411,7 +411,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), saves: d.saves, quarters: d.quarters }))
       .sort((a, b) => b.saves - a.saves)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   // 6. 빙하기 메이커: lowest combined score when on field (FW/DF)
   const iceAgeRanking = useMemo(() => {
