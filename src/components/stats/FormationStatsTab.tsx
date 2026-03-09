@@ -429,11 +429,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       });
     });
     return [...data.entries()]
-      .filter(([, d]) => d.quarters >= 10)
+      .filter(([pid, d]) => d.quarters >= 10 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.avgScore - b.avgScore)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, players, playerMatchCount]);
 
   const RankingCard = ({ title, emoji, desc, children }: { title: string; emoji: string; desc: string; children: React.ReactNode }) => (
     <div className="mb-6">
