@@ -126,7 +126,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
     <div className="mb-6">
       <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">💸 민생지원금 수령자</h3>
       <p className="mb-2 text-[10px] text-muted-foreground">
-        팀이 위기일 땐 안 보이지만, 3점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.
+        팀이 위기일 땐 안 보이지만, 4점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.
       </p>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         {ranking.map((d, i) => (
