@@ -15,7 +15,7 @@ import ComparisonPage from "@/pages/ComparisonPage";
 import MyPage from "@/pages/MyPage";
 import AdminPage from "@/pages/AdminPage";
 import TacticsPage from "@/pages/TacticsPage";
-import GuidePage from "@/pages/GuidePage";
+import ClubhousePage from "@/pages/ClubhousePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
