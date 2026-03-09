@@ -204,11 +204,13 @@ const AdminMatchEdit = () => {
     } finally { setSaving(false); }
   };
 
-  const handleAddPlayerToRoster = async (pid: number) => {
-    if (!matchId || !ourTeam) return;
+  const handleAddPlayerToRoster = async (pid: number, teamId?: number) => {
+    if (!matchId) return;
+    const targetTeamId = teamId || ourTeam?.id;
+    if (!targetTeamId) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("rosters").insert({ match_id: matchId, team_id: ourTeam.id, player_id: pid });
+      const { error } = await supabase.from("rosters").insert({ match_id: matchId, team_id: targetTeamId, player_id: pid });
       if (error) throw error;
       invalidateAll();
       toast({ title: `${getPlayerName(players, pid)} 추가됨` });
