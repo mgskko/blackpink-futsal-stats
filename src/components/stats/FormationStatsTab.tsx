@@ -194,11 +194,11 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       }
     });
     return [...fwGoalMap.entries()]
-      .filter(([, d]) => d.quarters >= 5 && d.teamGoals >= 3)
+      .filter(([pid, d]) => d.quarters >= 5 && d.teamGoals >= 3 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), usage: Math.round((d.ownGoals / d.teamGoals) * 100), ownGoals: d.ownGoals, teamGoals: d.teamGoals }))
       .sort((a, b) => b.usage - a.usage)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, players, playerMatchCount]);
 
   // ─── Bench / Physical Stats ───
   const gameChangerRanking = useMemo(() => {
