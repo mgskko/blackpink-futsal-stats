@@ -119,13 +119,21 @@ const StatisticsPage = () => {
     const momCounts = new Map<number, number>();
     const matchIdsWithQuarters = [...new Set(filteredQuarters.map(q => q.match_id))];
     matchIdsWithQuarters.forEach(mid => {
-      const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
-      if (mom) momCounts.set(mom.playerId, (momCounts.get(mom.playerId) || 0) + 1);
+      const match = matches.find(m => m.id === mid);
+      if (match?.is_custom) {
+        // Custom match: dual Data MOM (one per team)
+        const dual = computeDualDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+        if (dual.teamA) momCounts.set(dual.teamA.playerId, (momCounts.get(dual.teamA.playerId) || 0) + 1);
+        if (dual.teamB) momCounts.set(dual.teamB.playerId, (momCounts.get(dual.teamB.playerId) || 0) + 1);
+      } else {
+        const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+        if (mom) momCounts.set(mom.playerId, (momCounts.get(mom.playerId) || 0) + 1);
+      }
     });
     return [...momCounts.entries()].map(([pid, count]) => ({
       id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
     })).sort((a, b) => b.count - a.count).slice(0, 10);
-  }, [filteredQuarters, players, teams, goalEvents, allQuarters, results]);
+  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results]);
 
   if (isLoading) return <SplashScreen />;
 
