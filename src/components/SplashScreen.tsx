@@ -11,7 +11,7 @@ const SplashScreen = () => (
     >
       <motion.img
         src={burneesLogo}
-        alt="Burnees FC"
+        alt="Bunnies FC"
         className="h-32 w-32 rounded-full"
         animate={{ 
           boxShadow: [
