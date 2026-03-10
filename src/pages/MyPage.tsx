@@ -47,7 +47,7 @@ const MyPage = () => {
       <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 pb-20">
         <motion.img
           src={burneesLogo}
-          alt="Burnees FC"
+          alt="Bunnies FC"
           className="h-28 w-28 rounded-full box-glow"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
