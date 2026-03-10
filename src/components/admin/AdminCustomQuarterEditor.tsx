@@ -120,6 +120,37 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
     }));
   };
 
+  const swapPlayerTeam = (qIdx: number, playerId: number) => {
+    setQuarters(prev => prev.map((q, i) => {
+      if (i !== qIdx) return q;
+      // Find which team the player is on
+      let sourceTeam: "teamA" | "teamB" | null = null;
+      let sourcePos: PosKey | null = null;
+      for (const team of ["teamA", "teamB"] as const) {
+        for (const pos of POSITIONS) {
+          if ((q.lineup[team][pos] || []).includes(playerId)) {
+            sourceTeam = team;
+            sourcePos = pos;
+            break;
+          }
+        }
+        if (sourceTeam) break;
+      }
+      if (!sourceTeam || !sourcePos) return q;
+      const destTeam = sourceTeam === "teamA" ? "teamB" : "teamA";
+
+      // Remove from source
+      const srcLineup = { ...q.lineup[sourceTeam] };
+      POSITIONS.forEach(p => { srcLineup[p] = (srcLineup[p] || []).filter((id: number) => id !== playerId); });
+
+      // Add to dest in same position
+      const destLineup = { ...q.lineup[destTeam] };
+      destLineup[sourcePos] = [...(destLineup[sourcePos] || []), playerId];
+
+      return { ...q, lineup: { ...q.lineup, [sourceTeam]: srcLineup, [destTeam]: destLineup } };
+    }));
+  };
+
   const countPlayers = (tl: TeamLineup) => POSITIONS.reduce((s, p) => s + (tl[p]?.length || 0), 0);
 
   const handleSave = async () => {
