@@ -4,7 +4,7 @@ import { User, Download } from "lucide-react";
 import html2canvas from "html2canvas";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
-import { computeDataMOM } from "@/hooks/useMatchAnalysis";
+import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import type { Team, Result } from "@/hooks/useFutsalData";
 
 interface Props {
