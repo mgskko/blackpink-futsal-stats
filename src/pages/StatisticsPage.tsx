@@ -143,11 +143,12 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.margin - a.margin).slice(0, 10);
-  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
+  const memberPlayers = players.filter(p => !(p as any).is_guest);
+  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
   // Defense contribution ranking
-  const defenseRanking = players.map(p => {
+  const defenseRanking = memberPlayers.map(p => {
     const dc = getDefenseContribution(p.id, filteredQuarters);
     return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
   }).filter(p => p.quartersWithPlayer >= 10).sort((a, b) => a.diff - b.diff).slice(0, 10);
@@ -155,12 +156,12 @@ const StatisticsPage = () => {
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
   const ageRecords = getAgeCategoryRecords(filteredMatches, filteredTeams, filteredResults);
-  const winFairy = getWinFairyData(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
-  const lastQSpecialists = getLastQuarterSpecialists(players, filteredMatches, filteredGoalEvents);
-  const duoSynergy = getDuoSynergyWinRate(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
-  const ownGoals = getOwnGoalRanking(players, filteredGoalEvents);
-  const hallOfFame = getHallOfFame(players, filteredMatches, filteredRosters, filteredGoalEvents);
-  const momRanking = getMOMRanking(players, momVotes || []);
+  const winFairy = getWinFairyData(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const lastQSpecialists = getLastQuarterSpecialists(memberPlayers, filteredMatches, filteredGoalEvents);
+  const duoSynergy = getDuoSynergyWinRate(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const ownGoals = getOwnGoalRanking(memberPlayers, filteredGoalEvents);
+  const hallOfFame = getHallOfFame(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents);
+  const momRanking = getMOMRanking(memberPlayers, momVotes || []);
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 

@@ -10,7 +10,7 @@ import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalDa
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, FIRE_TIER_CONFIG, type FireTier } from "@/hooks/useOnFirePlayers";
 import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
-import { useMarketValue } from "@/hooks/useMarketValue";
+import { useMarketValue, computeMarketValue } from "@/hooks/useMarketValue";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
