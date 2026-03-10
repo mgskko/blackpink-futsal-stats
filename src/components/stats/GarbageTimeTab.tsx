@@ -99,7 +99,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
 
     // Combine and rank
     const eligible = players.filter(p => {
-      const apps = playerAppearances.get(p.id) || 0;
+      const apps = playerMatchSets.get(p.id)?.size || 0;
       const totalAP = playerTotalAP.get(p.id) || 0;
       return apps >= 10 && totalAP >= 10;
     });
