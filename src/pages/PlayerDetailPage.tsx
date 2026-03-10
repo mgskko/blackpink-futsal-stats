@@ -406,6 +406,40 @@ const PlayerDetailPage = () => {
         )}
       </motion.div>
 
+      {/* Market Value */}
+      {(() => {
+        const mv = computeMarketValue(playerId, players, matches, rosters, goalEvents, allQuarters, worstVotes);
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-3 rounded-xl border border-yellow-500/30 bg-gradient-to-r from-yellow-500/5 via-card to-amber-500/5 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💰</span>
+                <span className="text-xs font-bold text-yellow-400">현재 가치</span>
+              </div>
+              <div className="text-right">
+                <span className="font-display text-xl text-yellow-400">{mv.currentValue.toLocaleString()}만 원</span>
+                {mv.change !== 0 && (
+                  <div className={`text-[10px] font-bold ${mv.change > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {mv.change > 0 ? "🔺" : "🔻"} {mv.change > 0 ? "+" : ""}{mv.change.toLocaleString()}만 원 ({mv.changePercent > 0 ? "+" : ""}{mv.changePercent}%)
+                  </div>
+                )}
+              </div>
+            </div>
+            {mv.history.length > 2 && (
+              <div className="h-16">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mv.history.slice(-15)}>
+                    <Line type="monotone" dataKey="value" stroke="hsl(45, 100%, 60%)" strokeWidth={2} dot={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(45 100% 60% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" }}
+                      formatter={(v: any) => [`${Number(v).toLocaleString()}만 원`, "몸값"]} labelFormatter={(l: any) => l} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </motion.div>
+        );
+      })()}
+
       {/* Summary stats bar */}
       <div className="mx-4 mt-3 grid grid-cols-4 gap-2">
         {[
