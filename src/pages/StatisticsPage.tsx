@@ -582,8 +582,10 @@ const StatisticsPage = () => {
 
             {/* Position Duos by Win Rate */}
             {(() => {
-              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 5, false, filteredGoalEvents);
-              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 5, true, filteredGoalEvents);
+              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 10, false, filteredGoalEvents)
+                .sort((a, b) => b.combinedGoals - a.combinedGoals).slice(0, 5);
+              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 20, true, filteredGoalEvents)
+                .sort((a, b) => a.combinedGoals - b.combinedGoals || b.quarters - a.quarters || a.winRate - b.winRate).slice(0, 5);
               const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, false, filteredGoalEvents);
               const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, true, filteredGoalEvents);
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
