@@ -6,11 +6,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters, computeMatchAP } from "@/hooks/useFutsalData";
-import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
+import type { Match, Roster, GoalEvent, MatchQuarter, Team, Result } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, FIRE_TIER_CONFIG, type FireTier } from "@/hooks/useOnFirePlayers";
 import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
 import { useMarketValue, computeMarketValue } from "@/hooks/useMarketValue";
+import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +23,7 @@ import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 
-function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): { active: boolean; country: string; text: string } {
+function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): { active: boolean; country: string; text: string } {
   // Get last 5 matches this player appeared in
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
@@ -77,30 +78,25 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM (highest AP in own team) 2+ times in last 5
+  // 🇦🇷 Argentina: Official Data MOM 2+ times in last 5
   {
     let momCount = 0;
     recent5.forEach(m => {
-      const mGoals = goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length;
-      const mAssists = goalEvents.filter(g => g.match_id === m.id && g.assist_player_id === playerId).length;
-      const myAP = mGoals + mAssists;
-      if (myAP === 0) return;
-
-      // Find player's team from rosters
-      const playerRoster = rosters?.find(r => r.match_id === m.id && r.player_id === playerId);
-      if (!playerRoster) return;
-      const myTeamId = playerRoster.team_id;
-
-      // Get all teammates' AP on the same team
-      const teammates = rosters?.filter(r => r.match_id === m.id && r.team_id === myTeamId) || [];
-      const teammateAPs = teammates.map(r => {
-        const g = goalEvents.filter(g2 => g2.match_id === m.id && g2.goal_player_id === r.player_id && !g2.is_own_goal).length;
-        const a = goalEvents.filter(g2 => g2.match_id === m.id && g2.assist_player_id === r.player_id).length;
-        return { playerId: r.player_id, ap: g + a };
-      });
-      const maxAP = Math.max(...teammateAPs.map(t => t.ap));
-      // Count if this player is tied for the highest AP on their team
-      if (myAP >= maxAP && maxAP > 0) momCount++;
+      const isCustomMatch = allQuarters.some(q => q.match_id === m.id && q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).teamA);
+      
+      if (isCustomMatch) {
+        // Custom match: dual Data MOM (one per team)
+        const dual = computeDualDataMOM(m.id, players || [], teams, goalEvents, allQuarters, results);
+        if ((dual.teamA && dual.teamA.playerId === playerId) || (dual.teamB && dual.teamB.playerId === playerId)) {
+          momCount++;
+        }
+      } else {
+        // Normal match: single Data MOM
+        const mom = computeDataMOM(m.id, players || [], teams, goalEvents, allQuarters, results);
+        if (mom && mom.playerId === playerId) {
+          momCount++;
+        }
+      }
     });
     if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
   }
@@ -275,7 +271,7 @@ const PlayerDetailPage = () => {
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, momVotes, players);
+  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
   const isConcacaf = concacafInfo.active;
 
   const playerDuos = new Map<number, number>();
