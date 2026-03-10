@@ -229,20 +229,22 @@ export function computeToxicDuos(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup);
-    const conceded = q.score_against || 0;
-    // All pairs
-    for (let i = 0; i < field.length; i++) {
-      if (!has10Matches(field[i])) continue;
-      for (let j = i + 1; j < field.length; j++) {
-        if (!has10Matches(field[j])) continue;
-        const key = `${Math.min(field[i], field[j])}-${Math.max(field[i], field[j])}`;
-        const cur = duoMap.get(key) || { p1: Math.min(field[i], field[j]), p2: Math.max(field[i], field[j]), conceded: 0, quarters: 0 };
-        cur.conceded += conceded;
-        cur.quarters++;
-        duoMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      const conceded = getGroupConceded(q, gi, custom);
+      for (let i = 0; i < field.length; i++) {
+        if (!has10Matches(field[i])) continue;
+        for (let j = i + 1; j < field.length; j++) {
+          if (!has10Matches(field[j])) continue;
+          const key = `${Math.min(field[i], field[j])}-${Math.max(field[i], field[j])}`;
+          const cur = duoMap.get(key) || { p1: Math.min(field[i], field[j]), p2: Math.max(field[i], field[j]), conceded: 0, quarters: 0 };
+          cur.conceded += conceded;
+          cur.quarters++;
+          duoMap.set(key, cur);
+        }
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
