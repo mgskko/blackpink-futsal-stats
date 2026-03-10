@@ -527,29 +527,59 @@ const MatchDetailPage = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
-                  <th className="px-3 py-2 text-left font-bold text-foreground">이름</th>
+                  <th className="px-3 py-2 text-left font-bold text-foreground">{match.is_custom ? "팀 / 이름" : "이름"}</th>
                   {lineupSummary.quarters.map(q => (
                     <th key={q} className="px-2 py-2 text-center font-bold text-primary">{q}Q</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {[...lineupSummary.players.entries()].map(([pid, posMap]) => (
-                  <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
-                    <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                      {getPlayerName(players, pid)}
-                    </td>
-                    {lineupSummary.quarters.map(q => {
-                      const pos = posMap.get(q);
-                      const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
-                      return (
-                        <td key={q} className={`px-2 py-2 text-center ${posColor}`}>
-                          {pos || "-"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {(() => {
+                  const entries = [...lineupSummary.players.entries()];
+                  if (match.is_custom && lineupSummary.playerTeamMap.size > 0) {
+                    const teamAEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamA");
+                    const teamBEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamB");
+                    const renderRows = (rows: typeof entries, teamLabel: string, borderColor: string) => (
+                      <>
+                        <tr className="bg-secondary/20">
+                          <td colSpan={lineupSummary.quarters.length + 1} className={`px-3 py-1.5 text-[10px] font-bold border-l-2 ${borderColor}`}>
+                            {teamLabel}
+                          </td>
+                        </tr>
+                        {rows.map(([pid, posMap]) => (
+                          <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                            <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
+                              {getPlayerName(players, pid)}
+                            </td>
+                            {lineupSummary.quarters.map(q => {
+                              const pos = posMap.get(q);
+                              const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
+                              return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
+                            })}
+                          </tr>
+                        ))}
+                      </>
+                    );
+                    return (
+                      <>
+                        {renderRows(teamAEntries, `🅰️ ${matchTeams[0]?.name || "A팀"}`, "border-blue-500")}
+                        {renderRows(teamBEntries, `🅱️ ${matchTeams[1]?.name || "B팀"}`, "border-orange-500")}
+                      </>
+                    );
+                  }
+                  return entries.map(([pid, posMap]) => (
+                    <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                      <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
+                        {getPlayerName(players, pid)}
+                      </td>
+                      {lineupSummary.quarters.map(q => {
+                        const pos = posMap.get(q);
+                        const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
+                        return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
+                      })}
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
