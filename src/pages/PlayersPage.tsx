@@ -60,7 +60,7 @@ const PlayersPage = () => {
   return (
     <div className="pb-20">
       <AvatarModal imageUrl={avatarPlayer?.url || null} name={avatarPlayer?.name || ""} open={!!avatarPlayer} onClose={() => setAvatarPlayer(null)} />
-      <PageHeader title="PLAYERS" subtitle={`총 ${players.length}명`} />
+      <PageHeader title="PLAYERS" subtitle={`총 ${activePlayers.length}명`} />
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
           const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, player.id);
