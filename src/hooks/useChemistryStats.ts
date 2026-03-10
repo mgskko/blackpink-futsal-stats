@@ -410,11 +410,22 @@ export function computeWithoutYou(
     let onMargin = 0, onQ = 0, offMargin = 0, offQ = 0;
     allQuarters.forEach(q => {
       if (!q.lineup) return;
-      const field = getFieldPlayers(q.lineup);
+      const custom = isCustomLineup(q.lineup);
+      const groups = getFieldPlayerGroups(q.lineup);
       const bench = getBenchPlayers(q.lineup);
-      const diff = (q.score_for || 0) - (q.score_against || 0);
-      if (field.includes(pid)) { onMargin += diff; onQ++; }
-      else if (bench.includes(pid)) { offMargin += diff; offQ++; }
+      let onField = false;
+      groups.forEach((field, gi) => {
+        if (field.includes(pid)) {
+          const diff = getGroupMargin(q, gi, custom);
+          onMargin += diff; onQ++;
+          onField = true;
+        }
+      });
+      if (!onField && bench.includes(pid)) {
+        // Use generic margin for bench (doesn't matter which team perspective)
+        const diff = (q.score_for || 0) - (q.score_against || 0);
+        offMargin += diff; offQ++;
+      }
     });
     if (onQ >= 5 && offQ >= 2) {
       playerMap.set(pid, { onMargin, onQ, offMargin, offQ });
