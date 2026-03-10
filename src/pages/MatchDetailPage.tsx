@@ -13,7 +13,8 @@ import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
-import { useMatchAnalysis } from "@/hooks/useMatchAnalysis";
+import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
+import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
@@ -44,9 +45,22 @@ function formatTimestamp(ts: string): string {
 
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
-// Helper: get player position info per quarter from lineup data
-function getPlayerPosition(lineup: any, playerId: number): string | null {
+// Helper: get player position info per quarter from lineup data (supports teamA/teamB)
+function getPlayerPositionFromLineup(lineup: any, playerId: number): string | null {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return null;
+  // Check teamA/teamB format
+  if (lineup.teamA || lineup.teamB) {
+    for (const team of [lineup.teamA, lineup.teamB]) {
+      if (!team) continue;
+      for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+        if (team[pos]) {
+          const ids = (Array.isArray(team[pos]) ? team[pos] : [team[pos]]).map(Number);
+          if (ids.includes(playerId)) return pos;
+        }
+      }
+    }
+    return null;
+  }
   for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
     if (lineup[pos]) {
       const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
@@ -86,7 +100,7 @@ const MatchDetailPage = () => {
     return computeMatchCourtMargins(sorted, matchGoals, players);
   }, [matchQuarters, goalEvents, matchId, players]);
 
-  const { dataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? []);
+  const { dataMOM, dualDataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? []);
 
   // Compute total score from quarters
   const quarterTotalScore = useMemo(() => {
@@ -99,45 +113,76 @@ const MatchDetailPage = () => {
     return { scoreFor, scoreAgainst };
   }, [matchQuarters]);
 
-  // Build lineup summary table: player → position per quarter
+  // Build lineup summary table: player → position per quarter (supports teamA/teamB)
   const lineupSummary = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return null;
-    const hasLineup = matchQuarters.some(q => q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).GK);
+    const hasLineup = matchQuarters.some(q => {
+      if (!q.lineup || typeof q.lineup !== "object" || Array.isArray(q.lineup)) return false;
+      const l = q.lineup as any;
+      return l.GK || l.teamA?.GK || l.teamB?.GK;
+    });
     if (!hasLineup) return null;
 
     const sortedQ = [...matchQuarters].sort((a, b) => a.quarter - b.quarter);
     const playerMap = new Map<number, Map<number, string>>();
+    const playerTeamMap = new Map<number, "teamA" | "teamB">();
 
     sortedQ.forEach(q => {
       if (!q.lineup) return;
-      for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
-        const lineup = q.lineup as any;
-        if (lineup[pos]) {
-          const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
-          ids.forEach((pid: number) => {
-            if (!playerMap.has(pid)) playerMap.set(pid, new Map());
-            playerMap.get(pid)!.set(q.quarter, pos);
-          });
+      const lineup = q.lineup as any;
+      const isCustom = lineup.teamA || lineup.teamB;
+
+      if (isCustom) {
+        for (const teamKey of ["teamA", "teamB"] as const) {
+          if (!lineup[teamKey]) continue;
+          for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+            if (lineup[teamKey][pos]) {
+              const ids = (Array.isArray(lineup[teamKey][pos]) ? lineup[teamKey][pos] : [lineup[teamKey][pos]]).map(Number);
+              ids.forEach((pid: number) => {
+                if (!playerMap.has(pid)) playerMap.set(pid, new Map());
+                playerMap.get(pid)!.set(q.quarter, pos);
+                playerTeamMap.set(pid, teamKey);
+              });
+            }
+          }
+        }
+      } else {
+        for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+          if (lineup[pos]) {
+            const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+            ids.forEach((pid: number) => {
+              if (!playerMap.has(pid)) playerMap.set(pid, new Map());
+              playerMap.get(pid)!.set(q.quarter, pos);
+            });
+          }
         }
       }
     });
 
-    return { players: playerMap, quarters: sortedQ.map(q => q.quarter) };
+    return { players: playerMap, quarters: sortedQ.map(q => q.quarter), playerTeamMap };
   }, [matchQuarters]);
 
-  // Compute clean sheet badges per player
+  // Compute clean sheet badges per player (supports teamA/teamB)
   const cleanSheetBadges = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return new Map<number, number>();
-    const badges = new Map<number, number>(); // playerId → count of clean sheet quarters as DF/GK
+    const badges = new Map<number, number>();
     matchQuarters.forEach(q => {
-      if (!q.lineup || (q.score_against || 0) > 0) return;
+      if (!q.lineup) return;
       const lineup = q.lineup as any;
-      const dfGkPlayers: number[] = [];
-      if (lineup.GK) (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).forEach((id: any) => dfGkPlayers.push(Number(id)));
-      if (lineup.DF) (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).forEach((id: any) => dfGkPlayers.push(Number(id)));
-      dfGkPlayers.forEach(pid => {
-        badges.set(pid, (badges.get(pid) || 0) + 1);
-      });
+      const isCustom = lineup.teamA || lineup.teamB;
+      const getDFGK = (l: any, conceded: number) => {
+        if (conceded > 0) return;
+        const players: number[] = [];
+        if (l?.GK) (Array.isArray(l.GK) ? l.GK : [l.GK]).forEach((id: any) => players.push(Number(id)));
+        if (l?.DF) (Array.isArray(l.DF) ? l.DF : [l.DF]).forEach((id: any) => players.push(Number(id)));
+        players.forEach(pid => badges.set(pid, (badges.get(pid) || 0) + 1));
+      };
+      if (isCustom) {
+        getDFGK(lineup.teamA, q.score_against || 0);
+        getDFGK(lineup.teamB, q.score_for || 0);
+      } else {
+        getDFGK(lineup, q.score_against || 0);
+      }
     });
     return badges;
   }, [matchQuarters]);
@@ -264,8 +309,37 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Data MOM */}
-      {dataMOM && (
+      {/* Data MOM - dual for custom matches */}
+      {match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 grid grid-cols-2 gap-3">
+          {([["teamA", dualDataMOM.teamA, matchTeams[0]?.name || "A팀", "border-blue-500/30 bg-blue-500/5"], ["teamB", dualDataMOM.teamB, matchTeams[1]?.name || "B팀", "border-orange-500/30 bg-orange-500/5"]] as const).map(([key, mom, teamName, colorClass]) => mom && (
+            <div key={key} className={`rounded-xl border ${colorClass} p-4`}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-lg">👑</span>
+                <div>
+                  <div className="text-[9px] font-bold tracking-wider text-primary">DATA MOM · {teamName}</div>
+                  <div className="text-sm font-bold text-foreground">{mom.name}</div>
+                </div>
+              </div>
+              <div className="text-xl font-display text-primary text-glow mb-2">{mom.score.toFixed(1)}</div>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">공격</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.attack.toFixed(1)}</div>
+                </div>
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">수비</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.defense.toFixed(1)}</div>
+                </div>
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">감점</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.penalty.toFixed(1)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      ) : dataMOM && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-4 box-glow">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -453,29 +527,59 @@ const MatchDetailPage = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
-                  <th className="px-3 py-2 text-left font-bold text-foreground">이름</th>
+                  <th className="px-3 py-2 text-left font-bold text-foreground">{match.is_custom ? "팀 / 이름" : "이름"}</th>
                   {lineupSummary.quarters.map(q => (
                     <th key={q} className="px-2 py-2 text-center font-bold text-primary">{q}Q</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {[...lineupSummary.players.entries()].map(([pid, posMap]) => (
-                  <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
-                    <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                      {getPlayerName(players, pid)}
-                    </td>
-                    {lineupSummary.quarters.map(q => {
-                      const pos = posMap.get(q);
-                      const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
-                      return (
-                        <td key={q} className={`px-2 py-2 text-center ${posColor}`}>
-                          {pos || "-"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {(() => {
+                  const entries = [...lineupSummary.players.entries()];
+                  if (match.is_custom && lineupSummary.playerTeamMap.size > 0) {
+                    const teamAEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamA");
+                    const teamBEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamB");
+                    const renderRows = (rows: typeof entries, teamLabel: string, borderColor: string) => (
+                      <>
+                        <tr className="bg-secondary/20">
+                          <td colSpan={lineupSummary.quarters.length + 1} className={`px-3 py-1.5 text-[10px] font-bold border-l-2 ${borderColor}`}>
+                            {teamLabel}
+                          </td>
+                        </tr>
+                        {rows.map(([pid, posMap]) => (
+                          <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                            <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
+                              {getPlayerName(players, pid)}
+                            </td>
+                            {lineupSummary.quarters.map(q => {
+                              const pos = posMap.get(q);
+                              const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
+                              return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
+                            })}
+                          </tr>
+                        ))}
+                      </>
+                    );
+                    return (
+                      <>
+                        {renderRows(teamAEntries, `🅰️ ${matchTeams[0]?.name || "A팀"}`, "border-blue-500")}
+                        {renderRows(teamBEntries, `🅱️ ${matchTeams[1]?.name || "B팀"}`, "border-orange-500")}
+                      </>
+                    );
+                  }
+                  return entries.map(([pid, posMap]) => (
+                    <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                      <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
+                        {getPlayerName(players, pid)}
+                      </td>
+                      {lineupSummary.quarters.map(q => {
+                        const pos = posMap.get(q);
+                        const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
+                        return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
+                      })}
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>

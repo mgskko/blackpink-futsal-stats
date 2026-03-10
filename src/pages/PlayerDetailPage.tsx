@@ -9,7 +9,7 @@ import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssist
 import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
 import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
-import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition } from "@/hooks/useCourtStats";
+import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +32,11 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   const r5AP = r5Goals.length + r5Assists.length;
   const r5Quarters = allQuarters.filter(q => r5Ids.has(q.match_id) && q.lineup && getPlayerPosition(q.lineup, playerId) && getPlayerPosition(q.lineup, playerId) !== "Bench");
   let r5Margin = 0;
-  r5Quarters.forEach(q => { r5Margin += (q.score_for || 0) - (q.score_against || 0); });
+  r5Quarters.forEach(q => {
+    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
+    const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
+    r5Margin += pTeam === "teamB" ? -baseDiff : baseDiff;
+  });
 
   // 🇧🇷 Brazil: AP >= 30 in last 10 matches
   const recent10 = sortedMatches.slice(0, 10);
@@ -71,27 +75,35 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM 2+ times in last 5
-  if (momVotes) {
-    // Count MOM wins per match (most votes)
+  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (highest AP player per match)
+  {
+    // Count matches where this player was Data MOM from quarter data
     let momCount = 0;
     recent5.forEach(m => {
-      const mVotes = momVotes.filter(v => v.match_id === m.id);
-      if (mVotes.length === 0) return;
-      const voteCounts = new Map<number, number>();
-      mVotes.forEach(v => voteCounts.set(v.voted_player_id, (voteCounts.get(v.voted_player_id) || 0) + 1));
-      const sorted = [...voteCounts.entries()].sort((a, b) => b[1] - a[1]);
-      if (sorted[0][0] === playerId) momCount++;
+      const mQuarters = allQuarters.filter(q => q.match_id === m.id);
+      if (mQuarters.length === 0 || !mQuarters.some(q => q.lineup)) return;
+      // Simple scoring: count goals + assists as proxy
+      const mGoals = goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length;
+      const mAssists = goalEvents.filter(g => g.match_id === m.id && g.assist_player_id === playerId).length;
+      if (mGoals + mAssists === 0) return;
+      // Check if this player has the highest AP in that match
+      const allPlayerAPs = new Map<number, number>();
+      goalEvents.filter(g => g.match_id === m.id && !g.is_own_goal).forEach(g => {
+        if (g.goal_player_id) allPlayerAPs.set(g.goal_player_id, (allPlayerAPs.get(g.goal_player_id) || 0) + 1);
+        if (g.assist_player_id) allPlayerAPs.set(g.assist_player_id, (allPlayerAPs.get(g.assist_player_id) || 0) + 1);
+      });
+      const sorted = [...allPlayerAPs.entries()].sort((a, b) => b[1] - a[1]);
+      if (sorted.length > 0 && sorted[0][0] === playerId) momCount++;
     });
-    if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 MOM 2회 선정으로 팀을 하드캐리!" };
+    if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
   }
 
   // 🇳🇱 Netherlands: FW 8+ quarters & DF 8+ quarters, both margins +3
   const fwQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "FW");
   const dfQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
   if (fwQ.length >= 8 && dfQ.length >= 8) {
-    const fwMargin = fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0);
-    const dfMargin = dfQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0);
+    const fwMargin = fwQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
+    const dfMargin = dfQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
     if (fwMargin >= 3 && dfMargin >= 3) return { active: true, country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" };
   }
 

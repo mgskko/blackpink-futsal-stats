@@ -47,13 +47,13 @@ const MyPage = () => {
       <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 pb-20">
         <motion.img
           src={burneesLogo}
-          alt="Burnees FC"
+          alt="Bunnies FC"
           className="h-28 w-28 rounded-full box-glow"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
         />
         <div className="text-center">
-          <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BURNEES FC</h1>
+          <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BUNNIES FC</h1>
           <p className="mt-2 text-sm text-muted-foreground">Google 계정으로 로그인하세요</p>
         </div>
         <Button

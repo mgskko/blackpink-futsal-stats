@@ -5,7 +5,7 @@ import type { Player, Team } from "@/hooks/useFutsalData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2, ArrowLeftRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -120,6 +120,37 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
     }));
   };
 
+  const swapPlayerTeam = (qIdx: number, playerId: number) => {
+    setQuarters(prev => prev.map((q, i) => {
+      if (i !== qIdx) return q;
+      // Find which team the player is on
+      let sourceTeam: "teamA" | "teamB" | null = null;
+      let sourcePos: PosKey | null = null;
+      for (const team of ["teamA", "teamB"] as const) {
+        for (const pos of POSITIONS) {
+          if ((q.lineup[team][pos] || []).includes(playerId)) {
+            sourceTeam = team;
+            sourcePos = pos;
+            break;
+          }
+        }
+        if (sourceTeam) break;
+      }
+      if (!sourceTeam || !sourcePos) return q;
+      const destTeam = sourceTeam === "teamA" ? "teamB" : "teamA";
+
+      // Remove from source
+      const srcLineup = { ...q.lineup[sourceTeam] };
+      POSITIONS.forEach(p => { srcLineup[p] = (srcLineup[p] || []).filter((id: number) => id !== playerId); });
+
+      // Add to dest in same position
+      const destLineup = { ...q.lineup[destTeam] };
+      destLineup[sourcePos] = [...(destLineup[sourcePos] || []), playerId];
+
+      return { ...q, lineup: { ...q.lineup, [sourceTeam]: srcLineup, [destTeam]: destLineup } };
+    }));
+  };
+
   const countPlayers = (tl: TeamLineup) => POSITIONS.reduce((s, p) => s + (tl[p]?.length || 0), 0);
 
   const handleSave = async () => {
@@ -176,17 +207,27 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
                   const isInThisPos = currentPos === pos;
                   const isInOtherPos = currentPos && currentPos !== pos;
                   return (
-                    <button
-                      key={p.id}
-                      onClick={() => isInThisPos ? removePlayerFromTeam(qIdx, team, p.id) : togglePlayer(qIdx, team, pos, p.id)}
-                      className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                        isInThisPos ? "border-primary bg-primary/20 text-primary"
-                          : isInOtherPos ? "border-border bg-secondary/30 text-muted-foreground/50 line-through"
-                          : "border-border bg-card text-muted-foreground hover:border-primary/40"
-                      }`}
-                    >
-                      {p.name}
-                    </button>
+                    <div key={p.id} className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => isInThisPos ? removePlayerFromTeam(qIdx, team, p.id) : togglePlayer(qIdx, team, pos, p.id)}
+                        className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                          isInThisPos ? "border-primary bg-primary/20 text-primary"
+                            : isInOtherPos ? "border-border bg-secondary/30 text-muted-foreground/50 line-through"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                      {isInThisPos && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); swapPlayerTeam(qIdx, p.id); }}
+                          className="rounded border border-accent bg-accent/20 px-0.5 py-0.5 text-[9px] text-accent-foreground hover:bg-accent/40 transition-colors"
+                          title={`${team === "teamA" ? "B팀" : "A팀"}으로 이동`}
+                        >
+                          <ArrowLeftRight size={10} />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>

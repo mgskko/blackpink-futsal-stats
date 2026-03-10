@@ -10,7 +10,7 @@ export interface PlayerCourtMargin {
   ppq: number;
 }
 
-function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
+function parseLineupFlat(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
   const result = { GK: [] as number[], DF: [] as number[], MF: [] as number[], FW: [] as number[], Bench: [] as number[] };
   if (!lineup) return result;
   if (Array.isArray(lineup)) {
@@ -33,6 +33,37 @@ function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; F
     if (lineup.Bench) result.Bench = (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
   }
   return result;
+}
+
+function isCustomLineup(lineup: any): boolean {
+  return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
+}
+
+function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
+  if (!lineup) return { GK: [], DF: [], MF: [], FW: [], Bench: [] };
+  if (isCustomLineup(lineup)) {
+    const a = parseLineupFlat(lineup.teamA);
+    const b = parseLineupFlat(lineup.teamB);
+    return {
+      GK: [...a.GK, ...b.GK],
+      DF: [...a.DF, ...b.DF],
+      MF: [...a.MF, ...b.MF],
+      FW: [...a.FW, ...b.FW],
+      Bench: [...a.Bench, ...b.Bench],
+    };
+  }
+  return parseLineupFlat(lineup);
+}
+
+/** Returns "teamA" | "teamB" | null for custom lineup format */
+export function getPlayerTeamInLineup(lineup: any, playerId: number): "teamA" | "teamB" | null {
+  if (!isCustomLineup(lineup)) return null;
+  for (const team of ["teamA", "teamB"] as const) {
+    if (!lineup[team]) continue;
+    const parsed = parseLineupFlat(lineup[team]);
+    if ([...parsed.GK, ...parsed.DF, ...parsed.MF, ...parsed.FW, ...parsed.Bench].includes(playerId)) return team;
+  }
+  return null;
 }
 
 function getFieldPlayers(lineup: any): number[] {
@@ -66,12 +97,19 @@ export function computeMatchCourtMargins(
     if (!q.lineup) return;
     const fieldPlayers = getFieldPlayers(q.lineup);
     const benchPlayers = getBenchPlayers(q.lineup);
-    const diff = (q.score_for || 0) - (q.score_against || 0);
+    const isCustom = isCustomLineup(q.lineup);
+    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
     const prevQ = idx > 0 ? quarters[idx - 1] : null;
     const prevBench = prevQ?.lineup ? getBenchPlayers(prevQ.lineup) : [];
 
     fieldPlayers.forEach(pid => {
       const cur = result.get(pid) || { margin: 0, quartersPlayed: 0, ap: 0, isSuperSub: false };
+      // For custom matches, teamB players get flipped margin
+      let diff = baseDiff;
+      if (isCustom) {
+        const team = getPlayerTeamInLineup(q.lineup, pid);
+        if (team === "teamB") diff = -baseDiff;
+      }
       cur.margin += diff;
       cur.quartersPlayed++;
       const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && g.goal_player_id === pid && !g.is_own_goal).length;

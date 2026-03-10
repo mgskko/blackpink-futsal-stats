@@ -13,21 +13,41 @@ export interface DataMOMResult {
     clutch: number;
     penalty: number;
   };
+  team?: "teamA" | "teamB";
+}
+
+// ─── Lineup helpers that support teamA/teamB format ───
+
+function isCustomLineup(lineup: any): boolean {
+  return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
+}
+
+function getPlayerPositionFlat(lineup: any, playerId: number): string | null {
+  if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return null;
+  if (lineup.GK && (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).map(Number).includes(playerId)) return "GK";
+  if (lineup.DF && (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).map(Number).includes(playerId)) return "DF";
+  if (lineup.MF && (Array.isArray(lineup.MF) ? lineup.MF : [lineup.MF]).map(Number).includes(playerId)) return "MF";
+  if (lineup.FW && (Array.isArray(lineup.FW) ? lineup.FW : [lineup.FW]).map(Number).includes(playerId)) return "FW";
+  if (lineup.Bench && (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number).includes(playerId)) return "Bench";
+  return null;
 }
 
 function getPlayerPosition(lineup: any, playerId: number): string | null {
   if (!lineup) return null;
-  if (typeof lineup === "object" && !Array.isArray(lineup)) {
-    if (lineup.GK && (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).map(Number).includes(playerId)) return "GK";
-    if (lineup.DF && (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).map(Number).includes(playerId)) return "DF";
-    if (lineup.MF && (Array.isArray(lineup.MF) ? lineup.MF : [lineup.MF]).map(Number).includes(playerId)) return "MF";
-    if (lineup.FW && (Array.isArray(lineup.FW) ? lineup.FW : [lineup.FW]).map(Number).includes(playerId)) return "FW";
-    if (lineup.Bench && (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number).includes(playerId)) return "Bench";
+  if (isCustomLineup(lineup)) {
+    return getPlayerPositionFlat(lineup.teamA, playerId) || getPlayerPositionFlat(lineup.teamB, playerId);
   }
+  return getPlayerPositionFlat(lineup, playerId);
+}
+
+function getPlayerTeamInLineup(lineup: any, playerId: number): "teamA" | "teamB" | null {
+  if (!isCustomLineup(lineup)) return null;
+  if (getPlayerPositionFlat(lineup.teamA, playerId)) return "teamA";
+  if (getPlayerPositionFlat(lineup.teamB, playerId)) return "teamB";
   return null;
 }
 
-function getFieldPlayers(lineup: any): number[] {
+function getFieldPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   const result: number[] = [];
   ["GK", "DF", "MF", "FW"].forEach(pos => {
@@ -38,36 +58,84 @@ function getFieldPlayers(lineup: any): number[] {
   return result;
 }
 
-function hasLineupData(quarters: MatchQuarter[]): boolean {
-  return quarters.some(q => q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) &&
-    (q.lineup as any).GK);
+function getFieldPlayers(lineup: any): number[] {
+  if (!lineup) return [];
+  if (isCustomLineup(lineup)) {
+    return [...getFieldPlayersFlat(lineup.teamA), ...getFieldPlayersFlat(lineup.teamB)];
+  }
+  return getFieldPlayersFlat(lineup);
 }
 
-export function computeDataMOM(
+function hasLineupData(quarters: MatchQuarter[]): boolean {
+  return quarters.some(q => {
+    if (!q.lineup || typeof q.lineup !== "object" || Array.isArray(q.lineup)) return false;
+    const l = q.lineup as any;
+    if (l.GK) return true;
+    if (l.teamA?.GK || l.teamB?.GK) return true;
+    return false;
+  });
+}
+
+function getFWPlayersFromLineup(lineup: any): number[] {
+  if (!lineup) return [];
+  if (isCustomLineup(lineup)) {
+    const a = lineup.teamA?.FW ? (Array.isArray(lineup.teamA.FW) ? lineup.teamA.FW : [lineup.teamA.FW]).map(Number) : [];
+    const b = lineup.teamB?.FW ? (Array.isArray(lineup.teamB.FW) ? lineup.teamB.FW : [lineup.teamB.FW]).map(Number) : [];
+    return [...a, ...b];
+  }
+  return (typeof lineup === "object" && !Array.isArray(lineup) && lineup.FW)
+    ? (Array.isArray(lineup.FW) ? lineup.FW : [lineup.FW]).map(Number) : [];
+}
+
+function getDFGKPlayersFromLineup(lineup: any): number[] {
+  if (!lineup) return [];
+  const extract = (l: any) => {
+    const result: number[] = [];
+    if (l?.GK) (Array.isArray(l.GK) ? l.GK : [l.GK]).forEach((id: any) => result.push(Number(id)));
+    if (l?.DF) (Array.isArray(l.DF) ? l.DF : [l.DF]).forEach((id: any) => result.push(Number(id)));
+    return result;
+  };
+  if (isCustomLineup(lineup)) {
+    return [...extract(lineup.teamA), ...extract(lineup.teamB)];
+  }
+  return extract(lineup);
+}
+
+function getDFPlayersFromLineup(lineup: any): number[] {
+  if (!lineup) return [];
+  const extract = (l: any) => {
+    if (!l?.DF) return [];
+    return (Array.isArray(l.DF) ? l.DF : [l.DF]).map(Number);
+  };
+  if (isCustomLineup(lineup)) {
+    return [...extract(lineup.teamA), ...extract(lineup.teamB)];
+  }
+  return extract(lineup);
+}
+
+// ─── Core scoring logic ───
+function scorePlayersForMatch(
   matchId: number,
   players: Player[],
   teams: Team[],
   goalEvents: GoalEvent[],
   quarters: MatchQuarter[],
-  results: Result[]
-): DataMOMResult | null {
+  results: Result[],
+  filterTeam?: "teamA" | "teamB"
+): DataMOMResult[] {
   const matchGoals = goalEvents.filter(g => g.match_id === matchId);
   const matchQuarters = quarters.filter(q => q.match_id === matchId).sort((a, b) => a.quarter - b.quarter);
-  const matchTeams = teams.filter(t => t.match_id === matchId);
-  const ourTeamIds = new Set(matchTeams.filter(t => t.is_ours).map(t => t.id));
 
-  // 🚨 No Data MOM if no lineup data exists
-  if (!hasLineupData(matchQuarters)) return null;
-  if (matchGoals.length === 0 && matchQuarters.length === 0) return null;
+  if (!hasLineupData(matchQuarters)) return [];
+  if (matchGoals.length === 0 && matchQuarters.length === 0) return [];
 
   const playerScores = new Map<number, { attack: number; defense: number; clutch: number; penalty: number }>();
-
   const initScore = (pid: number) => {
     if (!playerScores.has(pid)) playerScores.set(pid, { attack: 0, defense: 0, clutch: 0, penalty: 0 });
     return playerScores.get(pid)!;
   };
 
-  // Attack scoring: Goal * 3, Assist * 2.5
+  // Attack scoring
   matchGoals.forEach(g => {
     if (g.goal_player_id && !g.is_own_goal) {
       const s = initScore(g.goal_player_id);
@@ -77,7 +145,6 @@ export function computeDataMOM(
       const s = initScore(g.assist_player_id);
       s.attack += 2.5;
     }
-    // Own goal penalty
     if (g.is_own_goal && g.goal_player_id) {
       const s = initScore(g.goal_player_id);
       s.penalty -= 2;
@@ -87,33 +154,48 @@ export function computeDataMOM(
   // Defense scoring from quarters
   matchQuarters.forEach(q => {
     if (!q.lineup) return;
+    const isCustom = isCustomLineup(q.lineup);
     const fieldPlayers = getFieldPlayers(q.lineup);
-    const diff = (q.score_for || 0) - (q.score_against || 0);
-    const conceded = q.score_against || 0;
+    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
+    const baseConceded = q.score_against || 0;
 
     fieldPlayers.forEach(pid => {
+      // If filtering by team, skip players not on that team
+      if (filterTeam && isCustom) {
+        const pTeam = getPlayerTeamInLineup(q.lineup, pid);
+        if (pTeam !== filterTeam) return;
+      }
+
       const s = initScore(pid);
       const pos = getPlayerPosition(q.lineup, pid);
 
-      // Quarter attendance: +0.5
+      // For custom matches, flip margin/conceded for teamB
+      let diff = baseDiff;
+      let conceded = baseConceded;
+      if (isCustom) {
+        const pTeam = getPlayerTeamInLineup(q.lineup, pid);
+        if (pTeam === "teamB") {
+          diff = -baseDiff;
+          conceded = q.score_for || 0;
+        }
+      }
+
       s.defense += 0.5;
 
-      // DF/GK court margin bonus: margin * 2
       if (pos === "DF" || pos === "GK") {
         s.defense += diff * 2;
-        // Clean sheet bonus: +1 per quarter
         if (conceded === 0) s.defense += 1;
       }
     });
   });
 
-  // 🚨 Penalty: Silent FW (FW 3+ quarters, 0 AP)
+  // Penalty: Silent FW
   const fwQuarterCount = new Map<number, number>();
   matchQuarters.forEach(q => {
     if (!q.lineup) return;
-    const fwPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).FW)
-      ? (Array.isArray((q.lineup as any).FW) ? (q.lineup as any).FW : [(q.lineup as any).FW]).map(Number) : [];
+    const fwPlayers = getFWPlayersFromLineup(q.lineup);
     fwPlayers.forEach((pid: number) => {
+      if (filterTeam && isCustomLineup(q.lineup) && getPlayerTeamInLineup(q.lineup, pid) !== filterTeam) return;
       fwQuarterCount.set(pid, (fwQuarterCount.get(pid) || 0) + 1);
     });
   });
@@ -128,16 +210,18 @@ export function computeDataMOM(
     }
   });
 
-  // 🚨 Penalty: Leaky DF/GK (conceded 5+ goals while playing DF/GK)
+  // Penalty: Leaky DF/GK
   const dfGkConceded = new Map<number, number>();
   matchQuarters.forEach(q => {
     if (!q.lineup) return;
-    const conceded = q.score_against || 0;
-    const lineup = q.lineup as any;
-    const dfGkPlayers: number[] = [];
-    if (lineup.GK) (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).forEach((id: any) => dfGkPlayers.push(Number(id)));
-    if (lineup.DF) (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).forEach((id: any) => dfGkPlayers.push(Number(id)));
+    const isCustom = isCustomLineup(q.lineup);
+    const dfGkPlayers = getDFGKPlayersFromLineup(q.lineup);
     dfGkPlayers.forEach(pid => {
+      if (filterTeam && isCustom && getPlayerTeamInLineup(q.lineup, pid) !== filterTeam) return;
+      let conceded = q.score_against || 0;
+      if (isCustom && getPlayerTeamInLineup(q.lineup, pid) === "teamB") {
+        conceded = q.score_for || 0;
+      }
       dfGkConceded.set(pid, (dfGkConceded.get(pid) || 0) + conceded);
     });
   });
@@ -148,15 +232,62 @@ export function computeDataMOM(
     }
   });
 
-  // Calculate totals and find MOM
-  const scored = [...playerScores.entries()].map(([pid, s]) => ({
+  // Filter to only players on the specified team if applicable
+  let scored = [...playerScores.entries()].map(([pid, s]) => ({
     playerId: pid,
     name: getPlayerName(players, pid),
     score: s.attack + s.defense + s.clutch + s.penalty,
     breakdown: s,
   })).sort((a, b) => b.score - a.score);
 
+  if (filterTeam) {
+    const teamPlayerIds = new Set<number>();
+    matchQuarters.forEach(q => {
+      if (!q.lineup || !isCustomLineup(q.lineup)) return;
+      const teamLineup = q.lineup[filterTeam];
+      if (teamLineup) getFieldPlayersFlat(teamLineup).forEach(pid => teamPlayerIds.add(pid));
+    });
+    scored = scored.filter(s => teamPlayerIds.has(s.playerId));
+  }
+
+  return scored;
+}
+
+export function computeDataMOM(
+  matchId: number,
+  players: Player[],
+  teams: Team[],
+  goalEvents: GoalEvent[],
+  quarters: MatchQuarter[],
+  results: Result[]
+): DataMOMResult | null {
+  const scored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results);
   return scored.length > 0 ? scored[0] : null;
+}
+
+/** For custom matches: returns one MOM per team */
+export function computeDualDataMOM(
+  matchId: number,
+  players: Player[],
+  teams: Team[],
+  goalEvents: GoalEvent[],
+  quarters: MatchQuarter[],
+  results: Result[]
+): { teamA: DataMOMResult | null; teamB: DataMOMResult | null } {
+  const matchQuarters = quarters.filter(q => q.match_id === matchId);
+  const isCustom = matchQuarters.some(q => q.lineup && isCustomLineup(q.lineup));
+  if (!isCustom) {
+    const single = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results);
+    return { teamA: single.length > 0 ? { ...single[0], team: "teamA" } : null, teamB: null };
+  }
+
+  const teamAScored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamA");
+  const teamBScored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamB");
+
+  return {
+    teamA: teamAScored.length > 0 ? { ...teamAScored[0], team: "teamA" } : null,
+    teamB: teamBScored.length > 0 ? { ...teamBScored[0], team: "teamB" } : null,
+  };
 }
 
 // ─── AI Match Comment Generator ───
@@ -204,8 +335,7 @@ export function generateMatchComment(
     const fwGoals = new Map<number, number>();
     matchQuarters.forEach(q => {
       if (!q.lineup) return;
-      const fwPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).FW)
-        ? (Array.isArray((q.lineup as any).FW) ? (q.lineup as any).FW : [(q.lineup as any).FW]).map(Number) : [];
+      const fwPlayers = getFWPlayersFromLineup(q.lineup);
       fwPlayers.forEach((pid: number) => {
         const goals = matchGoals.filter(g => g.quarter === q.quarter && g.goal_player_id === pid && !g.is_own_goal).length;
         if (goals > 0) fwGoals.set(pid, (fwGoals.get(pid) || 0) + goals);
@@ -220,12 +350,16 @@ export function generateMatchComment(
     const dfQuarterCleanSheets = new Map<number, { clean: number; total: number }>();
     matchQuarters.forEach(q => {
       if (!q.lineup) return;
-      const dfPlayers = (typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).DF)
-        ? (Array.isArray((q.lineup as any).DF) ? (q.lineup as any).DF : [(q.lineup as any).DF]).map(Number) : [];
+      const dfPlayers = getDFPlayersFromLineup(q.lineup);
       dfPlayers.forEach((pid: number) => {
         const cur = dfQuarterCleanSheets.get(pid) || { clean: 0, total: 0 };
         cur.total++;
-        if ((q.score_against || 0) === 0) cur.clean++;
+        // For custom matches, check correct conceded side
+        let conceded = q.score_against || 0;
+        if (isCustomLineup(q.lineup) && getPlayerTeamInLineup(q.lineup, pid) === "teamB") {
+          conceded = q.score_for || 0;
+        }
+        if (conceded === 0) cur.clean++;
         dfQuarterCleanSheets.set(pid, cur);
       });
     });
@@ -270,6 +404,7 @@ export function useMatchAnalysis(
   quarters: MatchQuarter[]
 ) {
   const dataMOM = useMemo(() => computeDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
+  const dualDataMOM = useMemo(() => computeDualDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
   const aiComments = useMemo(() => generateMatchComment(matchId, players, teams, results, goalEvents, quarters), [matchId, players, teams, results, goalEvents, quarters]);
-  return { dataMOM, aiComments };
+  return { dataMOM, dualDataMOM, aiComments };
 }
