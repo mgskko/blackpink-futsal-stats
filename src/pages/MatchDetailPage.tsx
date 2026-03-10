@@ -309,8 +309,37 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Data MOM */}
-      {dataMOM && (
+      {/* Data MOM - dual for custom matches */}
+      {match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 grid grid-cols-2 gap-3">
+          {([["teamA", dualDataMOM.teamA, matchTeams[0]?.name || "A팀", "border-blue-500/30 bg-blue-500/5"], ["teamB", dualDataMOM.teamB, matchTeams[1]?.name || "B팀", "border-orange-500/30 bg-orange-500/5"]] as const).map(([key, mom, teamName, colorClass]) => mom && (
+            <div key={key} className={`rounded-xl border ${colorClass} p-4`}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-lg">👑</span>
+                <div>
+                  <div className="text-[9px] font-bold tracking-wider text-primary">DATA MOM · {teamName}</div>
+                  <div className="text-sm font-bold text-foreground">{mom.name}</div>
+                </div>
+              </div>
+              <div className="text-xl font-display text-primary text-glow mb-2">{mom.score.toFixed(1)}</div>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">공격</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.attack.toFixed(1)}</div>
+                </div>
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">수비</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.defense.toFixed(1)}</div>
+                </div>
+                <div className="rounded bg-secondary/50 p-1.5 text-center">
+                  <div className="text-[8px] text-muted-foreground">감점</div>
+                  <div className="text-xs font-bold text-foreground">{mom.breakdown.penalty.toFixed(1)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      ) : dataMOM && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-primary/30 bg-card p-4 box-glow">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
