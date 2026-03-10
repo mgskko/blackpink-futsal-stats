@@ -130,7 +130,8 @@ export function computeDeathLineup(
         const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
         cur.margin += diff;
         cur.quarters++;
-      comboMap.set(key, cur);
+        comboMap.set(key, cur);
+      });
     });
   });
 
