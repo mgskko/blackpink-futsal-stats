@@ -75,11 +75,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (using computeDataMOM, not votes)
-  if (players && players.length > 0) {
-    // Dynamically import computeDataMOM
-    const { computeDataMOM } = await import("@/hooks/useMatchAnalysis").catch(() => ({ computeDataMOM: null }));
-    // Since this is a sync function, we use a different approach:
+  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (highest AP player per match)
+  {
     // Count matches where this player was Data MOM from quarter data
     let momCount = 0;
     recent5.forEach(m => {
