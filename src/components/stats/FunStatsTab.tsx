@@ -27,14 +27,28 @@ function getFieldPlayers(lineup: any): number[] {
 const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, allQuarters }: Props) => {
   const navigate = useNavigate();
 
+  // Global 10-match filter
+  const playerMatchCount = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    rosters.forEach(r => {
+      if (!map.has(r.player_id)) map.set(r.player_id, new Set());
+      map.get(r.player_id)!.add(r.match_id);
+    });
+    const result = new Map<number, number>();
+    map.forEach((matchSet, pid) => result.set(pid, matchSet.size));
+    return result;
+  }, [rosters]);
+
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
+
   // 1. 유산소의 신: 15Q+, AP 극히 적고, margin <= 0
   const cardioRanking = useMemo(() => {
     const courtMargins = computeAllCourtMargins(players, matches, allQuarters, goalEvents);
     return courtMargins
-      .filter(p => p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
+      .filter(p => has10Matches(p.id) && p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
       .sort((a, b) => b.quartersPlayed - a.quartersPlayed || a.margin - b.margin)
       .slice(0, 5);
-  }, [players, matches, allQuarters, goalEvents]);
+  }, [players, matches, allQuarters, goalEvents, playerMatchCount]);
 
   // 2. 전술적 희생양: FW margin top tier but overall margin hurt by DF/GK
   const tacticalVictim = useMemo(() => {
