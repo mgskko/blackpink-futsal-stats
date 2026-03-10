@@ -91,10 +91,10 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         if (g.quarter >= 6 && g.quarter <= 8) lateMap.set(g.assist_player_id, (lateMap.get(g.assist_player_id) || 0) + 1);
       }
     });
-    const earlyBirds = [...earlyMap.entries()].map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
-    const slowStarters = [...lateMap.entries()].map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const earlyBirds = [...earlyMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const slowStarters = [...lateMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
     return { earlyBirds, slowStarters };
-  }, [goalEvents, players]);
+  }, [goalEvents, players, playerMatchCount]);
 
   // 4. 패배 요정: AP를 올린 경기의 팀 승률이 가장 낮은
   const jinxRanking = useMemo(() => {
