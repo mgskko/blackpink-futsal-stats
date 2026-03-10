@@ -13,7 +13,8 @@ import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
-import { useMatchAnalysis } from "@/hooks/useMatchAnalysis";
+import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
+import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
