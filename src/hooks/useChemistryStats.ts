@@ -351,11 +351,15 @@ export function computeSynergyMargin(
       let togetherMargin = 0, togetherQ = 0, apartMargin = 0, apartQ = 0;
       allQuarters.forEach(q => {
         if (!q.lineup) return;
-        const field = getFieldPlayers(q.lineup);
-        const diff = (q.score_for || 0) - (q.score_against || 0);
-        const has1 = field.includes(p1), has2 = field.includes(p2);
-        if (has1 && has2) { togetherMargin += diff; togetherQ++; }
-        else if (has1 || has2) { apartMargin += diff; apartQ++; }
+        const custom = isCustomLineup(q.lineup);
+        const groups = getFieldPlayerGroups(q.lineup);
+        // Check if both players are on the same team group
+        groups.forEach((field, gi) => {
+          const diff = getGroupMargin(q, gi, custom);
+          const has1 = field.includes(p1), has2 = field.includes(p2);
+          if (has1 && has2) { togetherMargin += diff; togetherQ++; }
+          else if (has1 || has2) { apartMargin += diff; apartQ++; }
+        });
       });
       if (togetherQ >= 10 && apartQ >= 10) {
         const key = `${Math.min(p1, p2)}-${Math.max(p1, p2)}`;
