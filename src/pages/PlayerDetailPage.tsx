@@ -77,25 +77,30 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (highest AP player per match)
+  // 🇦🇷 Argentina: Data MOM (highest AP in own team) 2+ times in last 5
   {
-    // Count matches where this player was Data MOM from quarter data
     let momCount = 0;
     recent5.forEach(m => {
-      const mQuarters = allQuarters.filter(q => q.match_id === m.id);
-      if (mQuarters.length === 0 || !mQuarters.some(q => q.lineup)) return;
-      // Simple scoring: count goals + assists as proxy
       const mGoals = goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length;
       const mAssists = goalEvents.filter(g => g.match_id === m.id && g.assist_player_id === playerId).length;
-      if (mGoals + mAssists === 0) return;
-      // Check if this player has the highest AP in that match
-      const allPlayerAPs = new Map<number, number>();
-      goalEvents.filter(g => g.match_id === m.id && !g.is_own_goal).forEach(g => {
-        if (g.goal_player_id) allPlayerAPs.set(g.goal_player_id, (allPlayerAPs.get(g.goal_player_id) || 0) + 1);
-        if (g.assist_player_id) allPlayerAPs.set(g.assist_player_id, (allPlayerAPs.get(g.assist_player_id) || 0) + 1);
+      const myAP = mGoals + mAssists;
+      if (myAP === 0) return;
+
+      // Find player's team from rosters
+      const playerRoster = rosters?.find(r => r.match_id === m.id && r.player_id === playerId);
+      if (!playerRoster) return;
+      const myTeamId = playerRoster.team_id;
+
+      // Get all teammates' AP on the same team
+      const teammates = rosters?.filter(r => r.match_id === m.id && r.team_id === myTeamId) || [];
+      const teammateAPs = teammates.map(r => {
+        const g = goalEvents.filter(g2 => g2.match_id === m.id && g2.goal_player_id === r.player_id && !g2.is_own_goal).length;
+        const a = goalEvents.filter(g2 => g2.match_id === m.id && g2.assist_player_id === r.player_id).length;
+        return { playerId: r.player_id, ap: g + a };
       });
-      const sorted = [...allPlayerAPs.entries()].sort((a, b) => b[1] - a[1]);
-      if (sorted.length > 0 && sorted[0][0] === playerId) momCount++;
+      const maxAP = Math.max(...teammateAPs.map(t => t.ap));
+      // Count if this player is tied for the highest AP on their team
+      if (myAP >= maxAP && maxAP > 0) momCount++;
     });
     if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
   }
