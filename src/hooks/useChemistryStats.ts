@@ -600,26 +600,31 @@ export function computeTriosByWinRate(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 3) return;
-    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
-    const sf = q.score_for || 0;
-    const sa = q.score_against || 0;
-    for (let i = 0; i < field.length; i++) {
-      for (let j = i + 1; j < field.length; j++) {
-        for (let k = j + 1; k < field.length; k++) {
-          const ids = [field[i], field[j], field[k]];
-          const key = ids.join(",");
-          const cur = trioMap.get(key) || { ids, wins: 0, quarters: 0, scored: 0, conceded: 0, margin: 0 };
-          cur.wins += won;
-          cur.quarters++;
-          cur.scored += sf;
-          cur.conceded += sa;
-          cur.margin += sf - sa;
-          trioMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      field.sort((a, b) => a - b);
+      if (field.length < 3) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const won = diff > 0 ? 1 : 0;
+      const scored = getGroupScored(q, gi, custom);
+      const conceded = getGroupConceded(q, gi, custom);
+      for (let i = 0; i < field.length; i++) {
+        for (let j = i + 1; j < field.length; j++) {
+          for (let k = j + 1; k < field.length; k++) {
+            const ids = [field[i], field[j], field[k]];
+            const key = ids.join(",");
+            const cur = trioMap.get(key) || { ids, wins: 0, quarters: 0, scored: 0, conceded: 0, margin: 0 };
+            cur.wins += won;
+            cur.quarters++;
+            cur.scored += scored;
+            cur.conceded += conceded;
+            cur.margin += diff;
+            trioMap.set(key, cur);
+          }
         }
       }
-    }
+    });
   });
 
   return [...trioMap.values()]
