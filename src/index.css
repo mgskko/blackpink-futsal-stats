@@ -253,6 +253,93 @@
   .fire-particle-1 { animation: fire-particle-1 2.5s ease-in-out infinite; }
   .fire-particle-2 { animation: fire-particle-2 3s ease-in-out infinite 0.5s; }
 
+  /* === FIRE TIER: WARMING (3+ streak) === */
+  @keyframes warming-ring {
+    0%, 100% { box-shadow: 0 0 6px 2px hsl(45 100% 55% / 0.4), 0 0 12px 3px hsl(50 100% 50% / 0.2); }
+    50% { box-shadow: 0 0 10px 3px hsl(45 100% 60% / 0.5), 0 0 16px 4px hsl(50 100% 55% / 0.25); }
+  }
+  .warming-fire-ring {
+    animation: warming-ring 2.5s ease-in-out infinite;
+    border-color: hsl(45 100% 55% / 0.6) !important;
+  }
+  .warming-fire-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(45 30% 10%) 50%, hsl(50 20% 8%) 100%) !important;
+    box-shadow: 0 0 8px hsl(45 100% 55% / 0.15);
+  }
+  .warming-fire-card > * { position: relative; z-index: 1; }
+
+  /* === FIRE TIER: LEGENDARY (10+ streak) === */
+  @keyframes legendary-pulse {
+    0%, 100% { box-shadow: 0 0 12px 4px hsl(270 80% 60% / 0.5), 0 0 24px 8px hsl(280 70% 50% / 0.3); }
+    50% { box-shadow: 0 0 18px 6px hsl(270 80% 65% / 0.7), 0 0 36px 10px hsl(280 70% 55% / 0.4); }
+  }
+  .legendary-fire-ring {
+    animation: legendary-pulse 1.5s ease-in-out infinite;
+    border-color: hsl(270 80% 60% / 0.8) !important;
+  }
+  .legendary-fire-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(270 40% 12%) 30%, hsl(280 50% 10%) 60%, hsl(260 30% 8%) 100%) !important;
+    overflow: visible;
+    box-shadow: 0 0 20px hsl(270 80% 60% / 0.25), 0 0 40px hsl(280 70% 50% / 0.15);
+  }
+  .legendary-fire-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(90deg, hsl(270 80% 60%), hsl(300 70% 65%), hsl(250 80% 55%), hsl(270 80% 60%));
+    background-size: 300% 100%;
+    animation: fire-border-rotate 3s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .legendary-fire-card > * { position: relative; z-index: 1; }
+
+  /* === FIRE TIER: GOD MODE (30+ streak) === */
+  @keyframes godmode-pulse {
+    0% { box-shadow: 0 0 15px 5px hsl(180 80% 60% / 0.6), 0 0 30px 10px hsl(200 80% 50% / 0.3), 0 0 60px 15px hsl(160 80% 60% / 0.15); }
+    33% { box-shadow: 0 0 20px 7px hsl(260 80% 65% / 0.6), 0 0 40px 12px hsl(280 70% 55% / 0.3), 0 0 70px 18px hsl(300 80% 60% / 0.15); }
+    66% { box-shadow: 0 0 18px 6px hsl(45 100% 60% / 0.6), 0 0 35px 10px hsl(30 100% 55% / 0.3), 0 0 65px 16px hsl(60 100% 60% / 0.15); }
+    100% { box-shadow: 0 0 15px 5px hsl(180 80% 60% / 0.6), 0 0 30px 10px hsl(200 80% 50% / 0.3), 0 0 60px 15px hsl(160 80% 60% / 0.15); }
+  }
+  .godmode-fire-ring {
+    animation: godmode-pulse 3s ease-in-out infinite;
+    border-color: hsl(180 80% 60% / 0.9) !important;
+  }
+  @keyframes aurora-shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .godmode-fire-card {
+    position: relative;
+    background: linear-gradient(135deg, hsl(0 0% 5%) 0%, hsl(220 40% 10%) 25%, hsl(280 30% 8%) 50%, hsl(180 30% 10%) 75%, hsl(0 0% 5%) 100%) !important;
+    overflow: visible;
+    box-shadow: 0 0 25px hsl(180 80% 60% / 0.2), 0 0 50px hsl(260 80% 60% / 0.15), 0 0 80px hsl(45 100% 60% / 0.1);
+  }
+  .godmode-fire-card::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 3px;
+    background: linear-gradient(90deg, hsl(180 80% 60%), hsl(260 80% 65%), hsl(45 100% 60%), hsl(330 100% 71%), hsl(180 80% 60%));
+    background-size: 500% 100%;
+    animation: aurora-shimmer 4s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .godmode-fire-card > * { position: relative; z-index: 1; }
+
   /* CONCACAF Mode background */
   .concacaf-bg {
     background: linear-gradient(180deg, hsl(160 30% 8%) 0%, hsl(210 30% 6%) 50%, hsl(0 0% 5%) 100%) !important;
