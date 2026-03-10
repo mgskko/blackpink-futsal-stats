@@ -162,19 +162,27 @@ const MatchDetailPage = () => {
     return { players: playerMap, quarters: sortedQ.map(q => q.quarter), playerTeamMap };
   }, [matchQuarters]);
 
-  // Compute clean sheet badges per player
+  // Compute clean sheet badges per player (supports teamA/teamB)
   const cleanSheetBadges = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return new Map<number, number>();
-    const badges = new Map<number, number>(); // playerId → count of clean sheet quarters as DF/GK
+    const badges = new Map<number, number>();
     matchQuarters.forEach(q => {
-      if (!q.lineup || (q.score_against || 0) > 0) return;
+      if (!q.lineup) return;
       const lineup = q.lineup as any;
-      const dfGkPlayers: number[] = [];
-      if (lineup.GK) (Array.isArray(lineup.GK) ? lineup.GK : [lineup.GK]).forEach((id: any) => dfGkPlayers.push(Number(id)));
-      if (lineup.DF) (Array.isArray(lineup.DF) ? lineup.DF : [lineup.DF]).forEach((id: any) => dfGkPlayers.push(Number(id)));
-      dfGkPlayers.forEach(pid => {
-        badges.set(pid, (badges.get(pid) || 0) + 1);
-      });
+      const isCustom = lineup.teamA || lineup.teamB;
+      const getDFGK = (l: any, conceded: number) => {
+        if (conceded > 0) return;
+        const players: number[] = [];
+        if (l?.GK) (Array.isArray(l.GK) ? l.GK : [l.GK]).forEach((id: any) => players.push(Number(id)));
+        if (l?.DF) (Array.isArray(l.DF) ? l.DF : [l.DF]).forEach((id: any) => players.push(Number(id)));
+        players.forEach(pid => badges.set(pid, (badges.get(pid) || 0) + 1));
+      };
+      if (isCustom) {
+        getDFGK(lineup.teamA, q.score_against || 0);
+        getDFGK(lineup.teamB, q.score_for || 0);
+      } else {
+        getDFGK(lineup, q.score_against || 0);
+      }
     });
     return badges;
   }, [matchQuarters]);
