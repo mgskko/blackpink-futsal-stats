@@ -65,7 +65,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         totalQ++;
         if (pos === "FW") { fwMargin += diff; fwQ++; }
       });
-      if (fwQ >= 3 && totalQ >= 10 && (totalQ - fwQ) >= 3) {
+      if (fwQ >= 3 && totalQ >= 10 && (totalQ - fwQ) >= 3 && has10Matches(p.id)) {
         const fwMpq = fwMargin / fwQ;
         const totalMpq = totalMargin / totalQ;
         if (fwMpq > totalMpq + 0.3) {
