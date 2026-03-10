@@ -128,12 +128,14 @@ const StatisticsPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  // Filter out guests from rankings
+  const memberStats = allStats.filter(p => !(p as any).is_guest);
 
-  const topGoals = [...allStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
-  const topAssists = [...allStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
-  const topAttackPoints = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 5);
-  const topAP10 = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 10);
-  const topAppearances = [...allStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
+  const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
+  const topAssists = [...memberStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
+  const topAttackPoints = [...memberStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 5);
+  const topAP10 = [...memberStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 10);
+  const topAppearances = [...memberStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
 
   const apChartData = topAttackPoints.map(p => ({ name: p.name, 공격포인트: p.attackPoints, 골: p.goals, 도움: p.assists }));
   const quarterData = getQuarterGoalDistribution(filteredGoalEvents, filteredQuarters);
