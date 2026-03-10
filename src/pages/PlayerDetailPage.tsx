@@ -32,7 +32,11 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   const r5AP = r5Goals.length + r5Assists.length;
   const r5Quarters = allQuarters.filter(q => r5Ids.has(q.match_id) && q.lineup && getPlayerPosition(q.lineup, playerId) && getPlayerPosition(q.lineup, playerId) !== "Bench");
   let r5Margin = 0;
-  r5Quarters.forEach(q => { r5Margin += (q.score_for || 0) - (q.score_against || 0); });
+  r5Quarters.forEach(q => {
+    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
+    const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
+    r5Margin += pTeam === "teamB" ? -baseDiff : baseDiff;
+  });
 
   // 🇧🇷 Brazil: AP >= 30 in last 10 matches
   const recent10 = sortedMatches.slice(0, 10);
