@@ -466,21 +466,24 @@ export function computeFWDuos(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const fws = getPositionPlayers(q.lineup, "FW").sort((a, b) => a - b);
-    if (fws.length < 2) return;
-    // All FW pairs
-    for (let i = 0; i < fws.length; i++) {
-      for (let j = i + 1; j < fws.length; j++) {
-        const key = `${fws[i]}-${fws[j]}`;
-        const diff = (q.score_for || 0) - (q.score_against || 0);
-        const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === fws[i] || g.goal_player_id === fws[j])).length;
-        const cur = duoMap.get(key) || { p1: fws[i], p2: fws[j], margin: 0, quarters: 0, goals: 0 };
-        cur.margin += diff;
-        cur.quarters++;
-        cur.goals += qGoals;
-        duoMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const fwGroups = getPositionPlayerGroups(q.lineup, "FW");
+    fwGroups.forEach((fws, gi) => {
+      fws.sort((a, b) => a - b);
+      if (fws.length < 2) return;
+      const diff = getGroupMargin(q, gi, custom);
+      for (let i = 0; i < fws.length; i++) {
+        for (let j = i + 1; j < fws.length; j++) {
+          const key = `${fws[i]}-${fws[j]}`;
+          const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === fws[i] || g.goal_player_id === fws[j])).length;
+          const cur = duoMap.get(key) || { p1: fws[i], p2: fws[j], margin: 0, quarters: 0, goals: 0 };
+          cur.margin += diff;
+          cur.quarters++;
+          cur.goals += qGoals;
+          duoMap.set(key, cur);
+        }
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
