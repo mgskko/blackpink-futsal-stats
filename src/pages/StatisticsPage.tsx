@@ -6,7 +6,7 @@ import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribut
 import type { Player, Match, Result, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
 import { computeAllCourtMargins, getDefenseContribution } from "@/hooks/useCourtStats";
-import { computeDataMOM } from "@/hooks/useMatchAnalysis";
+import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getBiggestCrasher } from "@/hooks/useMarketValue";
 import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos, computePositionDuosByWinRate, computeTriosByWinRate } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
