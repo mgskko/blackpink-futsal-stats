@@ -10,7 +10,7 @@ export interface PlayerCourtMargin {
   ppq: number;
 }
 
-function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
+function parseLineupFlat(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
   const result = { GK: [] as number[], DF: [] as number[], MF: [] as number[], FW: [] as number[], Bench: [] as number[] };
   if (!lineup) return result;
   if (Array.isArray(lineup)) {
@@ -33,6 +33,37 @@ function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; F
     if (lineup.Bench) result.Bench = (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
   }
   return result;
+}
+
+function isCustomLineup(lineup: any): boolean {
+  return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
+}
+
+function parseLineup(lineup: any): { GK: number[]; DF: number[]; MF: number[]; FW: number[]; Bench: number[] } {
+  if (!lineup) return { GK: [], DF: [], MF: [], FW: [], Bench: [] };
+  if (isCustomLineup(lineup)) {
+    const a = parseLineupFlat(lineup.teamA);
+    const b = parseLineupFlat(lineup.teamB);
+    return {
+      GK: [...a.GK, ...b.GK],
+      DF: [...a.DF, ...b.DF],
+      MF: [...a.MF, ...b.MF],
+      FW: [...a.FW, ...b.FW],
+      Bench: [...a.Bench, ...b.Bench],
+    };
+  }
+  return parseLineupFlat(lineup);
+}
+
+/** Returns "teamA" | "teamB" | null for custom lineup format */
+export function getPlayerTeamInLineup(lineup: any, playerId: number): "teamA" | "teamB" | null {
+  if (!isCustomLineup(lineup)) return null;
+  for (const team of ["teamA", "teamB"] as const) {
+    if (!lineup[team]) continue;
+    const parsed = parseLineupFlat(lineup[team]);
+    if ([...parsed.GK, ...parsed.DF, ...parsed.MF, ...parsed.FW, ...parsed.Bench].includes(playerId)) return team;
+  }
+  return null;
 }
 
 function getFieldPlayers(lineup: any): number[] {
