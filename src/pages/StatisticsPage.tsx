@@ -606,7 +606,7 @@ const StatisticsPage = () => {
                         <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
                           <span>{d.quarters}쿼터</span>
                           <span>마진 {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}/Q</span>
-                          {isFW && !isWorst && <span className="text-primary font-bold">⚽ 합작 {d.combinedGoals}골</span>}
+                          {isFW && <span className={`${isWorst ? "text-destructive" : "text-primary"} font-bold`}>승률 {d.winRate}%</span>}
                           {!isFW && !isWorst && <span className="text-primary font-bold">🛡️ 합작 무실점 {d.cleanSheetQuarters}Q</span>}
                         </div>
                       </div>
