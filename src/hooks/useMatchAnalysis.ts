@@ -290,7 +290,7 @@ export function computeDualDataMOM(
   };
 }
 
-// ─── AI Match Comment Generator ───
+// ─── AI Match Comment Generator (Fake News Style) ───
 export function generateMatchComment(
   matchId: number,
   players: Player[],
@@ -303,10 +303,23 @@ export function generateMatchComment(
   const matchGoals = goalEvents.filter(g => g.match_id === matchId);
   const matchQuarters = quarters.filter(q => q.match_id === matchId).sort((a, b) => a.quarter - b.quarter);
   const matchTeams = teams.filter(t => t.match_id === matchId);
+  const ourTeam = matchTeams.find(t => t.is_ours);
+  const oppTeam = matchTeams.find(t => !t.is_ours);
   const ourTeamIds = new Set(matchTeams.filter(t => t.is_ours).map(t => t.id));
 
   if (matchGoals.length === 0 && matchQuarters.length === 0) return comments;
 
+  const ourResult = results.find(r => matchTeams.some(t => t.is_ours && t.id === r.team_id) && r.match_id === matchId);
+  const scoreFor = ourResult?.score_for ?? 0;
+  const scoreAgainst = ourResult?.score_against ?? 0;
+  const diff = scoreFor - scoreAgainst;
+  const oppName = oppTeam?.name || "상대팀";
+  const ourName = ourTeam?.name || "버니즈";
+
+  // Own goal check
+  const ownGoals = matchGoals.filter(g => g.is_own_goal && ourTeamIds.has(g.team_id));
+
+  // Top scorer
   const playerGoals = new Map<number, number>();
   const playerAssists = new Map<number, number>();
   matchGoals.forEach(g => {
@@ -317,44 +330,51 @@ export function generateMatchComment(
       playerAssists.set(g.assist_player_id, (playerAssists.get(g.assist_player_id) || 0) + 1);
     }
   });
-
   const topScorer = [...playerGoals.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (topScorer && topScorer[1] >= 3) {
-    comments.push(`⚡ ${getPlayerName(players, topScorer[0])} 선수가 ${topScorer[1]}골을 몰아치며 원맨쇼를 펼친 경기였습니다.`);
-  } else if (topScorer && topScorer[1] >= 2) {
-    comments.push(`⚽ ${getPlayerName(players, topScorer[0])} 선수가 멀티골(${topScorer[1]}골)을 기록하며 공격을 이끌었습니다.`);
-  }
-
   const topAssister = [...playerAssists.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (topAssister && topAssister[1] >= 2) {
-    comments.push(`🎯 ${getPlayerName(players, topAssister[0])} 선수의 이타적인 연계(${topAssister[1]}어시)가 팀의 득점력을 끌어올렸습니다.`);
+
+  // Fake News headline
+  if (ourResult) {
+    if (diff >= 5) {
+      comments.push(`📰 [속보] ${ourName}, ${oppName}을 ${scoreFor}-${scoreAgainst}로 영혼까지 털어버리다! ${topScorer ? `(${getPlayerName(players, topScorer[0])} ${topScorer[1]}골 하드캐리)` : ""}`);
+    } else if (diff >= 3) {
+      comments.push(`📰 [속보] ${ourName}, ${oppName} 상대 ${scoreFor}-${scoreAgainst} 완승! ${topScorer ? `${getPlayerName(players, topScorer[0])} 선수의 활약이 빛났다.` : ""}`);
+    } else if (diff === 1 || diff === 2) {
+      comments.push(`📰 [긴급] ${ourName}, 치열한 접전 끝에 ${scoreFor}-${scoreAgainst} 짜릿한 승리! 끝까지 포기하지 않았다.`);
+    } else if (diff === 0) {
+      comments.push(`📰 [단독] ${scoreFor}-${scoreAgainst}, 양 팀 모두 한 치의 양보 없는 격전... 승자 없는 무승부.`);
+    } else if (diff >= -2) {
+      if (ownGoals.length > 0) {
+        const ogPlayer = ownGoals[0].goal_player_id;
+        comments.push(`📰 [단독] 충격의 패배... ${ogPlayer ? `${getPlayerName(players, ogPlayer)} 선수의 치명적 자책골로 분위기 박살!` : "자책골이 승부를 갈랐다."} (${scoreFor}-${scoreAgainst})`);
+      } else {
+        comments.push(`📰 [속보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 아쉬운 역전패. 재정비가 필요한 시점.`);
+      }
+    } else {
+      comments.push(`📰 [비보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 충격의 대패! 긴급 전술 회의 소집됐다.`);
+    }
   }
 
-  // FW performance
-  if (hasLineupData(matchQuarters)) {
-    const fwGoals = new Map<number, number>();
-    matchQuarters.forEach(q => {
-      if (!q.lineup) return;
-      const fwPlayers = getFWPlayersFromLineup(q.lineup);
-      fwPlayers.forEach((pid: number) => {
-        const goals = matchGoals.filter(g => g.quarter === q.quarter && g.goal_player_id === pid && !g.is_own_goal).length;
-        if (goals > 0) fwGoals.set(pid, (fwGoals.get(pid) || 0) + goals);
-      });
-    });
-    const topFW = [...fwGoals.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (topFW && topFW[1] >= 2 && (!topScorer || topFW[0] !== topScorer[0])) {
-      comments.push(`🔥 ${getPlayerName(players, topFW[0])} 선수가 공격수(FW)로 출전하여 엄청난 득점력을 뽐낸 경기였습니다.`);
-    }
+  // Sub-headlines
+  if (topScorer && topScorer[1] >= 3) {
+    comments.push(`⚡ ${getPlayerName(players, topScorer[0])} 선수 ${topScorer[1]}골 원맨쇼! 상대 수비진은 속수무책이었다.`);
+  } else if (topScorer && topScorer[1] >= 2) {
+    comments.push(`⚽ ${getPlayerName(players, topScorer[0])} 선수 멀티골(${topScorer[1]}골)! 결정적 순간마다 등장한 에이스.`);
+  }
 
-    // DF stability
+  if (topAssister && topAssister[1] >= 2) {
+    comments.push(`🎯 ${getPlayerName(players, topAssister[0])} 선수 ${topAssister[1]}어시스트! 팀의 공격을 설계한 컨트롤 타워.`);
+  }
+
+  // DF/GK analysis
+  if (hasLineupData(matchQuarters)) {
     const dfQuarterCleanSheets = new Map<number, { clean: number; total: number }>();
     matchQuarters.forEach(q => {
       if (!q.lineup) return;
-      const dfPlayers = getDFPlayersFromLineup(q.lineup);
+      const dfPlayers = getDFGKPlayersFromLineup(q.lineup);
       dfPlayers.forEach((pid: number) => {
         const cur = dfQuarterCleanSheets.get(pid) || { clean: 0, total: 0 };
         cur.total++;
-        // For custom matches, check correct conceded side
         let conceded = q.score_against || 0;
         if (isCustomLineup(q.lineup) && getPlayerTeamInLineup(q.lineup, pid) === "teamB") {
           conceded = q.score_for || 0;
@@ -367,27 +387,7 @@ export function generateMatchComment(
       .filter(([, v]) => v.total >= 2 && v.clean / v.total >= 0.7)
       .sort((a, b) => b[1].clean - a[1].clean)[0];
     if (bestDF) {
-      comments.push(`🛡️ ${getPlayerName(players, bestDF[0])} 선수가 수비 라인을 지킨 쿼터 동안 팀은 압도적인 안정감을 보여주었습니다.`);
-    }
-  }
-
-  // Kill pass analysis
-  const killPassAssists = matchGoals.filter(g => g.assist_type === "킬패스" && g.assist_player_id && ourTeamIds.has(g.team_id));
-  if (killPassAssists.length >= 2) {
-    const assisterId = killPassAssists[0].assist_player_id!;
-    const allFromSame = killPassAssists.filter(g => g.assist_player_id === assisterId).length;
-    if (allFromSame >= 2) {
-      comments.push(`🎯 ${getPlayerName(players, assisterId)} 선수의 예리한 킬패스가 빛을 발하며 팀의 승리를 이끌었습니다.`);
-    }
-  }
-
-  // Comeback or dominant win
-  const ourResult = results.find(r => matchTeams.some(t => t.is_ours && t.id === r.team_id) && r.match_id === matchId);
-  if (ourResult) {
-    if (ourResult.score_for !== null && ourResult.score_against !== null) {
-      const diff = (ourResult.score_for || 0) - (ourResult.score_against || 0);
-      if (diff >= 5) comments.push(`💥 ${ourResult.score_for}:${ourResult.score_against}! 압도적인 대승을 거둔 경기입니다.`);
-      else if (diff <= -5) comments.push(`😢 ${ourResult.score_for}:${ourResult.score_against}. 뼈아픈 대패를 당한 경기입니다.`);
+      comments.push(`🛡️ ${getPlayerName(players, bestDF[0])} 선수가 수비진을 이끌며 ${bestDF[1].clean}쿼터 무실점의 철벽을 완성했다.`);
     }
   }
 

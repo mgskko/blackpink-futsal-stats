@@ -7,6 +7,7 @@ import type { Player, Match, Result, Roster, GoalEvent, MatchQuarter } from "@/h
 import { getOpponentRecords, getVenueRecords, getAgeCategoryRecords, getWinFairyData, getLastQuarterSpecialists, getDuoSynergyWinRate, getOwnGoalRanking, getHallOfFame, getMOMRanking } from "@/hooks/useAdvancedStats";
 import { computeAllCourtMargins, getDefenseContribution } from "@/hooks/useCourtStats";
 import { computeDataMOM } from "@/hooks/useMatchAnalysis";
+import { getBiggestCrasher } from "@/hooks/useMarketValue";
 import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos, computePositionDuosByWinRate, computeTriosByWinRate } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
@@ -18,6 +19,7 @@ import FormationStatsTab from "@/components/stats/FormationStatsTab";
 import FunStatsTab from "@/components/stats/FunStatsTab";
 import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import POTMCard from "@/components/stats/POTMCard";
 
 type FilterType = "all" | "custom" | string;
 
@@ -128,12 +130,14 @@ const StatisticsPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  // Filter out guests from rankings
+  const memberStats = allStats.filter(p => !(p as any).is_guest);
 
-  const topGoals = [...allStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
-  const topAssists = [...allStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
-  const topAttackPoints = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 5);
-  const topAP10 = [...allStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 10);
-  const topAppearances = [...allStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
+  const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
+  const topAssists = [...memberStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
+  const topAttackPoints = [...memberStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 5);
+  const topAP10 = [...memberStats].sort((a, b) => b.attackPoints - a.attackPoints).filter(p => p.attackPoints > 0).slice(0, 10);
+  const topAppearances = [...memberStats].sort((a, b) => b.appearances - a.appearances).filter(p => p.appearances > 0).slice(0, 10);
 
   const apChartData = topAttackPoints.map(p => ({ name: p.name, 공격포인트: p.attackPoints, 골: p.goals, 도움: p.assists }));
   const quarterData = getQuarterGoalDistribution(filteredGoalEvents, filteredQuarters);
@@ -141,11 +145,12 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.margin - a.margin).slice(0, 10);
-  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
+  const memberPlayers = players.filter(p => !(p as any).is_guest);
+  const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
   // Defense contribution ranking
-  const defenseRanking = players.map(p => {
+  const defenseRanking = memberPlayers.map(p => {
     const dc = getDefenseContribution(p.id, filteredQuarters);
     return { ...p, diff: dc.diff, quartersWithPlayer: dc.quartersWithPlayer };
   }).filter(p => p.quartersWithPlayer >= 10).sort((a, b) => a.diff - b.diff).slice(0, 10);
@@ -153,12 +158,12 @@ const StatisticsPage = () => {
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
   const ageRecords = getAgeCategoryRecords(filteredMatches, filteredTeams, filteredResults);
-  const winFairy = getWinFairyData(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
-  const lastQSpecialists = getLastQuarterSpecialists(players, filteredMatches, filteredGoalEvents);
-  const duoSynergy = getDuoSynergyWinRate(players, filteredMatches, filteredTeams, filteredResults, filteredRosters);
-  const ownGoals = getOwnGoalRanking(players, filteredGoalEvents);
-  const hallOfFame = getHallOfFame(players, filteredMatches, filteredRosters, filteredGoalEvents);
-  const momRanking = getMOMRanking(players, momVotes || []);
+  const winFairy = getWinFairyData(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const lastQSpecialists = getLastQuarterSpecialists(memberPlayers, filteredMatches, filteredGoalEvents);
+  const duoSynergy = getDuoSynergyWinRate(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
+  const ownGoals = getOwnGoalRanking(memberPlayers, filteredGoalEvents);
+  const hallOfFame = getHallOfFame(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents);
+  const momRanking = getMOMRanking(memberPlayers, momVotes || []);
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 
@@ -279,6 +284,28 @@ const StatisticsPage = () => {
       <div className="px-4">
         {activeTab === "player" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* POTM Card */}
+            <POTMCard players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
+            {/* 먹튀 칭호 */}
+            {(() => {
+              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotesAll);
+              if (!crasher || crasher.crashPercent < 20) return null;
+              return (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">💸</span>
+                    <span className="text-xs font-bold text-red-400">버니즈 역대 최고의 먹튀 (에당 아자르 빙의)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${crasher.playerId}`)}>{crasher.name}</span>
+                    <span className="font-display text-lg text-red-400">📉 -{crasher.crashPercent}% 폭락</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">피크 대비 가상 몸값 최대 하락률 기준</p>
+                </motion.div>
+              );
+            })()}
+
             {/* AP Chart */}
             <div className="mb-6">
               <h3 className="mb-3 font-display text-xl tracking-wider text-primary">TOP 5 공격포인트</h3>
