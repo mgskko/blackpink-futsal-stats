@@ -100,7 +100,7 @@ export default function SeasonWrapped({ player, year, stats, scoutingReport, tie
               {/* Header */}
               <div className="text-center">
                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-[hsl(330,100%,71%)]">
-                  BURNEES FUTSAL CLUB
+                  BUNNIES FUTSAL CLUB
                 </div>
                 <div className="mt-1 font-display text-5xl tracking-wider text-white" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
                   {year}

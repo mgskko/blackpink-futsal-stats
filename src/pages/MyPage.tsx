@@ -53,7 +53,7 @@ const MyPage = () => {
           animate={{ opacity: 1, scale: 1 }}
         />
         <div className="text-center">
-          <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BURNEES FC</h1>
+          <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BUNNIES FC</h1>
           <p className="mt-2 text-sm text-muted-foreground">Google 계정으로 로그인하세요</p>
         </div>
         <Button

@@ -28,7 +28,7 @@ const SplashScreen = () => (
         transition={{ delay: 0.3 }}
         className="font-display text-2xl tracking-wider text-glow text-primary"
       >
-        BURNEES FC
+        BUNNIES FC
       </motion.p>
     </motion.div>
   </div>

@@ -13,7 +13,7 @@ const PageHeader = ({ title, subtitle }: PageHeaderProps) => (
     className="px-4 pt-6 pb-4"
   >
     <div className="flex items-center gap-3">
-      <img src={burneesLogo} alt="Burnees FC" className="h-10 w-10 rounded-full" />
+      <img src={burneesLogo} alt="Bunnies FC" className="h-10 w-10 rounded-full" />
       <div>
         <h1 className="font-display text-3xl tracking-wider text-glow text-primary">
           {title}
