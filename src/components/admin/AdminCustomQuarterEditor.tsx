@@ -5,7 +5,7 @@ import type { Player, Team } from "@/hooks/useFutsalData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2, ArrowLeftRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
