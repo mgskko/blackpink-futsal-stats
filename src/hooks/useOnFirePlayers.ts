@@ -76,10 +76,15 @@ export const FIRE_TIER_CONFIG: Record<Exclude<FireTier, "none">, {
 export function useOnFirePlayers(matches: Match[], rosters?: Roster[]) {
   const fireMap = useMemo(() => {
     const map = new Map<number, FireInfo>();
-    if (!rosters || matches.length === 0) return map;
+    if (!rosters || rosters.length === 0 || matches.length === 0) return map;
 
-    // Sort matches by date descending (most recent first)
-    const sorted = [...matches].sort((a, b) => b.date.localeCompare(a.date));
+    // Only consider matches that actually have rosters (completed matches)
+    const matchIdsWithRosters = new Set(rosters.map(r => r.match_id));
+    const sorted = [...matches]
+      .filter(m => matchIdsWithRosters.has(m.id))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    if (sorted.length === 0) return map;
 
     // Get all unique player IDs from rosters
     const allPlayerIds = new Set(rosters.map(r => r.player_id));
