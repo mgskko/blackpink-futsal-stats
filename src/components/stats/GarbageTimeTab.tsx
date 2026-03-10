@@ -29,11 +29,12 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
     const today = new Date().toISOString().slice(0, 10);
     const pastMatches = matches.filter(m => m.date <= today);
 
-    // Per player: count appearances
-    const playerAppearances = new Map<number, number>();
+    // Per player: count unique match appearances
+    const playerMatchSets = new Map<number, Set<number>>();
     rosters.forEach(r => {
       if (!pastMatches.some(m => m.id === r.match_id)) return;
-      playerAppearances.set(r.player_id, (playerAppearances.get(r.player_id) || 0) + 1);
+      if (!playerMatchSets.has(r.player_id)) playerMatchSets.set(r.player_id, new Set());
+      playerMatchSets.get(r.player_id)!.add(r.match_id);
     });
 
     // Get total AP per player (min 10 AP)
@@ -98,7 +99,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
 
     // Combine and rank
     const eligible = players.filter(p => {
-      const apps = playerAppearances.get(p.id) || 0;
+      const apps = playerMatchSets.get(p.id)?.size || 0;
       const totalAP = playerTotalAP.get(p.id) || 0;
       return apps >= 10 && totalAP >= 10;
     });

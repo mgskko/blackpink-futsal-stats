@@ -27,14 +27,28 @@ function getFieldPlayers(lineup: any): number[] {
 const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, allQuarters }: Props) => {
   const navigate = useNavigate();
 
+  // Global 10-match filter
+  const playerMatchCount = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    rosters.forEach(r => {
+      if (!map.has(r.player_id)) map.set(r.player_id, new Set());
+      map.get(r.player_id)!.add(r.match_id);
+    });
+    const result = new Map<number, number>();
+    map.forEach((matchSet, pid) => result.set(pid, matchSet.size));
+    return result;
+  }, [rosters]);
+
+  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
+
   // 1. 유산소의 신: 15Q+, AP 극히 적고, margin <= 0
   const cardioRanking = useMemo(() => {
     const courtMargins = computeAllCourtMargins(players, matches, allQuarters, goalEvents);
     return courtMargins
-      .filter(p => p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
+      .filter(p => has10Matches(p.playerId) && p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
       .sort((a, b) => b.quartersPlayed - a.quartersPlayed || a.margin - b.margin)
       .slice(0, 5);
-  }, [players, matches, allQuarters, goalEvents]);
+  }, [players, matches, allQuarters, goalEvents, playerMatchCount]);
 
   // 2. 전술적 희생양: FW margin top tier but overall margin hurt by DF/GK
   const tacticalVictim = useMemo(() => {
@@ -51,7 +65,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         totalQ++;
         if (pos === "FW") { fwMargin += diff; fwQ++; }
       });
-      if (fwQ >= 3 && totalQ >= 10 && (totalQ - fwQ) >= 3) {
+      if (fwQ >= 3 && totalQ >= 10 && (totalQ - fwQ) >= 3 && has10Matches(p.id)) {
         const fwMpq = fwMargin / fwQ;
         const totalMpq = totalMargin / totalQ;
         if (fwMpq > totalMpq + 0.3) {
@@ -77,10 +91,10 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         if (g.quarter >= 6 && g.quarter <= 8) lateMap.set(g.assist_player_id, (lateMap.get(g.assist_player_id) || 0) + 1);
       }
     });
-    const earlyBirds = [...earlyMap.entries()].map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
-    const slowStarters = [...lateMap.entries()].map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const earlyBirds = [...earlyMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const slowStarters = [...lateMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
     return { earlyBirds, slowStarters };
-  }, [goalEvents, players]);
+  }, [goalEvents, players, playerMatchCount]);
 
   // 4. 패배 요정: AP를 올린 경기의 팀 승률이 가장 낮은
   const jinxRanking = useMemo(() => {
@@ -98,7 +112,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     });
     const ranking: { id: number; name: string; winRate: number; wins: number; total: number }[] = [];
     playerMatchAP.forEach((matchIds, pid) => {
-      if (matchIds.size < 10) return;
+      if (matchIds.size < 10 || !has10Matches(pid)) return;
       let wins = 0;
       matchIds.forEach(mid => {
         const pRoster = rosters.find(r => r.player_id === pid && r.match_id === mid);
@@ -123,11 +137,11 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       playerGoals.set(g.goal_player_id, cur);
     });
     return [...playerGoals.entries()]
-      .filter(([, d]) => d.total >= 5 && d.hard >= 2)
+      .filter(([pid, d]) => d.total >= 5 && d.hard >= 2 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.hard / d.total) * 100), hard: d.hard, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
-  }, [goalEvents, players]);
+  }, [goalEvents, players, playerMatchCount]);
 
   const RankItem = ({ i, name, id, value, sub, total }: { i: number; name: string; id: number; value: string; sub?: string; total?: number }) => (
     <div onClick={() => navigate(`/player/${id}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${total !== undefined && i < total - 1 ? "border-b border-border" : ""}`}>
