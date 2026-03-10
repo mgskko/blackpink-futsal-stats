@@ -1,8 +1,12 @@
 import type { Player, Match, Team, Result, GoalEvent, MatchQuarter, Roster } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
 
-// Helper: parse lineup to get field players
-function getFieldPlayers(lineup: any): number[] {
+function isCustomLineup(lineup: any): boolean {
+  return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
+}
+
+// Parse a single flat lineup (no teamA/teamB nesting)
+function getFieldPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   const result: number[] = [];
   ["GK", "DF", "MF", "FW"].forEach(pos => {
@@ -13,16 +17,76 @@ function getFieldPlayers(lineup: any): number[] {
   return result;
 }
 
-function getBenchPlayers(lineup: any): number[] {
+// For chemistry: return per-team field player groups
+// For normal matches: returns one group; for custom: two groups (teamA & teamB)
+function getFieldPlayerGroups(lineup: any): number[][] {
+  if (!lineup || typeof lineup !== "object") return [];
+  if (isCustomLineup(lineup)) {
+    const groups: number[][] = [];
+    if (lineup.teamA) groups.push(getFieldPlayersFlat(lineup.teamA));
+    if (lineup.teamB) groups.push(getFieldPlayersFlat(lineup.teamB));
+    return groups;
+  }
+  const flat = getFieldPlayersFlat(lineup);
+  return flat.length > 0 ? [flat] : [];
+}
+
+// Legacy: get ALL field players merged (for backward compat)
+function getFieldPlayers(lineup: any): number[] {
+  return getFieldPlayerGroups(lineup).flat();
+}
+
+function getBenchPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   if (!lineup.Bench) return [];
   return (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
 }
 
-function getPositionPlayers(lineup: any, pos: string): number[] {
+function getBenchPlayers(lineup: any): number[] {
+  if (isCustomLineup(lineup)) {
+    const a = lineup.teamA ? getBenchPlayersFlat(lineup.teamA) : [];
+    const b = lineup.teamB ? getBenchPlayersFlat(lineup.teamB) : [];
+    return [...a, ...b];
+  }
+  return getBenchPlayersFlat(lineup);
+}
+
+function getPositionPlayersFlat(lineup: any, pos: string): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   if (!lineup[pos]) return [];
   return (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+}
+
+// For chemistry: returns position players per team group
+function getPositionPlayerGroups(lineup: any, pos: string): number[][] {
+  if (isCustomLineup(lineup)) {
+    const groups: number[][] = [];
+    if (lineup.teamA) groups.push(getPositionPlayersFlat(lineup.teamA, pos));
+    if (lineup.teamB) groups.push(getPositionPlayersFlat(lineup.teamB, pos));
+    return groups;
+  }
+  const flat = getPositionPlayersFlat(lineup, pos);
+  return flat.length > 0 ? [flat] : [];
+}
+
+function getPositionPlayers(lineup: any, pos: string): number[] {
+  return getPositionPlayerGroups(lineup, pos).flat();
+}
+
+// Helper: get margin from a player group's perspective
+function getGroupMargin(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  const sf = q.score_for || 0;
+  const sa = q.score_against || 0;
+  if (isCustom && groupIdx === 1) return sa - sf; // teamB: flipped
+  return sf - sa;
+}
+function getGroupConceded(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  if (isCustom && groupIdx === 1) return q.score_for || 0; // teamB: score_for is what they conceded
+  return q.score_against || 0;
+}
+function getGroupScored(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  if (isCustom && groupIdx === 1) return q.score_against || 0;
+  return q.score_for || 0;
 }
 
 // ─── 1. Death Lineup: Best 5-player combo by margin ───
