@@ -165,7 +165,7 @@ export default function SeasonWrapped({ player, year, stats, scoutingReport, tie
 
               {/* Footer */}
               <div className="text-[8px] text-white/30 tracking-widest">
-                BURNEES.LOVABLE.APP
+                BUNNIES.LOVABLE.APP
               </div>
             </div>
           </div>
