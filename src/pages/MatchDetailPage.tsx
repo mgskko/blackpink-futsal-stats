@@ -45,9 +45,22 @@ function formatTimestamp(ts: string): string {
 
 type AttendanceStatus = "attending" | "absent" | "undecided";
 
-// Helper: get player position info per quarter from lineup data
-function getPlayerPosition(lineup: any, playerId: number): string | null {
+// Helper: get player position info per quarter from lineup data (supports teamA/teamB)
+function getPlayerPositionFromLineup(lineup: any, playerId: number): string | null {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return null;
+  // Check teamA/teamB format
+  if (lineup.teamA || lineup.teamB) {
+    for (const team of [lineup.teamA, lineup.teamB]) {
+      if (!team) continue;
+      for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+        if (team[pos]) {
+          const ids = (Array.isArray(team[pos]) ? team[pos] : [team[pos]]).map(Number);
+          if (ids.includes(playerId)) return pos;
+        }
+      }
+    }
+    return null;
+  }
   for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
     if (lineup[pos]) {
       const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
