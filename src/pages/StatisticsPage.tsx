@@ -284,6 +284,28 @@ const StatisticsPage = () => {
       <div className="px-4">
         {activeTab === "player" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* POTM Card */}
+            <POTMCard players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
+            {/* 먹튀 칭호 */}
+            {(() => {
+              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotesAll);
+              if (!crasher || crasher.crashPercent < 20) return null;
+              return (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">💸</span>
+                    <span className="text-xs font-bold text-red-400">버니즈 역대 최고의 먹튀 (에당 아자르 빙의)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${crasher.playerId}`)}>{crasher.name}</span>
+                    <span className="font-display text-lg text-red-400">📉 -{crasher.crashPercent}% 폭락</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">피크 대비 가상 몸값 최대 하락률 기준</p>
+                </motion.div>
+              );
+            })()}
+
             {/* AP Chart */}
             <div className="mb-6">
               <h3 className="mb-3 font-display text-xl tracking-wider text-primary">TOP 5 공격포인트</h3>
