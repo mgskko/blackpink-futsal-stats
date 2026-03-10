@@ -113,30 +113,53 @@ const MatchDetailPage = () => {
     return { scoreFor, scoreAgainst };
   }, [matchQuarters]);
 
-  // Build lineup summary table: player → position per quarter
+  // Build lineup summary table: player → position per quarter (supports teamA/teamB)
   const lineupSummary = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return null;
-    const hasLineup = matchQuarters.some(q => q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).GK);
+    const hasLineup = matchQuarters.some(q => {
+      if (!q.lineup || typeof q.lineup !== "object" || Array.isArray(q.lineup)) return false;
+      const l = q.lineup as any;
+      return l.GK || l.teamA?.GK || l.teamB?.GK;
+    });
     if (!hasLineup) return null;
 
     const sortedQ = [...matchQuarters].sort((a, b) => a.quarter - b.quarter);
     const playerMap = new Map<number, Map<number, string>>();
+    const playerTeamMap = new Map<number, "teamA" | "teamB">();
 
     sortedQ.forEach(q => {
       if (!q.lineup) return;
-      for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
-        const lineup = q.lineup as any;
-        if (lineup[pos]) {
-          const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
-          ids.forEach((pid: number) => {
-            if (!playerMap.has(pid)) playerMap.set(pid, new Map());
-            playerMap.get(pid)!.set(q.quarter, pos);
-          });
+      const lineup = q.lineup as any;
+      const isCustom = lineup.teamA || lineup.teamB;
+
+      if (isCustom) {
+        for (const teamKey of ["teamA", "teamB"] as const) {
+          if (!lineup[teamKey]) continue;
+          for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+            if (lineup[teamKey][pos]) {
+              const ids = (Array.isArray(lineup[teamKey][pos]) ? lineup[teamKey][pos] : [lineup[teamKey][pos]]).map(Number);
+              ids.forEach((pid: number) => {
+                if (!playerMap.has(pid)) playerMap.set(pid, new Map());
+                playerMap.get(pid)!.set(q.quarter, pos);
+                playerTeamMap.set(pid, teamKey);
+              });
+            }
+          }
+        }
+      } else {
+        for (const pos of ["GK", "DF", "MF", "FW", "Bench"]) {
+          if (lineup[pos]) {
+            const ids = (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+            ids.forEach((pid: number) => {
+              if (!playerMap.has(pid)) playerMap.set(pid, new Map());
+              playerMap.get(pid)!.set(q.quarter, pos);
+            });
+          }
         }
       }
     });
 
-    return { players: playerMap, quarters: sortedQ.map(q => q.quarter) };
+    return { players: playerMap, quarters: sortedQ.map(q => q.quarter), playerTeamMap };
   }, [matchQuarters]);
 
   // Compute clean sheet badges per player
