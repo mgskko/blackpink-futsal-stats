@@ -50,7 +50,8 @@ const PlayersPage = () => {
 
   if (isLoading) return <SplashScreen />;
 
-  const sortedPlayers = [...players].sort((a, b) => {
+  const activePlayers = players.filter(p => !(p as any).is_guest);
+  const sortedPlayers = [...activePlayers].sort((a, b) => {
     const sa = getPlayerStats(players, matches, teams, results, rosters, goalEvents, a.id);
     const sb = getPlayerStats(players, matches, teams, results, rosters, goalEvents, b.id);
     return sb.attackPoints - sa.attackPoints;
