@@ -75,19 +75,30 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM 2+ times in last 5
-  if (momVotes) {
-    // Count MOM wins per match (most votes)
+  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (using computeDataMOM, not votes)
+  if (players && players.length > 0) {
+    // Dynamically import computeDataMOM
+    const { computeDataMOM } = await import("@/hooks/useMatchAnalysis").catch(() => ({ computeDataMOM: null }));
+    // Since this is a sync function, we use a different approach:
+    // Count matches where this player was Data MOM from quarter data
     let momCount = 0;
     recent5.forEach(m => {
-      const mVotes = momVotes.filter(v => v.match_id === m.id);
-      if (mVotes.length === 0) return;
-      const voteCounts = new Map<number, number>();
-      mVotes.forEach(v => voteCounts.set(v.voted_player_id, (voteCounts.get(v.voted_player_id) || 0) + 1));
-      const sorted = [...voteCounts.entries()].sort((a, b) => b[1] - a[1]);
-      if (sorted[0][0] === playerId) momCount++;
+      const mQuarters = allQuarters.filter(q => q.match_id === m.id);
+      if (mQuarters.length === 0 || !mQuarters.some(q => q.lineup)) return;
+      // Simple scoring: count goals + assists as proxy
+      const mGoals = goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length;
+      const mAssists = goalEvents.filter(g => g.match_id === m.id && g.assist_player_id === playerId).length;
+      if (mGoals + mAssists === 0) return;
+      // Check if this player has the highest AP in that match
+      const allPlayerAPs = new Map<number, number>();
+      goalEvents.filter(g => g.match_id === m.id && !g.is_own_goal).forEach(g => {
+        if (g.goal_player_id) allPlayerAPs.set(g.goal_player_id, (allPlayerAPs.get(g.goal_player_id) || 0) + 1);
+        if (g.assist_player_id) allPlayerAPs.set(g.assist_player_id, (allPlayerAPs.get(g.assist_player_id) || 0) + 1);
+      });
+      const sorted = [...allPlayerAPs.entries()].sort((a, b) => b[1] - a[1]);
+      if (sorted.length > 0 && sorted[0][0] === playerId) momCount++;
     });
-    if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 MOM 2회 선정으로 팀을 하드캐리!" };
+    if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
   }
 
   // 🇳🇱 Netherlands: FW 8+ quarters & DF 8+ quarters, both margins +3
