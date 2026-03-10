@@ -118,16 +118,18 @@ export function computeDeathLineup(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 5) return;
-    const diff = (q.score_for || 0) - (q.score_against || 0);
-    // Generate all 5-player subsets
-    const combos5 = field.length === 5 ? [field] : getCombinations(field, 5);
-    combos5.forEach(combo => {
-      const key = combo.join(",");
-      const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
-      cur.margin += diff;
-      cur.quarters++;
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      field.sort((a, b) => a - b);
+      if (field.length < 5) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const combos5 = field.length === 5 ? [field] : getCombinations(field, 5);
+      combos5.forEach(combo => {
+        const key = combo.join(",");
+        const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
+        cur.margin += diff;
+        cur.quarters++;
       comboMap.set(key, cur);
     });
   });
