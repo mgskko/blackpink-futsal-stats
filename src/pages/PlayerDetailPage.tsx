@@ -2,14 +2,16 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift, Skull, Shield } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerAssistGiven, getPlayerAssistReceived, getPlayerName, getMatchResult, useMatchQuarters, computeMatchAP } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingReport, getVarianceBadge, getOpponentRecords } from "@/hooks/useAdvancedStats";
-import { useOnFirePlayers, type FireTier } from "@/hooks/useOnFirePlayers";
+import { useOnFirePlayers, FIRE_TIER_CONFIG, type FireTier } from "@/hooks/useOnFirePlayers";
 import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
+import { useMarketValue } from "@/hooks/useMarketValue";
+import { getPlayerCondition } from "@/hooks/useConditionArrow";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -75,25 +77,30 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   }).length;
   if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
 
-  // 🇦🇷 Argentina: Data MOM 2+ times in last 5 (highest AP player per match)
+  // 🇦🇷 Argentina: Data MOM (highest AP in own team) 2+ times in last 5
   {
-    // Count matches where this player was Data MOM from quarter data
     let momCount = 0;
     recent5.forEach(m => {
-      const mQuarters = allQuarters.filter(q => q.match_id === m.id);
-      if (mQuarters.length === 0 || !mQuarters.some(q => q.lineup)) return;
-      // Simple scoring: count goals + assists as proxy
       const mGoals = goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length;
       const mAssists = goalEvents.filter(g => g.match_id === m.id && g.assist_player_id === playerId).length;
-      if (mGoals + mAssists === 0) return;
-      // Check if this player has the highest AP in that match
-      const allPlayerAPs = new Map<number, number>();
-      goalEvents.filter(g => g.match_id === m.id && !g.is_own_goal).forEach(g => {
-        if (g.goal_player_id) allPlayerAPs.set(g.goal_player_id, (allPlayerAPs.get(g.goal_player_id) || 0) + 1);
-        if (g.assist_player_id) allPlayerAPs.set(g.assist_player_id, (allPlayerAPs.get(g.assist_player_id) || 0) + 1);
+      const myAP = mGoals + mAssists;
+      if (myAP === 0) return;
+
+      // Find player's team from rosters
+      const playerRoster = rosters?.find(r => r.match_id === m.id && r.player_id === playerId);
+      if (!playerRoster) return;
+      const myTeamId = playerRoster.team_id;
+
+      // Get all teammates' AP on the same team
+      const teammates = rosters?.filter(r => r.match_id === m.id && r.team_id === myTeamId) || [];
+      const teammateAPs = teammates.map(r => {
+        const g = goalEvents.filter(g2 => g2.match_id === m.id && g2.goal_player_id === r.player_id && !g2.is_own_goal).length;
+        const a = goalEvents.filter(g2 => g2.match_id === m.id && g2.assist_player_id === r.player_id).length;
+        return { playerId: r.player_id, ap: g + a };
       });
-      const sorted = [...allPlayerAPs.entries()].sort((a, b) => b[1] - a[1]);
-      if (sorted.length > 0 && sorted[0][0] === playerId) momCount++;
+      const maxAP = Math.max(...teammateAPs.map(t => t.ap));
+      // Count if this player is tied for the highest AP on their team
+      if (myAP >= maxAP && maxAP > 0) momCount++;
     });
     if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
   }
@@ -333,35 +340,27 @@ const PlayerDetailPage = () => {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
           isConcacaf ? "border-emerald-500/50 bg-gradient-to-br from-emerald-900/30 via-card to-blue-900/20"
-          : fireTier === "golden" ? "golden-fire-card border-yellow-500/50"
-          : fireTier === "red" ? "on-fire-card border-orange-500/50"
-          : fireTier === "blue" ? "blue-fire-card border-blue-400/50"
+          : fireTier !== "none" ? `${FIRE_TIER_CONFIG[fireTier].cardClass} ${FIRE_TIER_CONFIG[fireTier].borderClass}`
           : "border-primary/30 bg-card box-glow"
         }`}
       >
         <div className={`relative p-6 ${
-          isConcacaf ? "" : fireTier === "golden" ? "bg-gradient-to-br from-yellow-900/30 via-transparent to-amber-900/20"
-          : fireTier === "red" ? "bg-gradient-to-br from-orange-900/30 via-transparent to-red-900/20"
-          : fireTier === "blue" ? "bg-gradient-to-br from-blue-900/30 via-transparent to-cyan-900/20"
-          : "bg-gradient-to-br from-primary/20 via-card to-card"
+          isConcacaf ? "" : "bg-gradient-to-br from-primary/20 via-card to-card"
         }`}>
           {player.back_number !== null && player.back_number !== undefined && (
             <div className="absolute top-2 right-4 font-display text-[80px] leading-none text-primary/10 select-none pointer-events-none">{player.back_number}</div>
           )}
           {fireTier !== "none" && (
             <>
-              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>
+              <span className="fire-particle fire-particle-1" style={{ top: '10px', right: '20px' }}>{FIRE_TIER_CONFIG[fireTier].emoji}</span>
               <span className="fire-particle fire-particle-2" style={{ top: '30px', left: '15px' }}>✨</span>
-              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>{fireTier === "golden" ? "⭐" : fireTier === "red" ? "🔥" : "💎"}</span>
+              <span className="fire-particle fire-particle-1" style={{ bottom: '15px', right: '40px' }}>{FIRE_TIER_CONFIG[fireTier].emoji}</span>
             </>
           )}
           <div className="flex items-center gap-5 relative z-10">
             <div className="relative flex-shrink-0 cursor-pointer" onClick={() => player.profile_image_url && setAvatarOpen(true)}>
               <div className={`h-24 w-24 overflow-hidden rounded-2xl border-2 bg-secondary shadow-lg ${
-                fireTier === "golden" ? "golden-fire-ring shadow-yellow-500/30"
-                : fireTier === "red" ? "on-fire-ring shadow-orange-500/30"
-                : fireTier === "blue" ? "blue-fire-ring shadow-blue-500/30"
-                : "border-primary/50 shadow-primary/20"
+                fireTier !== "none" ? FIRE_TIER_CONFIG[fireTier].ringClass : "border-primary/50 shadow-primary/20"
               }`}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
@@ -376,7 +375,7 @@ const PlayerDetailPage = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
-                {fireTier !== "none" && <span className="text-lg sparkle-anim">{fireTier === "golden" ? "👑" : fireTier === "red" ? "🔥" : "💎"}</span>}
+                {fireTier !== "none" && <span className="text-lg sparkle-anim">{FIRE_TIER_CONFIG[fireTier].emoji}</span>}
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
@@ -386,12 +385,8 @@ const PlayerDetailPage = () => {
                 </div>
               )}
               {fireTier !== "none" && (
-                <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${
-                  fireTier === "golden" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
-                  : fireTier === "red" ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
-                  : "border-blue-400/40 bg-blue-400/10 text-blue-400"
-                }`}>
-                  {fireTier === "golden" ? "👑 LEGENDARY — " : fireTier === "red" ? "🔥 ON FIRE — " : "💎 HEATING UP — "}{fireInfo?.streak}연속 출석!
+                <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${FIRE_TIER_CONFIG[fireTier].bgClass} ${FIRE_TIER_CONFIG[fireTier].textClass}`}>
+                  {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}연속 출석!
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">가입일: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>

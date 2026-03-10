@@ -416,6 +416,7 @@ export type Database = {
           back_number: number | null
           id: number
           is_active: boolean
+          is_guest: boolean
           join_date: string
           name: string
           profile_image_url: string | null
@@ -424,6 +425,7 @@ export type Database = {
           back_number?: number | null
           id: number
           is_active?: boolean
+          is_guest?: boolean
           join_date: string
           name: string
           profile_image_url?: string | null
@@ -432,6 +434,7 @@ export type Database = {
           back_number?: number | null
           id?: number
           is_active?: boolean
+          is_guest?: boolean
           join_date?: string
           name?: string
           profile_image_url?: string | null
