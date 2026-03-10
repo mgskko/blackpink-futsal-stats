@@ -4,7 +4,7 @@ import { User, Download } from "lucide-react";
 import html2canvas from "html2canvas";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
-import { computeDataMOM } from "@/hooks/useMatchAnalysis";
+import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import type { Team, Result } from "@/hooks/useFutsalData";
 
 interface Props {
@@ -46,8 +46,14 @@ export default function POTMCard({ players, matches, teams, results, rosters, go
       let momCount = 0;
       const matchIdsWithQ = [...new Set(monthQuarters.map(q => q.match_id))];
       matchIdsWithQ.forEach(mid => {
-        const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
-        if (mom && mom.playerId === p.id) momCount++;
+        const match = monthMatches.find(m => m.id === mid);
+        if (match?.is_custom) {
+          const dual = computeDualDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+          if ((dual.teamA && dual.teamA.playerId === p.id) || (dual.teamB && dual.teamB.playerId === p.id)) momCount++;
+        } else {
+          const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+          if (mom && mom.playerId === p.id) momCount++;
+        }
       });
 
       return { player: p, goals, assists, ap: goals + assists, appearances, momCount, score: (goals + assists) * 2 + momCount * 5 };
