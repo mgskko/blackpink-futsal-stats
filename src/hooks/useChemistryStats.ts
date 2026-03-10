@@ -286,16 +286,19 @@ export function computeBestDefenseLine(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const dfs = getPositionPlayers(q.lineup, "DF").sort((a, b) => a - b);
-    if (dfs.length < 2) return;
-    // Filter: all players in combo must have 10+ all-time matches
-    if (!dfs.every(has10Matches)) return;
-    const key = dfs.join(",");
-    const conceded = q.score_against || 0;
-    const cur = comboMap.get(key) || { playerIds: dfs, conceded: 0, quarters: 0 };
-    cur.conceded += conceded;
-    cur.quarters++;
-    comboMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getPositionPlayerGroups(q.lineup, "DF");
+    groups.forEach((dfs, gi) => {
+      dfs.sort((a, b) => a - b);
+      if (dfs.length < 2) return;
+      if (!dfs.every(has10Matches)) return;
+      const key = dfs.join(",");
+      const conceded = getGroupConceded(q, gi, custom);
+      const cur = comboMap.get(key) || { playerIds: dfs, conceded: 0, quarters: 0 };
+      cur.conceded += conceded;
+      cur.quarters++;
+      comboMap.set(key, cur);
+    });
   });
 
   return [...comboMap.values()]
