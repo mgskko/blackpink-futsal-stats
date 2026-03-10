@@ -137,11 +137,11 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       playerGoals.set(g.goal_player_id, cur);
     });
     return [...playerGoals.entries()]
-      .filter(([, d]) => d.total >= 5 && d.hard >= 2)
+      .filter(([pid, d]) => d.total >= 5 && d.hard >= 2 && has10Matches(pid))
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.hard / d.total) * 100), hard: d.hard, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
-  }, [goalEvents, players]);
+  }, [goalEvents, players, playerMatchCount]);
 
   const RankItem = ({ i, name, id, value, sub, total }: { i: number; name: string; id: number; value: string; sub?: string; total?: number }) => (
     <div onClick={() => navigate(`/player/${id}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${total !== undefined && i < total - 1 ? "border-b border-border" : ""}`}>
