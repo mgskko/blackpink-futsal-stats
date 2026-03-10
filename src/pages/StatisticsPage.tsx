@@ -601,7 +601,7 @@ const StatisticsPage = () => {
                             <span className={isWorst ? "text-destructive" : "text-primary"}>×</span>
                             <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
                           </div>
-                          <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{d.winRate}%</span>
+                          <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{isFW ? `⚽ ${d.combinedGoals}골` : `${d.winRate}%`}</span>
                         </div>
                         <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
                           <span>{d.quarters}쿼터</span>
