@@ -45,7 +45,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
   const cardioRanking = useMemo(() => {
     const courtMargins = computeAllCourtMargins(players, matches, allQuarters, goalEvents);
     return courtMargins
-      .filter(p => has10Matches(p.id) && p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
+      .filter(p => has10Matches(p.playerId) && p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
       .sort((a, b) => b.quartersPlayed - a.quartersPlayed || a.margin - b.margin)
       .slice(0, 5);
   }, [players, matches, allQuarters, goalEvents, playerMatchCount]);
