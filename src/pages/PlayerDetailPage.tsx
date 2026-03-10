@@ -102,8 +102,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   const fwQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "FW");
   const dfQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
   if (fwQ.length >= 8 && dfQ.length >= 8) {
-    const fwMargin = fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0);
-    const dfMargin = dfQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0);
+    const fwMargin = fwQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
+    const dfMargin = dfQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
     if (fwMargin >= 3 && dfMargin >= 3) return { active: true, country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" };
   }
 
