@@ -1,8 +1,12 @@
 import type { Player, Match, Team, Result, GoalEvent, MatchQuarter, Roster } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
 
-// Helper: parse lineup to get field players
-function getFieldPlayers(lineup: any): number[] {
+function isCustomLineup(lineup: any): boolean {
+  return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
+}
+
+// Parse a single flat lineup (no teamA/teamB nesting)
+function getFieldPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   const result: number[] = [];
   ["GK", "DF", "MF", "FW"].forEach(pos => {
@@ -13,16 +17,76 @@ function getFieldPlayers(lineup: any): number[] {
   return result;
 }
 
-function getBenchPlayers(lineup: any): number[] {
+// For chemistry: return per-team field player groups
+// For normal matches: returns one group; for custom: two groups (teamA & teamB)
+function getFieldPlayerGroups(lineup: any): number[][] {
+  if (!lineup || typeof lineup !== "object") return [];
+  if (isCustomLineup(lineup)) {
+    const groups: number[][] = [];
+    if (lineup.teamA) groups.push(getFieldPlayersFlat(lineup.teamA));
+    if (lineup.teamB) groups.push(getFieldPlayersFlat(lineup.teamB));
+    return groups;
+  }
+  const flat = getFieldPlayersFlat(lineup);
+  return flat.length > 0 ? [flat] : [];
+}
+
+// Legacy: get ALL field players merged (for backward compat)
+function getFieldPlayers(lineup: any): number[] {
+  return getFieldPlayerGroups(lineup).flat();
+}
+
+function getBenchPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   if (!lineup.Bench) return [];
   return (Array.isArray(lineup.Bench) ? lineup.Bench : [lineup.Bench]).map(Number);
 }
 
-function getPositionPlayers(lineup: any, pos: string): number[] {
+function getBenchPlayers(lineup: any): number[] {
+  if (isCustomLineup(lineup)) {
+    const a = lineup.teamA ? getBenchPlayersFlat(lineup.teamA) : [];
+    const b = lineup.teamB ? getBenchPlayersFlat(lineup.teamB) : [];
+    return [...a, ...b];
+  }
+  return getBenchPlayersFlat(lineup);
+}
+
+function getPositionPlayersFlat(lineup: any, pos: string): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
   if (!lineup[pos]) return [];
   return (Array.isArray(lineup[pos]) ? lineup[pos] : [lineup[pos]]).map(Number);
+}
+
+// For chemistry: returns position players per team group
+function getPositionPlayerGroups(lineup: any, pos: string): number[][] {
+  if (isCustomLineup(lineup)) {
+    const groups: number[][] = [];
+    if (lineup.teamA) groups.push(getPositionPlayersFlat(lineup.teamA, pos));
+    if (lineup.teamB) groups.push(getPositionPlayersFlat(lineup.teamB, pos));
+    return groups;
+  }
+  const flat = getPositionPlayersFlat(lineup, pos);
+  return flat.length > 0 ? [flat] : [];
+}
+
+function getPositionPlayers(lineup: any, pos: string): number[] {
+  return getPositionPlayerGroups(lineup, pos).flat();
+}
+
+// Helper: get margin from a player group's perspective
+function getGroupMargin(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  const sf = q.score_for || 0;
+  const sa = q.score_against || 0;
+  if (isCustom && groupIdx === 1) return sa - sf; // teamB: flipped
+  return sf - sa;
+}
+function getGroupConceded(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  if (isCustom && groupIdx === 1) return q.score_for || 0; // teamB: score_for is what they conceded
+  return q.score_against || 0;
+}
+function getGroupScored(q: MatchQuarter, groupIdx: number, isCustom: boolean): number {
+  if (isCustom && groupIdx === 1) return q.score_against || 0;
+  return q.score_for || 0;
 }
 
 // ─── 1. Death Lineup: Best 5-player combo by margin ───
@@ -54,17 +118,20 @@ export function computeDeathLineup(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 5) return;
-    const diff = (q.score_for || 0) - (q.score_against || 0);
-    // Generate all 5-player subsets
-    const combos5 = field.length === 5 ? [field] : getCombinations(field, 5);
-    combos5.forEach(combo => {
-      const key = combo.join(",");
-      const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
-      cur.margin += diff;
-      cur.quarters++;
-      comboMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      field.sort((a, b) => a - b);
+      if (field.length < 5) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const combos5 = field.length === 5 ? [field] : getCombinations(field, 5);
+      combos5.forEach(combo => {
+        const key = combo.join(",");
+        const cur = comboMap.get(key) || { playerIds: combo, margin: 0, quarters: 0 };
+        cur.margin += diff;
+        cur.quarters++;
+        comboMap.set(key, cur);
+      });
     });
   });
 
@@ -162,20 +229,22 @@ export function computeToxicDuos(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup);
-    const conceded = q.score_against || 0;
-    // All pairs
-    for (let i = 0; i < field.length; i++) {
-      if (!has10Matches(field[i])) continue;
-      for (let j = i + 1; j < field.length; j++) {
-        if (!has10Matches(field[j])) continue;
-        const key = `${Math.min(field[i], field[j])}-${Math.max(field[i], field[j])}`;
-        const cur = duoMap.get(key) || { p1: Math.min(field[i], field[j]), p2: Math.max(field[i], field[j]), conceded: 0, quarters: 0 };
-        cur.conceded += conceded;
-        cur.quarters++;
-        duoMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      const conceded = getGroupConceded(q, gi, custom);
+      for (let i = 0; i < field.length; i++) {
+        if (!has10Matches(field[i])) continue;
+        for (let j = i + 1; j < field.length; j++) {
+          if (!has10Matches(field[j])) continue;
+          const key = `${Math.min(field[i], field[j])}-${Math.max(field[i], field[j])}`;
+          const cur = duoMap.get(key) || { p1: Math.min(field[i], field[j]), p2: Math.max(field[i], field[j]), conceded: 0, quarters: 0 };
+          cur.conceded += conceded;
+          cur.quarters++;
+          duoMap.set(key, cur);
+        }
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
@@ -217,16 +286,19 @@ export function computeBestDefenseLine(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const dfs = getPositionPlayers(q.lineup, "DF").sort((a, b) => a - b);
-    if (dfs.length < 2) return;
-    // Filter: all players in combo must have 10+ all-time matches
-    if (!dfs.every(has10Matches)) return;
-    const key = dfs.join(",");
-    const conceded = q.score_against || 0;
-    const cur = comboMap.get(key) || { playerIds: dfs, conceded: 0, quarters: 0 };
-    cur.conceded += conceded;
-    cur.quarters++;
-    comboMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getPositionPlayerGroups(q.lineup, "DF");
+    groups.forEach((dfs, gi) => {
+      dfs.sort((a, b) => a - b);
+      if (dfs.length < 2) return;
+      if (!dfs.every(has10Matches)) return;
+      const key = dfs.join(",");
+      const conceded = getGroupConceded(q, gi, custom);
+      const cur = comboMap.get(key) || { playerIds: dfs, conceded: 0, quarters: 0 };
+      cur.conceded += conceded;
+      cur.quarters++;
+      comboMap.set(key, cur);
+    });
   });
 
   return [...comboMap.values()]
@@ -279,11 +351,15 @@ export function computeSynergyMargin(
       let togetherMargin = 0, togetherQ = 0, apartMargin = 0, apartQ = 0;
       allQuarters.forEach(q => {
         if (!q.lineup) return;
-        const field = getFieldPlayers(q.lineup);
-        const diff = (q.score_for || 0) - (q.score_against || 0);
-        const has1 = field.includes(p1), has2 = field.includes(p2);
-        if (has1 && has2) { togetherMargin += diff; togetherQ++; }
-        else if (has1 || has2) { apartMargin += diff; apartQ++; }
+        const custom = isCustomLineup(q.lineup);
+        const groups = getFieldPlayerGroups(q.lineup);
+        // Check if both players are on the same team group
+        groups.forEach((field, gi) => {
+          const diff = getGroupMargin(q, gi, custom);
+          const has1 = field.includes(p1), has2 = field.includes(p2);
+          if (has1 && has2) { togetherMargin += diff; togetherQ++; }
+          else if (has1 || has2) { apartMargin += diff; apartQ++; }
+        });
       });
       if (togetherQ >= 10 && apartQ >= 10) {
         const key = `${Math.min(p1, p2)}-${Math.max(p1, p2)}`;
@@ -334,11 +410,22 @@ export function computeWithoutYou(
     let onMargin = 0, onQ = 0, offMargin = 0, offQ = 0;
     allQuarters.forEach(q => {
       if (!q.lineup) return;
-      const field = getFieldPlayers(q.lineup);
+      const custom = isCustomLineup(q.lineup);
+      const groups = getFieldPlayerGroups(q.lineup);
       const bench = getBenchPlayers(q.lineup);
-      const diff = (q.score_for || 0) - (q.score_against || 0);
-      if (field.includes(pid)) { onMargin += diff; onQ++; }
-      else if (bench.includes(pid)) { offMargin += diff; offQ++; }
+      let onField = false;
+      groups.forEach((field, gi) => {
+        if (field.includes(pid)) {
+          const diff = getGroupMargin(q, gi, custom);
+          onMargin += diff; onQ++;
+          onField = true;
+        }
+      });
+      if (!onField && bench.includes(pid)) {
+        // Use generic margin for bench (doesn't matter which team perspective)
+        const diff = (q.score_for || 0) - (q.score_against || 0);
+        offMargin += diff; offQ++;
+      }
     });
     if (onQ >= 5 && offQ >= 2) {
       playerMap.set(pid, { onMargin, onQ, offMargin, offQ });
@@ -379,21 +466,24 @@ export function computeFWDuos(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const fws = getPositionPlayers(q.lineup, "FW").sort((a, b) => a - b);
-    if (fws.length < 2) return;
-    // All FW pairs
-    for (let i = 0; i < fws.length; i++) {
-      for (let j = i + 1; j < fws.length; j++) {
-        const key = `${fws[i]}-${fws[j]}`;
-        const diff = (q.score_for || 0) - (q.score_against || 0);
-        const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === fws[i] || g.goal_player_id === fws[j])).length;
-        const cur = duoMap.get(key) || { p1: fws[i], p2: fws[j], margin: 0, quarters: 0, goals: 0 };
-        cur.margin += diff;
-        cur.quarters++;
-        cur.goals += qGoals;
-        duoMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const fwGroups = getPositionPlayerGroups(q.lineup, "FW");
+    fwGroups.forEach((fws, gi) => {
+      fws.sort((a, b) => a - b);
+      if (fws.length < 2) return;
+      const diff = getGroupMargin(q, gi, custom);
+      for (let i = 0; i < fws.length; i++) {
+        for (let j = i + 1; j < fws.length; j++) {
+          const key = `${fws[i]}-${fws[j]}`;
+          const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === fws[i] || g.goal_player_id === fws[j])).length;
+          const cur = duoMap.get(key) || { p1: fws[i], p2: fws[j], margin: 0, quarters: 0, goals: 0 };
+          cur.margin += diff;
+          cur.quarters++;
+          cur.goals += qGoals;
+          duoMap.set(key, cur);
+        }
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
@@ -443,29 +533,33 @@ export function computePositionDuosByWinRate(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const posPlayers = getPositionPlayers(q.lineup, position).sort((a, b) => a - b);
-    if (posPlayers.length < 2) return;
-    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
-    const diff = (q.score_for || 0) - (q.score_against || 0);
-    const isCleanSheet = (q.score_against || 0) === 0 ? 1 : 0;
-    for (let i = 0; i < posPlayers.length; i++) {
-      if (!has10Matches(posPlayers[i])) continue;
-      for (let j = i + 1; j < posPlayers.length; j++) {
-        if (!has10Matches(posPlayers[j])) continue;
-        const key = `${posPlayers[i]}-${posPlayers[j]}`;
-        const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
-        cur.wins += won;
-        cur.quarters++;
-        cur.margin += diff;
-        cur.cleanSheetQuarters += isCleanSheet;
-        // Count combined goals from goal events
-        if (goalEvents) {
-          const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === posPlayers[i] || g.goal_player_id === posPlayers[j])).length;
-          cur.combinedGoals += qGoals;
+    const custom = isCustomLineup(q.lineup);
+    const posGroups = getPositionPlayerGroups(q.lineup, position);
+    posGroups.forEach((posPlayers, gi) => {
+      posPlayers.sort((a, b) => a - b);
+      if (posPlayers.length < 2) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const won = diff > 0 ? 1 : 0;
+      const conceded = getGroupConceded(q, gi, custom);
+      const isCleanSheet = conceded === 0 ? 1 : 0;
+      for (let i = 0; i < posPlayers.length; i++) {
+        if (!has10Matches(posPlayers[i])) continue;
+        for (let j = i + 1; j < posPlayers.length; j++) {
+          if (!has10Matches(posPlayers[j])) continue;
+          const key = `${posPlayers[i]}-${posPlayers[j]}`;
+          const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
+          cur.wins += won;
+          cur.quarters++;
+          cur.margin += diff;
+          cur.cleanSheetQuarters += isCleanSheet;
+          if (goalEvents) {
+            const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === posPlayers[i] || g.goal_player_id === posPlayers[j])).length;
+            cur.combinedGoals += qGoals;
+          }
+          duoMap.set(key, cur);
         }
-        duoMap.set(key, cur);
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
@@ -506,26 +600,31 @@ export function computeTriosByWinRate(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const field = getFieldPlayers(q.lineup).sort((a, b) => a - b);
-    if (field.length < 3) return;
-    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
-    const sf = q.score_for || 0;
-    const sa = q.score_against || 0;
-    for (let i = 0; i < field.length; i++) {
-      for (let j = i + 1; j < field.length; j++) {
-        for (let k = j + 1; k < field.length; k++) {
-          const ids = [field[i], field[j], field[k]];
-          const key = ids.join(",");
-          const cur = trioMap.get(key) || { ids, wins: 0, quarters: 0, scored: 0, conceded: 0, margin: 0 };
-          cur.wins += won;
-          cur.quarters++;
-          cur.scored += sf;
-          cur.conceded += sa;
-          cur.margin += sf - sa;
-          trioMap.set(key, cur);
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    groups.forEach((field, gi) => {
+      field.sort((a, b) => a - b);
+      if (field.length < 3) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const won = diff > 0 ? 1 : 0;
+      const scored = getGroupScored(q, gi, custom);
+      const conceded = getGroupConceded(q, gi, custom);
+      for (let i = 0; i < field.length; i++) {
+        for (let j = i + 1; j < field.length; j++) {
+          for (let k = j + 1; k < field.length; k++) {
+            const ids = [field[i], field[j], field[k]];
+            const key = ids.join(",");
+            const cur = trioMap.get(key) || { ids, wins: 0, quarters: 0, scored: 0, conceded: 0, margin: 0 };
+            cur.wins += won;
+            cur.quarters++;
+            cur.scored += scored;
+            cur.conceded += conceded;
+            cur.margin += diff;
+            trioMap.set(key, cur);
+          }
         }
       }
-    }
+    });
   });
 
   return [...trioMap.values()]
