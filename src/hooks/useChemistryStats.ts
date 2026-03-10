@@ -533,29 +533,33 @@ export function computePositionDuosByWinRate(
 
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    const posPlayers = getPositionPlayers(q.lineup, position).sort((a, b) => a - b);
-    if (posPlayers.length < 2) return;
-    const won = (q.score_for || 0) > (q.score_against || 0) ? 1 : 0;
-    const diff = (q.score_for || 0) - (q.score_against || 0);
-    const isCleanSheet = (q.score_against || 0) === 0 ? 1 : 0;
-    for (let i = 0; i < posPlayers.length; i++) {
-      if (!has10Matches(posPlayers[i])) continue;
-      for (let j = i + 1; j < posPlayers.length; j++) {
-        if (!has10Matches(posPlayers[j])) continue;
-        const key = `${posPlayers[i]}-${posPlayers[j]}`;
-        const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
-        cur.wins += won;
-        cur.quarters++;
-        cur.margin += diff;
-        cur.cleanSheetQuarters += isCleanSheet;
-        // Count combined goals from goal events
-        if (goalEvents) {
-          const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === posPlayers[i] || g.goal_player_id === posPlayers[j])).length;
-          cur.combinedGoals += qGoals;
+    const custom = isCustomLineup(q.lineup);
+    const posGroups = getPositionPlayerGroups(q.lineup, position);
+    posGroups.forEach((posPlayers, gi) => {
+      posPlayers.sort((a, b) => a - b);
+      if (posPlayers.length < 2) return;
+      const diff = getGroupMargin(q, gi, custom);
+      const won = diff > 0 ? 1 : 0;
+      const conceded = getGroupConceded(q, gi, custom);
+      const isCleanSheet = conceded === 0 ? 1 : 0;
+      for (let i = 0; i < posPlayers.length; i++) {
+        if (!has10Matches(posPlayers[i])) continue;
+        for (let j = i + 1; j < posPlayers.length; j++) {
+          if (!has10Matches(posPlayers[j])) continue;
+          const key = `${posPlayers[i]}-${posPlayers[j]}`;
+          const cur = duoMap.get(key) || { p1: posPlayers[i], p2: posPlayers[j], wins: 0, quarters: 0, margin: 0, combinedGoals: 0, cleanSheetQuarters: 0 };
+          cur.wins += won;
+          cur.quarters++;
+          cur.margin += diff;
+          cur.cleanSheetQuarters += isCleanSheet;
+          if (goalEvents) {
+            const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && !g.is_own_goal && (g.goal_player_id === posPlayers[i] || g.goal_player_id === posPlayers[j])).length;
+            cur.combinedGoals += qGoals;
+          }
+          duoMap.set(key, cur);
         }
-        duoMap.set(key, cur);
       }
-    }
+    });
   });
 
   return [...duoMap.values()]
