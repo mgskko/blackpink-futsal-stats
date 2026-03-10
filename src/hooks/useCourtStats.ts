@@ -97,12 +97,19 @@ export function computeMatchCourtMargins(
     if (!q.lineup) return;
     const fieldPlayers = getFieldPlayers(q.lineup);
     const benchPlayers = getBenchPlayers(q.lineup);
-    const diff = (q.score_for || 0) - (q.score_against || 0);
+    const isCustom = isCustomLineup(q.lineup);
+    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
     const prevQ = idx > 0 ? quarters[idx - 1] : null;
     const prevBench = prevQ?.lineup ? getBenchPlayers(prevQ.lineup) : [];
 
     fieldPlayers.forEach(pid => {
       const cur = result.get(pid) || { margin: 0, quartersPlayed: 0, ap: 0, isSuperSub: false };
+      // For custom matches, teamB players get flipped margin
+      let diff = baseDiff;
+      if (isCustom) {
+        const team = getPlayerTeamInLineup(q.lineup, pid);
+        if (team === "teamB") diff = -baseDiff;
+      }
       cur.margin += diff;
       cur.quartersPlayed++;
       const qGoals = goalEvents.filter(g => g.match_id === q.match_id && g.quarter === q.quarter && g.goal_player_id === pid && !g.is_own_goal).length;
