@@ -130,11 +130,15 @@ function scorePlayersForMatch(
   if (matchGoals.length === 0 && matchQuarters.length === 0) return [];
 
   // 1. 초기화
-  const playerState = new Map<number, { score: number; marginSum: number; quartersPlayed: number; playedFW: boolean; apCount: number }>();
+  const playerState = new Map<number, { attack: number; defense: number; penalty: number; marginSum: number; quartersPlayed: number; playedFW: boolean; apCount: number }>();
   const init = (pid: number) => {
-    if (!playerState.has(pid)) playerState.set(pid, { score: 0, marginSum: 0, quartersPlayed: 0, playedFW: false, apCount: 0 });
+    if (!playerState.has(pid)) playerState.set(pid, { attack: 0, defense: 0, penalty: 0, marginSum: 0, quartersPlayed: 0, playedFW: false, apCount: 0 });
     return playerState.get(pid)!;
   };
+
+  // 쿼터 번호 → 라인업 맵 (공격 점수 계산 시 포지션 조회용)
+  const quarterLineupMap = new Map<number, any>();
+  matchQuarters.forEach(q => { if (q.lineup) quarterLineupMap.set(q.quarter, q.lineup); });
 
   // 2. 쿼터별 공통 & 수비 점수
   matchQuarters.forEach(q => {
@@ -163,19 +167,18 @@ function scorePlayersForMatch(
         }
       }
 
-      // 쿼터 출전
       s.quartersPlayed += 1;
 
-      // ⚖️ 공통 코트 마진
-      s.score += diff;
+      // ⚖️ 공통 코트 마진 → defense
+      s.defense += diff;
       s.marginSum += diff;
 
       // 🛡️ DF/GK 점수
       if (pos === "DF" || pos === "GK") {
         if (conceded === 0) {
-          s.score += 3;
+          s.defense += 3;
         } else {
-          s.score -= conceded * 0.5;
+          s.defense -= conceded * 0.2;
         }
       }
 
@@ -186,16 +189,28 @@ function scorePlayersForMatch(
     });
   });
 
-  // 3. 공격 점수
+  // 3. 공격 점수 (DF/GK 수트라이커 보너스 적용)
   matchGoals.forEach(g => {
+    const lineup = quarterLineupMap.get(g.quarter);
+
     if (g.goal_player_id && !g.is_own_goal) {
       const s = init(g.goal_player_id);
-      s.score += 3;
+      const pos = lineup ? getPlayerPosition(lineup, g.goal_player_id) : null;
+      if (pos === "DF" || pos === "GK") {
+        s.attack += 5;
+      } else {
+        s.attack += 3;
+      }
       s.apCount += 1;
     }
     if (g.assist_player_id) {
       const s = init(g.assist_player_id);
-      s.score += 2;
+      const pos = lineup ? getPlayerPosition(lineup, g.assist_player_id) : null;
+      if (pos === "DF" || pos === "GK") {
+        s.attack += 3;
+      } else {
+        s.attack += 2;
+      }
       s.apCount += 1;
     }
   });
@@ -203,7 +218,7 @@ function scorePlayersForMatch(
   // 4. 무득점 공격수 페널티
   playerState.forEach(s => {
     if (s.playedFW && s.apCount === 0) {
-      s.score -= 1;
+      s.penalty -= 1;
     }
   });
 
@@ -211,12 +226,12 @@ function scorePlayersForMatch(
   let scored = [...playerState.entries()].map(([pid, s]) => ({
     playerId: pid,
     name: getPlayerName(players, pid),
-    score: s.score,
+    score: s.attack + s.defense + s.penalty,
     breakdown: {
-      attack: 0,
-      defense: 0,
+      attack: s.attack,
+      defense: s.defense,
       clutch: 0,
-      penalty: 0,
+      penalty: s.penalty,
     },
     marginSum: s.marginSum,
     quartersPlayed: s.quartersPlayed,
