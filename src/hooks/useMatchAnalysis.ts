@@ -129,29 +129,14 @@ function scorePlayersForMatch(
   if (!hasLineupData(matchQuarters)) return [];
   if (matchGoals.length === 0 && matchQuarters.length === 0) return [];
 
-  const playerScores = new Map<number, { attack: number; defense: number; clutch: number; penalty: number }>();
-  const initScore = (pid: number) => {
-    if (!playerScores.has(pid)) playerScores.set(pid, { attack: 0, defense: 0, clutch: 0, penalty: 0 });
-    return playerScores.get(pid)!;
+  // 1. 초기화
+  const playerState = new Map<number, { score: number; marginSum: number; quartersPlayed: number; playedFW: boolean; apCount: number }>();
+  const init = (pid: number) => {
+    if (!playerState.has(pid)) playerState.set(pid, { score: 0, marginSum: 0, quartersPlayed: 0, playedFW: false, apCount: 0 });
+    return playerState.get(pid)!;
   };
 
-  // Attack scoring
-  matchGoals.forEach(g => {
-    if (g.goal_player_id && !g.is_own_goal) {
-      const s = initScore(g.goal_player_id);
-      s.attack += 3;
-    }
-    if (g.assist_player_id) {
-      const s = initScore(g.assist_player_id);
-      s.attack += 2.5;
-    }
-    if (g.is_own_goal && g.goal_player_id) {
-      const s = initScore(g.goal_player_id);
-      s.penalty -= 2;
-    }
-  });
-
-  // Defense scoring from quarters
+  // 2. 쿼터별 공통 & 수비 점수
   matchQuarters.forEach(q => {
     if (!q.lineup) return;
     const isCustom = isCustomLineup(q.lineup);
@@ -160,16 +145,14 @@ function scorePlayersForMatch(
     const baseConceded = q.score_against || 0;
 
     fieldPlayers.forEach(pid => {
-      // If filtering by team, skip players not on that team
       if (filterTeam && isCustom) {
         const pTeam = getPlayerTeamInLineup(q.lineup, pid);
         if (pTeam !== filterTeam) return;
       }
 
-      const s = initScore(pid);
+      const s = init(pid);
       const pos = getPlayerPosition(q.lineup, pid);
 
-      // For custom matches, flip margin/conceded for teamB
       let diff = baseDiff;
       let conceded = baseConceded;
       if (isCustom) {
@@ -180,71 +163,74 @@ function scorePlayersForMatch(
         }
       }
 
-      s.defense += 0.5;
+      // 쿼터 출전
+      s.quartersPlayed += 1;
 
+      // ⚖️ 공통 코트 마진
+      s.score += diff;
+      s.marginSum += diff;
+
+      // 🛡️ DF/GK 점수
       if (pos === "DF" || pos === "GK") {
-        s.defense += diff * 2;
-        if (conceded === 0) s.defense += 1;
+        if (conceded === 0) {
+          s.score += 3;
+        } else {
+          s.score -= conceded * 0.5;
+        }
+      }
+
+      // ⚔️ FW 체크
+      if (pos === "FW") {
+        s.playedFW = true;
       }
     });
   });
 
-  // Penalty: Silent FW
-  const fwQuarterCount = new Map<number, number>();
-  matchQuarters.forEach(q => {
-    if (!q.lineup) return;
-    const fwPlayers = getFWPlayersFromLineup(q.lineup);
-    fwPlayers.forEach((pid: number) => {
-      if (filterTeam && isCustomLineup(q.lineup) && getPlayerTeamInLineup(q.lineup, pid) !== filterTeam) return;
-      fwQuarterCount.set(pid, (fwQuarterCount.get(pid) || 0) + 1);
-    });
-  });
-  fwQuarterCount.forEach((count, pid) => {
-    if (count >= 3) {
-      const goals = matchGoals.filter(g => g.goal_player_id === pid && !g.is_own_goal).length;
-      const assists = matchGoals.filter(g => g.assist_player_id === pid).length;
-      if (goals + assists === 0) {
-        const s = initScore(pid);
-        s.penalty -= 3;
-      }
+  // 3. 공격 점수
+  matchGoals.forEach(g => {
+    if (g.goal_player_id && !g.is_own_goal) {
+      const s = init(g.goal_player_id);
+      s.score += 3;
+      s.apCount += 1;
+    }
+    if (g.assist_player_id) {
+      const s = init(g.assist_player_id);
+      s.score += 2;
+      s.apCount += 1;
     }
   });
 
-  // Penalty: Leaky DF/GK
-  const dfGkConceded = new Map<number, number>();
-  matchQuarters.forEach(q => {
-    if (!q.lineup) return;
-    const isCustom = isCustomLineup(q.lineup);
-    const dfGkPlayers = getDFGKPlayersFromLineup(q.lineup);
-    dfGkPlayers.forEach(pid => {
-      if (filterTeam && isCustom && getPlayerTeamInLineup(q.lineup, pid) !== filterTeam) return;
-      let conceded = q.score_against || 0;
-      if (isCustom && getPlayerTeamInLineup(q.lineup, pid) === "teamB") {
-        conceded = q.score_for || 0;
-      }
-      dfGkConceded.set(pid, (dfGkConceded.get(pid) || 0) + conceded);
-    });
-  });
-  dfGkConceded.forEach((totalConceded, pid) => {
-    if (totalConceded >= 5) {
-      const s = initScore(pid);
-      s.penalty -= 3;
+  // 4. 무득점 공격수 페널티
+  playerState.forEach(s => {
+    if (s.playedFW && s.apCount === 0) {
+      s.score -= 1;
     }
   });
 
-  // Filter to only players on the specified team if applicable
-  let scored = [...playerScores.entries()].map(([pid, s]) => ({
+  // 5. 정렬 및 필터링
+  let scored = [...playerState.entries()].map(([pid, s]) => ({
     playerId: pid,
     name: getPlayerName(players, pid),
-    score: s.attack + s.defense + s.clutch + s.penalty,
-    breakdown: s,
-  })).sort((a, b) => b.score - a.score);
+    score: s.score,
+    breakdown: {
+      attack: 0,
+      defense: 0,
+      clutch: 0,
+      penalty: 0,
+    },
+    marginSum: s.marginSum,
+    quartersPlayed: s.quartersPlayed,
+  })).sort((a, b) =>
+    b.score - a.score ||
+    b.marginSum - a.marginSum ||
+    a.quartersPlayed - b.quartersPlayed
+  );
 
   if (filterTeam) {
     const teamPlayerIds = new Set<number>();
     matchQuarters.forEach(q => {
       if (!q.lineup || !isCustomLineup(q.lineup)) return;
-      const teamLineup = q.lineup[filterTeam];
+      const teamLineup = (q.lineup as any)[filterTeam];
       if (teamLineup) getFieldPlayersFlat(teamLineup).forEach(pid => teamPlayerIds.add(pid));
     });
     scored = scored.filter(s => teamPlayerIds.has(s.playerId));
