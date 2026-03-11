@@ -149,7 +149,26 @@ const AdminPlayerManage = () => {
 
   return (
     <div className="mt-4 space-y-6">
-      <div>
+      {/* 신규 선수 등록 */}
+      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+        <Input
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          placeholder="새 선수 이름 입력"
+          className="h-9 flex-1 bg-card border-border text-sm"
+          onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
+          disabled={isAdding}
+        />
+        <Button
+          size="sm"
+          onClick={handleAddPlayer}
+          disabled={isAdding || !newPlayerName.trim()}
+          className="h-9 gap-1.5"
+        >
+          <Plus size={14} />
+          등록
+        </Button>
+      </div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
         <div className="space-y-2">
           {activePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
