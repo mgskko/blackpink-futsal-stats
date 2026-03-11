@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Camera, Save, User } from "lucide-react";
+import { Camera, Save, User, Plus } from "lucide-react";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
@@ -13,6 +13,30 @@ const AdminPlayerManage = () => {
   const [editingNumbers, setEditingNumbers] = useState<Record<number, string>>({});
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddPlayer = async () => {
+    const name = newPlayerName.trim();
+    if (!name) { toast.error("선수 이름을 입력해 주세요"); return; }
+    setIsAdding(true);
+    // Get next available ID
+    const maxId = players.length > 0 ? Math.max(...players.map(p => p.id)) : 0;
+    const newId = maxId + 1;
+    const today = new Date().toISOString().split("T")[0];
+    const { error } = await supabase.from("players").insert({
+      id: newId,
+      name,
+      is_active: true,
+      is_guest: false,
+      join_date: today,
+    });
+    setIsAdding(false);
+    if (error) { toast.error("선수 등록 실패: " + error.message); return; }
+    toast.success(`${name} 선수가 등록되었습니다`);
+    setNewPlayerName("");
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
 
   const activePlayers = [...players].filter(p => p.is_active).sort((a, b) => a.name.localeCompare(b.name, "ko"));
   const inactivePlayers = [...players].filter(p => !p.is_active).sort((a, b) => a.name.localeCompare(b.name, "ko"));
