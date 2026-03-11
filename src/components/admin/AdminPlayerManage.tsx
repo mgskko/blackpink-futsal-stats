@@ -169,6 +169,7 @@ const AdminPlayerManage = () => {
           등록
         </Button>
       </div>
+      <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
         <div className="space-y-2">
           {activePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
