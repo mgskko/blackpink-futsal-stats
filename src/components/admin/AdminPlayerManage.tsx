@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Camera, Save, User } from "lucide-react";
+import { Camera, Save, User, Plus } from "lucide-react";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
@@ -13,6 +13,30 @@ const AdminPlayerManage = () => {
   const [editingNumbers, setEditingNumbers] = useState<Record<number, string>>({});
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddPlayer = async () => {
+    const name = newPlayerName.trim();
+    if (!name) { toast.error("선수 이름을 입력해 주세요"); return; }
+    setIsAdding(true);
+    // Get next available ID
+    const maxId = players.length > 0 ? Math.max(...players.map(p => p.id)) : 0;
+    const newId = maxId + 1;
+    const today = new Date().toISOString().split("T")[0];
+    const { error } = await supabase.from("players").insert({
+      id: newId,
+      name,
+      is_active: true,
+      is_guest: false,
+      join_date: today,
+    });
+    setIsAdding(false);
+    if (error) { toast.error("선수 등록 실패: " + error.message); return; }
+    toast.success(`${name} 선수가 등록되었습니다`);
+    setNewPlayerName("");
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
 
   const activePlayers = [...players].filter(p => p.is_active).sort((a, b) => a.name.localeCompare(b.name, "ko"));
   const inactivePlayers = [...players].filter(p => !p.is_active).sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -125,6 +149,26 @@ const AdminPlayerManage = () => {
 
   return (
     <div className="mt-4 space-y-6">
+      {/* 신규 선수 등록 */}
+      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+        <Input
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          placeholder="새 선수 이름 입력"
+          className="h-9 flex-1 bg-card border-border text-sm"
+          onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
+          disabled={isAdding}
+        />
+        <Button
+          size="sm"
+          onClick={handleAddPlayer}
+          disabled={isAdding || !newPlayerName.trim()}
+          className="h-9 gap-1.5"
+        >
+          <Plus size={14} />
+          등록
+        </Button>
+      </div>
       <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
         <div className="space-y-2">
