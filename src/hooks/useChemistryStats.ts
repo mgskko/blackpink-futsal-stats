@@ -578,6 +578,142 @@ export function computePositionDuosByWinRate(
     .slice(0, topN);
 }
 
+// ─── 10. Interactive Chemistry Analyzer (2~3 players) ───
+export interface ChemistryAnalysis {
+  selectedIds: number[];
+  selectedNames: string[];
+  togetherQuarters: number;
+  togetherMatches: number;
+  combinedGoals: number; // 합작 골 (assist+scorer 모두 선택자)
+  silentQuarterRate: number; // 동시출전 쿼터 중 0득점 비율 (%)
+  goalsConcededPerQ: number;
+  defenseCollapseRate: number; // 2실점 이상 쿼터 비율 (%)
+  marginPerQ: number;
+  winRate: number; // 동시출전 승률(%)
+  apartWinRate: number; // 한 명만 출전했을 때 평균 승률(%)
+  apartQuarters: number;
+  benchSyncQuarters: number;
+  reliable: boolean; // 10경기 이상 함께
+  badge: { emoji: string; title: string; tone: "good" | "bad" | "neutral" };
+}
+
+export function analyzeChemistry(
+  players: Player[],
+  allQuarters: MatchQuarter[],
+  goalEvents: GoalEvent[],
+  selectedIds: number[]
+): ChemistryAnalysis | null {
+  if (selectedIds.length < 2 || selectedIds.length > 3) return null;
+
+  let togetherQ = 0;
+  let scored = 0, conceded = 0, marginSum = 0;
+  let silentQ = 0, collapseQ = 0;
+  let wins = 0;
+  let apartQ = 0, apartWins = 0;
+  let benchSyncQ = 0;
+  const togetherMatchIds = new Set<number>();
+  const togetherQKeys = new Set<string>(); // matchId-quarter for goal counting
+
+  allQuarters.forEach(q => {
+    if (!q.lineup) return;
+    const custom = isCustomLineup(q.lineup);
+    const groups = getFieldPlayerGroups(q.lineup);
+    let foundTogether = false;
+    let foundAloneAny = false;
+    groups.forEach((field, gi) => {
+      const presence = selectedIds.map(id => field.includes(id));
+      const allIn = presence.every(Boolean);
+      const anyIn = presence.some(Boolean);
+      if (allIn) {
+        foundTogether = true;
+        const diff = getGroupMargin(q, gi, custom);
+        const sf = getGroupScored(q, gi, custom);
+        const sa = getGroupConceded(q, gi, custom);
+        togetherQ++;
+        scored += sf; conceded += sa; marginSum += diff;
+        if (sf === 0) silentQ++;
+        if (sa >= 2) collapseQ++;
+        if (diff > 0) wins++;
+        togetherMatchIds.add(q.match_id);
+        togetherQKeys.add(`${q.match_id}-${q.quarter}`);
+      } else if (anyIn) {
+        foundAloneAny = true;
+        const diff = getGroupMargin(q, gi, custom);
+        apartQ++;
+        if (diff > 0) apartWins++;
+      }
+    });
+    // bench sync: all selected are on bench (and none on field)
+    if (!foundTogether) {
+      const benches: number[][] = [];
+      if (isCustomLineup(q.lineup)) {
+        if (q.lineup.teamA?.Bench) benches.push((Array.isArray(q.lineup.teamA.Bench) ? q.lineup.teamA.Bench : [q.lineup.teamA.Bench]).map(Number));
+        if (q.lineup.teamB?.Bench) benches.push((Array.isArray(q.lineup.teamB.Bench) ? q.lineup.teamB.Bench : [q.lineup.teamB.Bench]).map(Number));
+      } else if (q.lineup.Bench) {
+        benches.push((Array.isArray(q.lineup.Bench) ? q.lineup.Bench : [q.lineup.Bench]).map(Number));
+      }
+      const allOnBench = selectedIds.every(id => benches.some(b => b.includes(id)));
+      if (allOnBench) benchSyncQ++;
+    }
+  });
+
+  // Combined goals: goal events in togetherQ quarters where scorer in selected & assister in selected
+  const selectedSet = new Set(selectedIds);
+  let combinedGoals = 0;
+  goalEvents.forEach(g => {
+    if (g.is_own_goal) return;
+    if (!togetherQKeys.has(`${g.match_id}-${g.quarter}`)) return;
+    if (g.goal_player_id && g.assist_player_id && selectedSet.has(g.goal_player_id) && selectedSet.has(g.assist_player_id)) {
+      combinedGoals++;
+    }
+  });
+
+  if (togetherQ === 0) return null;
+
+  const winRate = Math.round((wins / togetherQ) * 100);
+  const apartWinRate = apartQ > 0 ? Math.round((apartWins / apartQ) * 100) : 0;
+  const goalsConcededPerQ = conceded / togetherQ;
+  const marginPerQ = marginSum / togetherQ;
+  const silentQuarterRate = Math.round((silentQ / togetherQ) * 100);
+  const defenseCollapseRate = Math.round((collapseQ / togetherQ) * 100);
+  const reliable = togetherMatchIds.size >= 10;
+
+  // Badge classification
+  let badge: ChemistryAnalysis["badge"] = { emoji: "🤝", title: "평범한 동료", tone: "neutral" };
+  const scoredPerQ = scored / togetherQ;
+  if (apartQ >= 5 && winRate < apartWinRate - 10) {
+    badge = { emoji: "💥", title: "파멸의 듀오", tone: "bad" };
+  } else if (winRate >= 65 && goalsConcededPerQ <= 1.0) {
+    badge = { emoji: "✨", title: "환상의 짝꿍", tone: "good" };
+  } else if (goalsConcededPerQ <= 0.7) {
+    badge = { emoji: "🛡️", title: "철벽 듀오", tone: "good" };
+  } else if (scoredPerQ >= 1.5 && goalsConcededPerQ >= 1.5) {
+    badge = { emoji: "🔫", title: "유리 대포", tone: "neutral" };
+  } else if (winRate >= 55) {
+    badge = { emoji: "🤝", title: "믿음직한 콤비", tone: "good" };
+  } else if (winRate < 35) {
+    badge = { emoji: "⚠️", title: "삐그덕 콤비", tone: "bad" };
+  }
+
+  return {
+    selectedIds,
+    selectedNames: selectedIds.map(id => getPlayerName(players, id)),
+    togetherQuarters: togetherQ,
+    togetherMatches: togetherMatchIds.size,
+    combinedGoals,
+    silentQuarterRate,
+    goalsConcededPerQ,
+    defenseCollapseRate,
+    marginPerQ,
+    winRate,
+    apartWinRate,
+    apartQuarters: apartQ,
+    benchSyncQuarters: benchSyncQ,
+    reliable,
+    badge,
+  };
+}
+
 // ─── 9. Trios by Win Rate ───
 export interface TrioWinRate {
   ids: number[];
