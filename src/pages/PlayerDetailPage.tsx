@@ -23,12 +23,13 @@ import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 
-function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): { active: boolean; country: string; text: string } {
+export type ConcacafBadge = { country: string; text: string };
+function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
   // Get last 5 matches this player appeared in
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
   const recent5 = sortedMatches.slice(0, 5);
-  if (recent5.length < 5) return { active: false, country: "", text: "" };
+  if (recent5.length < 5) return [];
   const r5Ids = new Set(recent5.map(m => m.id));
   const r5Goals = goalEvents.filter(g => r5Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal);
   const r5Assists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId);
@@ -41,6 +42,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
     r5Margin += pTeam === "teamB" ? -baseDiff : baseDiff;
   });
 
+  const out: ConcacafBadge[] = [];
+
   // 🇧🇷 Brazil: AP >= 30 in last 10 matches
   const recent10 = sortedMatches.slice(0, 10);
   if (recent10.length >= 10) {
@@ -48,35 +51,35 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
     const r10Goals = goalEvents.filter(g => r10Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal);
     const r10Assists = goalEvents.filter(g => r10Ids.has(g.match_id) && g.assist_player_id === playerId);
     const r10AP = r10Goals.length + r10Assists.length;
-    if (r10AP >= 30) return { active: true, country: "🇧🇷 브라질", text: "브라질 삼바 축구급 폼! 최근 10경기 공포 30개 이상으로 팀을 지배 중입니다." };
+    if (r10AP >= 30) out.push({ country: "🇧🇷 브라질", text: "브라질 삼바 축구급 폼! 최근 10경기 공포 30개 이상으로 팀을 지배 중입니다." });
   }
 
   // 🇫🇷 France: Assists >= 10
-  if (r5Assists.length >= 10) return { active: true, country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." };
+  if (r5Assists.length >= 10) out.push({ country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." });
 
-  // ENG England: Court margin >= +10
-  if (r5Margin >= 10) return { active: true, country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드 국대급 피지컬과 전술! 최근 5경기 마진 +10 이상의 승리 보증수표!" };
+  // ENG England: Court margin >= +5
+  if (r5Margin >= 5) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드 국대급 피지컬과 전술! 최근 5경기 마진 +5 이상의 승리 보증수표!" });
 
   // 🇰🇷 Korea: pressing/intercept AP >= 5
   const pressAP = goalEvents.filter(g => r5Ids.has(g.match_id) && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단") && (g.goal_player_id === playerId || g.assist_player_id === playerId)).length;
-  if (pressAP >= 5) return { active: true, country: "🇰🇷 한국", text: "대한민국 국대급 꺾이지 않는 투혼! 미친 활동량과 압박으로 상대를 질식시킵니다." };
+  if (pressAP >= 5) out.push({ country: "🇰🇷 한국", text: "대한민국 국대급 꺾이지 않는 투혼! 미친 활동량과 압박으로 상대를 질식시킵니다." });
 
   // 🇪🇸 Spain: kill pass / pass play assists >= 5
   const passAssists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId && (g.assist_type === "킬패스" || g.assist_type === "패스 플레이")).length;
-  if (passAssists >= 5) return { active: true, country: "🇪🇸 스페인", text: "스페인 무적함대급 패스워크! 최근 5경기 무자비한 킬패스로 수비진을 붕괴시켰습니다." };
+  if (passAssists >= 5) out.push({ country: "🇪🇸 스페인", text: "스페인 무적함대급 패스워크! 최근 5경기 무자비한 킬패스로 수비진을 붕괴시켰습니다." });
 
   // 🇩🇪 Germany: 15+ quarters in last 5 matches & quarter win rate >= 50%
   if (r5Quarters.length >= 15) {
     const qWins = r5Quarters.filter(q => (q.score_for || 0) > (q.score_against || 0)).length;
-    if (qWins / r5Quarters.length >= 0.5) return { active: true, country: "🇩🇪 독일", text: "독일 전차군단의 냉혹함! 최근 출전 쿼터 승률 50% 이상의 무자비한 효율성!" };
+    if (qWins / r5Quarters.length >= 0.5) out.push({ country: "🇩🇪 독일", text: "독일 전차군단의 냉혹함! 최근 출전 쿼터 승률 50% 이상의 무자비한 효율성!" });
   }
 
-  // 🇮🇹 Italy: 8+ clean sheet quarters as DF/GK
+  // 🇮🇹 Italy: 12+ clean sheet quarters as DF/GK
   const csQuarters = r5Quarters.filter(q => {
     const pos = getPlayerPosition(q.lineup, playerId);
     return (pos === "DF" || pos === "GK") && (q.score_against || 0) === 0;
   }).length;
-  if (csQuarters >= 8) return { active: true, country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 8번의 무실점 쿼터를 만들어낸 통곡의 벽!" };
+  if (csQuarters >= 12) out.push({ country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 12번의 무실점 쿼터를 만들어낸 통곡의 벽!" });
 
   // 🇦🇷 Argentina: Official Data MOM 2+ times in last 5
   {
@@ -98,7 +101,7 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
         }
       }
     });
-    if (momCount >= 2) return { active: true, country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" };
+    if (momCount >= 2) out.push({ country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" });
   }
 
   // 🇳🇱 Netherlands: FW 8+ quarters & DF 8+ quarters, both margins +3
@@ -107,10 +110,10 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   if (fwQ.length >= 8 && dfQ.length >= 8) {
     const fwMargin = fwQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
     const dfMargin = dfQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
-    if (fwMargin >= 3 && dfMargin >= 3) return { active: true, country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" };
+    if (fwMargin >= 3 && dfMargin >= 3) out.push({ country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" });
   }
 
-  return { active: false, country: "", text: "" };
+  return out;
 }
 
 const CHART_COLORS = ["hsl(330, 100%, 71%)", "hsl(210, 100%, 60%)", "hsl(150, 80%, 50%)", "hsl(45, 100%, 60%)", "hsl(280, 80%, 60%)", "hsl(0, 80%, 60%)", "hsl(180, 70%, 50%)"];
@@ -188,25 +191,29 @@ const PlayerDetailPage = () => {
         const mTeams = teams.filter(t => t.match_id === m.id);
         const { goals: g, assists: a } = computeMatchAP(playerId, m, rosters, goalEvents);
         
-        // For custom matches, find the player's team and the opposing team
+        // Always resolve result against the team the player was actually rostered on.
         let opponentName = "???";
-        let playerResult: string | undefined = mr?.ourResult.result;
-        if (m.is_custom) {
-          const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
-          if (playerRoster) {
-            const playerTeam = mTeams.find(t => t.id === playerRoster.team_id);
-            const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
-            opponentName = oppTeam?.name || "자체전";
-            const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
-            playerResult = playerTeamResult?.result;
-          } else {
-            opponentName = "자체전";
-          }
-        } else {
+        let playerResult: string | undefined;
+        let playerScoreFor: number | null | undefined;
+        let playerScoreAgainst: number | null | undefined;
+        const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+        if (playerRoster) {
+          const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
+          opponentName = oppTeam?.name || (m.is_custom ? "자체전" : "???");
+          const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
+          playerResult = playerTeamResult?.result;
+          playerScoreFor = playerTeamResult?.score_for;
+          playerScoreAgainst = playerTeamResult?.score_against;
+        } else if (!m.is_custom) {
           const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
           opponentName = oppTeam?.name || "???";
+          playerResult = mr?.ourResult.result;
+          playerScoreFor = mr?.ourResult.score_for;
+          playerScoreAgainst = mr?.ourResult.score_against;
+        } else {
+          opponentName = "자체전";
         }
-        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult };
+        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult, playerScoreFor, playerScoreAgainst };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
 
@@ -271,8 +278,8 @@ const PlayerDetailPage = () => {
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
-  const isConcacaf = concacafInfo.active;
+  const concacafBadges = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
+  const isConcacaf = concacafBadges.length > 0;
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
@@ -375,9 +382,13 @@ const PlayerDetailPage = () => {
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
-                <div className="mt-1 space-y-1">
-                  <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {concacafInfo.country} 🏆</div>
-                  <p className="text-[10px] text-emerald-400/80 leading-snug">{concacafInfo.text}</p>
+                <div className="mt-1 space-y-2">
+                  {concacafBadges.map((b, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {b.country} 🏆</div>
+                      <p className="text-[10px] text-emerald-400/80 leading-snug">{b.text}</p>
+                    </div>
+                  ))}
                 </div>
               )}
               {fireTier !== "none" && (
@@ -609,8 +620,8 @@ const PlayerDetailPage = () => {
       {activeTab === "matches" && (
         <div className="mx-4 mt-4 space-y-2">
           {playerMatchList.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">출전 기록이 없습니다</p>}
-          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists, playerResult }) => {
-            const resultStr = m.is_custom ? playerResult : mr?.ourResult.result;
+          {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists, playerResult, playerScoreFor, playerScoreAgainst }) => {
+            const resultStr = playerResult;
             const bgColor = resultStr === "승" ? "border-blue-500/30 bg-blue-500/5" : resultStr === "패" ? "border-red-500/30 bg-red-500/5" : resultStr === "무" ? "border-muted bg-muted/5" : "border-border bg-card";
             return (
               <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
@@ -627,7 +638,9 @@ const PlayerDetailPage = () => {
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{m.date}</span>
-                      {mr && <span>{mr.ourResult.score_for ?? "-"} : {mr.ourResult.score_against ?? "-"}</span>}
+                      {(playerScoreFor !== undefined || mr) && (
+                        <span>{(playerScoreFor ?? mr?.ourResult.score_for) ?? "-"} : {(playerScoreAgainst ?? mr?.ourResult.score_against) ?? "-"}</span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
