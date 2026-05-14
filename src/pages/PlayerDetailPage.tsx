@@ -191,25 +191,29 @@ const PlayerDetailPage = () => {
         const mTeams = teams.filter(t => t.match_id === m.id);
         const { goals: g, assists: a } = computeMatchAP(playerId, m, rosters, goalEvents);
         
-        // For custom matches, find the player's team and the opposing team
+        // Always resolve result against the team the player was actually rostered on.
         let opponentName = "???";
-        let playerResult: string | undefined = mr?.ourResult.result;
-        if (m.is_custom) {
-          const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
-          if (playerRoster) {
-            const playerTeam = mTeams.find(t => t.id === playerRoster.team_id);
-            const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
-            opponentName = oppTeam?.name || "자체전";
-            const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
-            playerResult = playerTeamResult?.result;
-          } else {
-            opponentName = "자체전";
-          }
-        } else {
+        let playerResult: string | undefined;
+        let playerScoreFor: number | null | undefined;
+        let playerScoreAgainst: number | null | undefined;
+        const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+        if (playerRoster) {
+          const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
+          opponentName = oppTeam?.name || (m.is_custom ? "자체전" : "???");
+          const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
+          playerResult = playerTeamResult?.result;
+          playerScoreFor = playerTeamResult?.score_for;
+          playerScoreAgainst = playerTeamResult?.score_against;
+        } else if (!m.is_custom) {
           const oppTeam = mTeams.find(t => !t.is_ours) || mTeams.find(t => t.name !== "버니즈");
           opponentName = oppTeam?.name || "???";
+          playerResult = mr?.ourResult.result;
+          playerScoreFor = mr?.ourResult.score_for;
+          playerScoreAgainst = mr?.ourResult.score_against;
+        } else {
+          opponentName = "자체전";
         }
-        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult };
+        return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult, playerScoreFor, playerScoreAgainst };
       });
   }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
 
