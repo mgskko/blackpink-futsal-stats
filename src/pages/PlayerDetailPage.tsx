@@ -274,8 +274,8 @@ const PlayerDetailPage = () => {
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const concacafInfo = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
-  const isConcacaf = concacafInfo.active;
+  const concacafBadges = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
+  const isConcacaf = concacafBadges.length > 0;
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
@@ -378,9 +378,13 @@ const PlayerDetailPage = () => {
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
               {isConcacaf && (
-                <div className="mt-1 space-y-1">
-                  <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {concacafInfo.country} 🏆</div>
-                  <p className="text-[10px] text-emerald-400/80 leading-snug">{concacafInfo.text}</p>
+                <div className="mt-1 space-y-2">
+                  {concacafBadges.map((b, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {b.country} 🏆</div>
+                      <p className="text-[10px] text-emerald-400/80 leading-snug">{b.text}</p>
+                    </div>
+                  ))}
                 </div>
               )}
               {fireTier !== "none" && (
