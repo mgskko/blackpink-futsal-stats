@@ -20,6 +20,7 @@ import FunStatsTab from "@/components/stats/FunStatsTab";
 import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
+import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 
 type FilterType = "all" | "custom" | string;
 
@@ -420,6 +421,7 @@ const StatisticsPage = () => {
 
         {activeTab === "chemistry" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <ChemistryAnalyzer players={players} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
             {/* Death Lineup */}
             {(() => {
               const deathLineup = computeDeathLineup(players, filteredQuarters);
