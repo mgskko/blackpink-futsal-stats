@@ -281,6 +281,7 @@ const PlayerDetailPage = () => {
 
   const concacafBadges = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
   const isConcacaf = concacafBadges.length > 0;
+  const inactive = isPlayerInactive(playerId, matches, rosters);
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
@@ -342,7 +343,7 @@ const PlayerDetailPage = () => {
 
       {/* Profile Header Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
+        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${inactive ? "opacity-60 grayscale" : ""} ${
           isConcacaf ? "border-emerald-500/50 bg-gradient-to-br from-emerald-900/30 via-card to-blue-900/20"
           : fireTier !== "none" ? `${FIRE_TIER_CONFIG[fireTier].cardClass} ${FIRE_TIER_CONFIG[fireTier].borderClass}`
           : "border-primary/30 bg-card box-glow"
