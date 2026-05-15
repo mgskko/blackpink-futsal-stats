@@ -136,8 +136,8 @@ const StatisticsPage = () => {
     });
     return [...momCounts.entries()].map(([pid, count]) => ({
       id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
-    })).sort((a, b) => b.count - a.count).slice(0, 10);
-  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results]);
+    })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
+  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results, inactiveIds]);
 
   if (isLoading) return <SplashScreen />;
 
