@@ -101,6 +101,8 @@ const StatisticsPage = () => {
   });
   const allQuarters = allQuartersRaw ?? [];
 
+  const inactiveIds = useMemo(() => getInactivePlayerIds(players, matches, rosters), [players, matches, rosters]);
+
   const years = getAvailableYears(matches);
   const isCustomFilter = selectedFilter === "custom";
 
