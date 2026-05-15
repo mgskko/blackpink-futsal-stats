@@ -21,6 +21,7 @@ import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
+import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
 
 type FilterType = "all" | "custom" | string;
 
@@ -100,6 +101,8 @@ const StatisticsPage = () => {
   });
   const allQuarters = allQuartersRaw ?? [];
 
+  const inactiveIds = useMemo(() => getInactivePlayerIds(players, matches, rosters), [players, matches, rosters]);
+
   const years = getAvailableYears(matches);
   const isCustomFilter = selectedFilter === "custom";
 
@@ -133,14 +136,15 @@ const StatisticsPage = () => {
     });
     return [...momCounts.entries()].map(([pid, count]) => ({
       id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
-    })).sort((a, b) => b.count - a.count).slice(0, 10);
-  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results]);
+    })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
+  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results, inactiveIds]);
 
   if (isLoading) return <SplashScreen />;
 
-  const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
-  // Filter out guests from rankings
-  const memberStats = allStats.filter(p => !(p as any).is_guest);
+  // Exclude long-term inactive (6+ months) from all rankings/charts
+  const activeRoster = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
+  const allStats = activeRoster.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  const memberStats = allStats;
 
   const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
   const topAssists = [...memberStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
@@ -154,7 +158,7 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const memberPlayers = players.filter(p => !(p as any).is_guest);
+  const memberPlayers = activeRoster;
   const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.margin - a.margin).slice(0, 10);
   const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
@@ -239,7 +243,7 @@ const StatisticsPage = () => {
       case "worst": {
         const worstCounts = new Map<number, number>();
         (worstVotesAll || []).forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
-        const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).sort((a, b) => b.count - a.count).slice(0, 10);
+        const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
         return worstRanking.length > 0
           ? <GenericRanking data={worstRanking} valueLabel="워스트" valueFn={(d: any) => `${d.count}표`} />
           : <p className="text-center text-sm text-muted-foreground py-4">워스트 투표 데이터가 없습니다</p>;
@@ -421,7 +425,7 @@ const StatisticsPage = () => {
 
         {activeTab === "chemistry" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <ChemistryAnalyzer players={players} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
+            <ChemistryAnalyzer players={memberPlayers} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
             {/* Death Lineup */}
             {(() => {
               const deathLineup = computeDeathLineup(players, filteredQuarters);

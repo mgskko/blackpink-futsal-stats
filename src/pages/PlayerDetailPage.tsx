@@ -13,6 +13,7 @@ import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter
 import { useMarketValue, computeMarketValue } from "@/hooks/useMarketValue";
 import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
+import { isPlayerInactive } from "@/hooks/useInactivePlayers";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -280,6 +281,7 @@ const PlayerDetailPage = () => {
 
   const concacafBadges = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
   const isConcacaf = concacafBadges.length > 0;
+  const inactive = isPlayerInactive(playerId, matches, rosters);
 
   const playerDuos = new Map<number, number>();
   filtered.goalEvents.forEach(g => {
@@ -341,7 +343,7 @@ const PlayerDetailPage = () => {
 
       {/* Profile Header Card */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${
+        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${inactive ? "opacity-60 grayscale" : ""} ${
           isConcacaf ? "border-emerald-500/50 bg-gradient-to-br from-emerald-900/30 via-card to-blue-900/20"
           : fireTier !== "none" ? `${FIRE_TIER_CONFIG[fireTier].cardClass} ${FIRE_TIER_CONFIG[fireTier].borderClass}`
           : "border-primary/30 bg-card box-glow"
@@ -412,6 +414,12 @@ const PlayerDetailPage = () => {
           </div>
         )}
       </motion.div>
+
+      {inactive && (
+        <div className="mx-4 mt-3 rounded-xl border border-muted-foreground/30 bg-muted/30 px-4 py-3 text-center">
+          <p className="text-xs font-bold text-muted-foreground">⚠️ 최근 6개월간 출전 기록이 없는 비활동 멤버입니다.</p>
+        </div>
+      )}
 
       {/* Market Value */}
       {(() => {

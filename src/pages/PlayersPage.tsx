@@ -5,6 +5,7 @@ import { User } from "lucide-react";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
 import { useOnFirePlayers, FIRE_TIER_CONFIG, type FireTier } from "@/hooks/useOnFirePlayers";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
+import { isPlayerInactive } from "@/hooks/useInactivePlayers";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 import AvatarModal from "@/components/player/AvatarModal";
@@ -67,10 +68,11 @@ const PlayersPage = () => {
           const fire = fireMap.get(player.id);
           const tier = fire?.tier || "none";
           const condition = getPlayerCondition(player.id, matches, rosters, goalEvents, allQuarters);
+          const inactive = isPlayerInactive(player.id, matches, rosters);
           return (
             <motion.div key={player.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
-              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)}`}>
+              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)} ${inactive ? "opacity-50 grayscale" : ""}`}>
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${getRingClass(tier)}`}
@@ -86,10 +88,13 @@ const PlayersPage = () => {
                   )}
                   {tier !== "none" && <span className="absolute -top-1 -right-1 text-sm sparkle-anim">{getFireEmoji(tier)}</span>}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap justify-center">
                   <span className="font-medium text-foreground">{player.name}</span>
                   <span className={`text-sm ${condition.colorClass}`}>{condition.emoji}</span>
                   {tier !== "none" && <span className="sparkle-anim inline-block text-xs">✨</span>}
+                  {inactive && (
+                    <span className="rounded-full border border-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">💤 비활동</span>
+                  )}
                 </div>
                 {tier === "onfire" && (
                   <>
