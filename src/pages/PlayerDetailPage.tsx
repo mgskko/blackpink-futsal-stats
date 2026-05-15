@@ -13,6 +13,7 @@ import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter
 import { useMarketValue, computeMarketValue } from "@/hooks/useMarketValue";
 import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
+import { isPlayerInactive } from "@/hooks/useInactivePlayers";
 import SplashScreen from "@/components/SplashScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
