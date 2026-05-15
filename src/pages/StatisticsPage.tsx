@@ -21,6 +21,7 @@ import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
+import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
 
 type FilterType = "all" | "custom" | string;
 
@@ -138,9 +139,11 @@ const StatisticsPage = () => {
 
   if (isLoading) return <SplashScreen />;
 
-  const allStats = players.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
-  // Filter out guests from rankings
-  const memberStats = allStats.filter(p => !(p as any).is_guest);
+  // Exclude long-term inactive (6+ months) from all rankings/charts
+  const inactiveIds = getInactivePlayerIds(players, matches, rosters);
+  const activeRoster = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
+  const allStats = activeRoster.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  const memberStats = allStats;
 
   const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
   const topAssists = [...memberStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0).slice(0, 10);
@@ -154,7 +157,7 @@ const StatisticsPage = () => {
 
   // Court margins
   const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const memberPlayers = players.filter(p => !(p as any).is_guest);
+  const memberPlayers = activeRoster;
   const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.margin - a.margin).slice(0, 10);
   const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
@@ -421,7 +424,7 @@ const StatisticsPage = () => {
 
         {activeTab === "chemistry" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <ChemistryAnalyzer players={players} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
+            <ChemistryAnalyzer players={memberPlayers} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
             {/* Death Lineup */}
             {(() => {
               const deathLineup = computeDeathLineup(players, filteredQuarters);
