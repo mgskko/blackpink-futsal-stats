@@ -415,6 +415,12 @@ const PlayerDetailPage = () => {
         )}
       </motion.div>
 
+      {inactive && (
+        <div className="mx-4 mt-3 rounded-xl border border-muted-foreground/30 bg-muted/30 px-4 py-3 text-center">
+          <p className="text-xs font-bold text-muted-foreground">⚠️ 최근 6개월간 출전 기록이 없는 비활동 멤버입니다.</p>
+        </div>
+      )}
+
       {/* Market Value */}
       {(() => {
         const mv = computeMarketValue(playerId, players, matches, rosters, goalEvents, allQuarters, worstVotes);
