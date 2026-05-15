@@ -142,7 +142,6 @@ const StatisticsPage = () => {
   if (isLoading) return <SplashScreen />;
 
   // Exclude long-term inactive (6+ months) from all rankings/charts
-  const inactiveIds = getInactivePlayerIds(players, matches, rosters);
   const activeRoster = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
   const allStats = activeRoster.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
   const memberStats = allStats;
