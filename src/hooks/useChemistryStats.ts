@@ -5,6 +5,16 @@ function isCustomLineup(lineup: any): boolean {
   return lineup && typeof lineup === "object" && !Array.isArray(lineup) && (lineup.teamA || lineup.teamB);
 }
 
+// Build a Set of currently-valid player IDs.
+// Any lineup ID not in this set is treated as a deleted/inactive ghost
+// and must be filtered out from all chemistry computations.
+function buildValidIds(players: Player[]): Set<number> {
+  return new Set(players.map(p => p.id));
+}
+function filterValid(ids: number[], valid: Set<number>): number[] {
+  return ids.filter(id => valid.has(id));
+}
+
 // Parse a single flat lineup (no teamA/teamB nesting)
 function getFieldPlayersFlat(lineup: any): number[] {
   if (!lineup || typeof lineup !== "object" || Array.isArray(lineup)) return [];
@@ -102,6 +112,7 @@ export function computeDeathLineup(
   players: Player[],
   allQuarters: MatchQuarter[]
 ): DeathLineup | null {
+  const valid = buildValidIds(players);
   // Generate all 5-player subsets from field players per quarter
   const comboMap = new Map<string, { playerIds: number[]; margin: number; quarters: number }>();
 
@@ -121,6 +132,7 @@ export function computeDeathLineup(
     const custom = isCustomLineup(q.lineup);
     const groups = getFieldPlayerGroups(q.lineup);
     groups.forEach((field, gi) => {
+      field = filterValid(field, valid);
       field.sort((a, b) => a - b);
       if (field.length < 5) return;
       const diff = getGroupMargin(q, gi, custom);
@@ -165,10 +177,12 @@ export function computePassNetwork(
   rosters: Roster[],
   topN: number = 10
 ): PassNetworkEntry[] {
+  const valid = buildValidIds(players);
   // First compute co-appearance counts per duo (min 8 matches together)
   const coAppearanceMap = new Map<string, number>();
   const matchPlayerMap = new Map<number, Set<number>>();
   rosters.forEach(r => {
+    if (!valid.has(r.player_id)) return;
     if (!matchPlayerMap.has(r.match_id)) matchPlayerMap.set(r.match_id, new Set());
     matchPlayerMap.get(r.match_id)!.add(r.player_id);
   });
@@ -185,6 +199,7 @@ export function computePassNetwork(
   const map = new Map<string, PassNetworkEntry>();
   goalEvents.forEach(g => {
     if (!g.assist_player_id || !g.goal_player_id || g.is_own_goal) return;
+    if (!valid.has(g.assist_player_id) || !valid.has(g.goal_player_id)) return;
     const duoKey = `${Math.min(g.assist_player_id, g.goal_player_id)}-${Math.max(g.assist_player_id, g.goal_player_id)}`;
     const coCount = coAppearanceMap.get(duoKey) || 0;
     if (coCount < 10) return; // Must have played together in 10+ matches
@@ -217,9 +232,11 @@ export function computeToxicDuos(
   rosters: Roster[],
   topN: number = 5
 ): ToxicDuo[] {
+  const valid = buildValidIds(players);
   // Build all-time match count per player
   const playerMatchCount = new Map<number, Set<number>>();
   rosters.forEach(r => {
+    if (!valid.has(r.player_id)) return;
     if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
     playerMatchCount.get(r.player_id)!.add(r.match_id);
   });
@@ -232,6 +249,7 @@ export function computeToxicDuos(
     const custom = isCustomLineup(q.lineup);
     const groups = getFieldPlayerGroups(q.lineup);
     groups.forEach((field, gi) => {
+      field = filterValid(field, valid);
       const conceded = getGroupConceded(q, gi, custom);
       for (let i = 0; i < field.length; i++) {
         if (!has10Matches(field[i])) continue;
@@ -274,9 +292,11 @@ export function computeBestDefenseLine(
   rosters: Roster[],
   topN: number = 5
 ): DefenseLine[] {
+  const valid = buildValidIds(players);
   // Build all-time match count per player
   const playerMatchCount = new Map<number, Set<number>>();
   rosters.forEach(r => {
+    if (!valid.has(r.player_id)) return;
     if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
     playerMatchCount.get(r.player_id)!.add(r.match_id);
   });
@@ -289,6 +309,7 @@ export function computeBestDefenseLine(
     const custom = isCustomLineup(q.lineup);
     const groups = getPositionPlayerGroups(q.lineup, "DF");
     groups.forEach((dfs, gi) => {
+      dfs = filterValid(dfs, valid);
       dfs.sort((a, b) => a - b);
       if (dfs.length < 2) return;
       if (!dfs.every(has10Matches)) return;
@@ -329,9 +350,11 @@ export function computeSynergyMargin(
   rosters: Roster[],
   topN: number = 5
 ): SynergyMargin[] {
+  const valid = buildValidIds(players);
   // Build all-time match count per player
   const playerMatchCount = new Map<number, Set<number>>();
   rosters.forEach(r => {
+    if (!valid.has(r.player_id)) return;
     if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
     playerMatchCount.get(r.player_id)!.add(r.match_id);
   });
@@ -341,7 +364,7 @@ export function computeSynergyMargin(
 
   // Get all player pairs who have played together (with 10+ all-time matches)
   const allFieldPlayerIds = new Set<number>();
-  allQuarters.forEach(q => { if (q.lineup) getFieldPlayers(q.lineup).forEach(pid => allFieldPlayerIds.add(pid)); });
+  allQuarters.forEach(q => { if (q.lineup) getFieldPlayers(q.lineup).forEach(pid => { if (valid.has(pid)) allFieldPlayerIds.add(pid); }); });
   const playerIds = [...allFieldPlayerIds].filter(has10Matches);
 
   // For each pair, compute together vs apart margin
@@ -397,13 +420,14 @@ export function computeWithoutYou(
   allQuarters: MatchQuarter[],
   topN: number = 7
 ): WithoutYouEntry[] {
+  const valid = buildValidIds(players);
   const playerMap = new Map<number, { onMargin: number; onQ: number; offMargin: number; offQ: number }>();
 
   const allPlayerIds = new Set<number>();
   allQuarters.forEach(q => {
     if (!q.lineup) return;
-    getFieldPlayers(q.lineup).forEach(pid => allPlayerIds.add(pid));
-    getBenchPlayers(q.lineup).forEach(pid => allPlayerIds.add(pid));
+    getFieldPlayers(q.lineup).forEach(pid => { if (valid.has(pid)) allPlayerIds.add(pid); });
+    getBenchPlayers(q.lineup).forEach(pid => { if (valid.has(pid)) allPlayerIds.add(pid); });
   });
 
   allPlayerIds.forEach(pid => {
@@ -462,6 +486,7 @@ export function computeFWDuos(
   goalEvents: GoalEvent[],
   topN: number = 5
 ): FWDuo[] {
+  const valid = buildValidIds(players);
   const duoMap = new Map<string, { p1: number; p2: number; margin: number; quarters: number; goals: number }>();
 
   allQuarters.forEach(q => {
@@ -469,6 +494,7 @@ export function computeFWDuos(
     const custom = isCustomLineup(q.lineup);
     const fwGroups = getPositionPlayerGroups(q.lineup, "FW");
     fwGroups.forEach((fws, gi) => {
+      fws = filterValid(fws, valid);
       fws.sort((a, b) => a - b);
       if (fws.length < 2) return;
       const diff = getGroupMargin(q, gi, custom);
@@ -521,9 +547,11 @@ export function computePositionDuosByWinRate(
   worst: boolean = false,
   goalEvents?: GoalEvent[]
 ): PositionDuoWinRate[] {
+  const valid = buildValidIds(players);
   // Build all-time match count per player
   const playerMatchCount = new Map<number, Set<number>>();
   rosters.forEach(r => {
+    if (!valid.has(r.player_id)) return;
     if (!playerMatchCount.has(r.player_id)) playerMatchCount.set(r.player_id, new Set());
     playerMatchCount.get(r.player_id)!.add(r.match_id);
   });
@@ -536,6 +564,7 @@ export function computePositionDuosByWinRate(
     const custom = isCustomLineup(q.lineup);
     const posGroups = getPositionPlayerGroups(q.lineup, position);
     posGroups.forEach((posPlayers, gi) => {
+      posPlayers = filterValid(posPlayers, valid);
       posPlayers.sort((a, b) => a - b);
       if (posPlayers.length < 2) return;
       const diff = getGroupMargin(q, gi, custom);
@@ -732,6 +761,7 @@ export function computeTriosByWinRate(
   topN: number = 5,
   worst: boolean = false
 ): TrioWinRate[] {
+  const valid = buildValidIds(players);
   const trioMap = new Map<string, { ids: number[]; wins: number; quarters: number; scored: number; conceded: number; margin: number }>();
 
   allQuarters.forEach(q => {
@@ -739,6 +769,7 @@ export function computeTriosByWinRate(
     const custom = isCustomLineup(q.lineup);
     const groups = getFieldPlayerGroups(q.lineup);
     groups.forEach((field, gi) => {
+      field = filterValid(field, valid);
       field.sort((a, b) => a - b);
       if (field.length < 3) return;
       const diff = getGroupMargin(q, gi, custom);
