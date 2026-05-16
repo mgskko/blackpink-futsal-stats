@@ -141,9 +141,10 @@ const StatisticsPage = () => {
 
   if (isLoading) return <SplashScreen />;
 
-  // Exclude long-term inactive (6+ months) from all rankings/charts
-  const activeRoster = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
-  const allStats = activeRoster.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  // Exclude long-term inactive (6+ months) from all rankings/charts.
+  // `activePlayers` is the hard-filtered roster used across every statistic.
+  const activePlayers = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
+  const allStats = activePlayers.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
   const memberStats = allStats;
 
   const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
@@ -157,8 +158,8 @@ const StatisticsPage = () => {
   const duos = getDeadlyDuos(filteredGoalEvents, 10);
 
   // Court margins
-  const courtMargins = computeAllCourtMargins(players, filteredMatches, filteredQuarters, filteredGoalEvents);
-  const memberPlayers = activeRoster;
+  const courtMargins = computeAllCourtMargins(activePlayers, filteredMatches, filteredQuarters, filteredGoalEvents);
+  const memberPlayers = activePlayers;
   const topCourtMargin = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.margin - a.margin).slice(0, 10);
   const topPPQ = [...courtMargins].filter(p => p.quartersPlayed >= 10 && memberPlayers.some(mp => mp.id === p.playerId)).sort((a, b) => b.ppq - a.ppq).slice(0, 10);
 
@@ -428,7 +429,7 @@ const StatisticsPage = () => {
             <ChemistryAnalyzer players={memberPlayers} allQuarters={filteredQuarters} goalEvents={filteredGoalEvents} />
             {/* Death Lineup */}
             {(() => {
-              const deathLineup = computeDeathLineup(players, filteredQuarters);
+              const deathLineup = computeDeathLineup(activePlayers, filteredQuarters);
               if (!deathLineup) return null;
               return (
                 <div className="mb-6">
@@ -452,7 +453,7 @@ const StatisticsPage = () => {
 
             {/* Pass Network */}
             {(() => {
-              const passNet = computePassNetwork(players, filteredGoalEvents, rosters, 10);
+              const passNet = computePassNetwork(activePlayers, filteredGoalEvents, rosters, 10);
               if (passNet.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -477,7 +478,7 @@ const StatisticsPage = () => {
 
             {/* Toxic Duo */}
             {(() => {
-              const toxicDuos = computeToxicDuos(players, filteredQuarters, rosters, 5);
+              const toxicDuos = computeToxicDuos(activePlayers, filteredQuarters, rosters, 5);
               if (toxicDuos.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -505,7 +506,7 @@ const StatisticsPage = () => {
 
             {/* Best Defensive Line */}
             {(() => {
-              const defLines = computeBestDefenseLine(players, filteredQuarters, rosters, 5);
+              const defLines = computeBestDefenseLine(activePlayers, filteredQuarters, rosters, 5);
               if (defLines.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -536,7 +537,7 @@ const StatisticsPage = () => {
 
             {/* Synergy Margin */}
             {(() => {
-              const synergy = computeSynergyMargin(players, filteredQuarters, rosters, 5);
+              const synergy = computeSynergyMargin(activePlayers, filteredQuarters, rosters, 5);
               if (synergy.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -567,7 +568,7 @@ const StatisticsPage = () => {
 
             {/* Without You */}
             {(() => {
-              const withoutYou = computeWithoutYou(players, filteredQuarters, 7);
+              const withoutYou = computeWithoutYou(activePlayers, filteredQuarters, 7);
               if (withoutYou.length === 0) return null;
               return (
                 <div className="mb-6">
@@ -596,12 +597,12 @@ const StatisticsPage = () => {
 
             {/* Position Duos by Win Rate */}
             {(() => {
-              const bestFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 10, false, filteredGoalEvents)
+              const bestFW = computePositionDuosByWinRate(activePlayers, filteredQuarters, "FW", rosters, 10, false, filteredGoalEvents)
                 .sort((a, b) => b.combinedGoals - a.combinedGoals).slice(0, 5);
-              const worstFW = computePositionDuosByWinRate(players, filteredQuarters, "FW", rosters, 20, true, filteredGoalEvents)
+              const worstFW = computePositionDuosByWinRate(activePlayers, filteredQuarters, "FW", rosters, 20, true, filteredGoalEvents)
                 .sort((a, b) => a.combinedGoals - b.combinedGoals || b.quarters - a.quarters || a.winRate - b.winRate).slice(0, 5);
-              const bestDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, false, filteredGoalEvents);
-              const worstDF = computePositionDuosByWinRate(players, filteredQuarters, "DF", rosters, 5, true, filteredGoalEvents);
+              const bestDF = computePositionDuosByWinRate(activePlayers, filteredQuarters, "DF", rosters, 5, false, filteredGoalEvents);
+              const worstDF = computePositionDuosByWinRate(activePlayers, filteredQuarters, "DF", rosters, 5, true, filteredGoalEvents);
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
@@ -638,8 +639,8 @@ const StatisticsPage = () => {
 
             {/* Trios */}
             {(() => {
-              const bestTrios = computeTriosByWinRate(players, filteredQuarters, 3, false);
-              const worstTrios = computeTriosByWinRate(players, filteredQuarters, 5, true);
+              const bestTrios = computeTriosByWinRate(activePlayers, filteredQuarters, 3, false);
+              const worstTrios = computeTriosByWinRate(activePlayers, filteredQuarters, 5, true);
               return (<>
                 {bestTrios.length > 0 && (
                   <div className="mb-6">
@@ -690,16 +691,16 @@ const StatisticsPage = () => {
         )}
 
         {activeTab === "formation" && (
-          <FormationStatsTab players={players} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
+          <FormationStatsTab players={activePlayers} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
         )}
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* 민생지원금 수령자 */}
-            <GarbageTimeTab players={players} matches={filteredMatches} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+            <GarbageTimeTab players={activePlayers} matches={filteredMatches} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
             {/* 이색/예능 기록 랭킹보드 */}
-            <FunStatsTab players={players} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+            <FunStatsTab players={activePlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
             {/* 방해꾼 트리오 */}
             {!isCustomFilter && (() => {

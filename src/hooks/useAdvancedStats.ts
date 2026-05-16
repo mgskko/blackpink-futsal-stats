@@ -529,7 +529,7 @@ export function getVarianceBadge(playerId: number, matches: Match[], rosters: Ro
       }).length;
       const fwMargin = fwQuarters.reduce((s: number, q: any) => s + (q.score_for || 0) - (q.score_against || 0), 0);
       if (fwAP <= 1 && fwMargin < 0) {
-        badges.push({ label: "폼 하락", emoji: "🚨" });
+        // "폼 하락" badge removed per UX cleanup; arrow indicator handled by condition arrow.
       }
     }
 
@@ -537,7 +537,7 @@ export function getVarianceBadge(playerId: number, matches: Match[], rosters: Ro
     if (dfGkQuarters.length >= 3) {
       const avgConceded = dfGkQuarters.reduce((s: number, q: any) => s + (q.score_against || 0), 0) / dfGkQuarters.length;
       if (avgConceded >= 2.0) {
-        badges.push({ label: "폼 하락", emoji: "🚨" });
+        // "폼 하락" badge removed.
       }
     }
   } else {
@@ -546,7 +546,7 @@ export function getVarianceBadge(playerId: number, matches: Match[], rosters: Ro
     if (recent3.length === 3) {
       let totalAP = 0;
       recent3.forEach(m => { const { goals, assists } = computeMatchAP(playerId, m, rosters, goalEvents); totalAP += goals + assists; });
-      if (totalAP === 0) badges.push({ label: "폼 하락", emoji: "🚨" });
+      if (totalAP === 0) { /* "폼 하락" badge removed */ }
     }
   }
 

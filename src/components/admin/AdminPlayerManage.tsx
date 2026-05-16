@@ -4,8 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Camera, Save, User, Plus } from "lucide-react";
+import { Camera, Save, User, Plus, Trash2 } from "lucide-react";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
@@ -15,6 +25,22 @@ const AdminPlayerManage = () => {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeletePlayer = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    const { error } = await supabase.from("players").delete().eq("id", deleteTarget.id);
+    setIsDeleting(false);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
+    toast.success(`${deleteTarget.name} 선수가 삭제되었습니다`);
+    setDeleteTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
 
   const handleAddPlayer = async () => {
     const name = newPlayerName.trim();
@@ -140,6 +166,15 @@ const AdminPlayerManage = () => {
               <Save size={14} />
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteTarget(player)}
+            title="선수 삭제"
+          >
+            <Trash2 size={14} />
+          </Button>
         </div>
       </div>
     );
@@ -183,6 +218,29 @@ const AdminPlayerManage = () => {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선수 삭제 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 <span className="font-bold text-foreground">{deleteTarget?.name}</span> 선수를 삭제하시겠습니까?
+              <br />
+              (관련 출전 기록에 영향이 있을 수 있습니다.)
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeletePlayer(); }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
