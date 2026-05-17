@@ -39,7 +39,8 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     return result;
   }, [rosters]);
 
-  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
+  const validIds = useMemo(() => new Set(players.map(p => p.id)), [players]);
+  const has10Matches = (pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10;
 
   // 1. 유산소의 신: 15Q+, AP 극히 적고, margin <= 0
   const cardioRanking = useMemo(() => {
