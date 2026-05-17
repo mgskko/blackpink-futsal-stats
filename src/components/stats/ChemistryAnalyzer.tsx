@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Player, MatchQuarter, GoalEvent } from "@/hooks/useFutsalData";
 import { analyzeChemistry } from "@/hooks/useChemistryStats";
 import { X, AlertTriangle, Sparkles } from "lucide-react";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: Props) {
+  const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [search, setSearch] = useState("");
 
@@ -124,11 +126,54 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
 
             {/* Attack & Synergy */}
             <div>
-              <div className="mb-2 text-xs font-bold text-foreground">⚔️ 공격 & 시너지</div>
+              <div className="mb-2 text-xs font-bold text-foreground">⚔️ 정밀 공격 합작 데이터</div>
               <div className="grid grid-cols-2 gap-2">
                 <Stat label="합작 골" value={`${result.combinedGoals}`} suffix="회" />
                 <Stat label="침묵 쿼터" value={`${result.silentQuarterRate}`} suffix="%" tone={result.silentQuarterRate > 40 ? "bad" : "neutral"} />
               </div>
+              {(result.goalSplit.length > 0 || result.assistSplit.length > 0) && (
+                <div className="mt-2 rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
+                  {result.goalSplit.map(g => (
+                    <div key={`g-${g.scorerId}`} className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">⚽ <span className="text-foreground font-medium">{g.scorerName}</span></span>
+                      <span className="text-primary font-bold">{g.goals}골</span>
+                    </div>
+                  ))}
+                  {result.assistSplit.map(a => (
+                    <div key={`a-${a.assisterId}`} className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground">🅰️ <span className="text-foreground font-medium">{a.assisterName}</span></span>
+                      <span className="text-primary font-bold">{a.assists}도움</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {result.comboBreakdown.length > 0 && (
+                <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-1">
+                  <div className="text-[10px] font-bold text-primary mb-1">합작 골 상세</div>
+                  {result.comboBreakdown.map(c => (
+                    <div key={`${c.assisterId}-${c.scorerId}`} className="flex justify-between text-[11px]">
+                      <span className="text-foreground"><span className="font-medium">{c.assisterName}</span> <span className="text-primary">→</span> <span className="font-medium">{c.scorerName}</span></span>
+                      <span className="text-primary font-bold">{c.count}회</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {result.comboTimeline.length > 0 && (
+                <details className="mt-2 rounded-lg border border-border bg-secondary/20 p-2">
+                  <summary className="cursor-pointer text-[10px] font-bold text-muted-foreground">📅 합작 골 타임라인 ({result.comboTimeline.length}건)</summary>
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
+                    {result.comboTimeline.map((t, i) => (
+                      <button
+                        key={i}
+                        onClick={() => navigate(`/match/${t.matchId}`)}
+                        className="w-full text-left rounded px-2 py-1 text-[10px] text-foreground hover:bg-primary/10 transition"
+                      >
+                        Q{t.quarter} · {t.assisterName} → {t.scorerName}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
 
             {/* Defense */}
@@ -137,15 +182,45 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
               <div className="grid grid-cols-2 gap-2">
                 <Stat label="쿼터당 평균 실점" value={result.goalsConcededPerQ.toFixed(2)} tone={result.goalsConcededPerQ > 1.5 ? "bad" : result.goalsConcededPerQ < 0.8 ? "good" : "neutral"} />
                 <Stat label="수비 붕괴율" value={`${result.defenseCollapseRate}`} suffix="%" tone={result.defenseCollapseRate > 30 ? "bad" : "neutral"} />
+                <Stat label="합작 무실점 쿼터" value={`${result.cleanSheetQuarters}`} suffix={`Q (${result.cleanSheetRate}%)`} tone={result.cleanSheetRate > 30 ? "good" : "neutral"} />
+                <Stat label="총 실점 / 동시 쿼터" value={`${Math.round(result.goalsConcededPerQ * result.togetherQuarters)} / ${result.togetherQuarters}`} />
               </div>
+              {result.dfQuarters > 0 && (
+                <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <div className="mb-2 text-[10px] font-bold text-primary">🛡️ 전원 DF/GK 후방 책임 쿼터</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div><div className="font-display text-lg text-foreground">{result.dfQuarters}</div><div className="text-[9px] text-muted-foreground">동시 수비 쿼터</div></div>
+                    <div><div className="font-display text-lg text-primary">{result.dfConcededPerQ.toFixed(2)}</div><div className="text-[9px] text-muted-foreground">쿼터당 실점</div></div>
+                    <div><div className="font-display text-lg text-primary text-glow">{result.dfCleanSheets}/{result.dfQuarters}</div><div className="text-[9px] text-muted-foreground">무실점</div></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Win index */}
             <div>
-              <div className="mb-2 text-xs font-bold text-foreground">⚖️ 냉정한 승리 지수</div>
+              <div className="mb-2 text-xs font-bold text-foreground">⚖️ 독립 마진 & 승리 지수</div>
               <div className="grid grid-cols-2 gap-2">
                 <Stat label="평균 코트 마진" value={`${result.marginPerQ > 0 ? "+" : ""}${result.marginPerQ.toFixed(2)}`} tone={result.marginPerQ > 0 ? "good" : "bad"} />
                 <Stat label="동시출전 승률" value={`${result.winRate}`} suffix="%" tone={result.winRate >= 55 ? "good" : result.winRate < 40 ? "bad" : "neutral"} />
+              </div>
+              <div className="mt-2 rounded-lg border border-border bg-secondary/30 p-3 text-[11px] text-foreground">
+                동시 출전 종합 전적: <span className="text-primary font-bold">{result.wins}승</span> {result.draws}무 <span className="text-destructive font-bold">{result.losses}패</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                <div className="text-[10px] font-bold text-muted-foreground">On/Off Court 마진 비교</div>
+                <div className="flex justify-between rounded-lg border border-primary/40 bg-primary/5 p-2 text-[11px]">
+                  <span className="text-foreground font-medium">전원 동시</span>
+                  <span className={`font-bold ${result.marginPerQ > 0 ? "text-primary" : "text-destructive"}`}>{result.marginPerQ > 0 ? "+" : ""}{result.marginPerQ.toFixed(2)}/Q ({result.togetherQuarters}Q)</span>
+                </div>
+                {result.soloMargins.map(s => (
+                  <div key={s.id} className="flex justify-between rounded-lg border border-border bg-secondary/30 p-2 text-[11px]">
+                    <span className="text-foreground">{s.name} 단독</span>
+                    <span className={`font-bold ${s.quarters === 0 ? "text-muted-foreground" : s.marginPerQ > 0 ? "text-primary" : "text-destructive"}`}>
+                      {s.quarters === 0 ? "기록 없음" : `${s.marginPerQ > 0 ? "+" : ""}${s.marginPerQ.toFixed(2)}/Q (${s.quarters}Q)`}
+                    </span>
+                  </div>
+                ))}
               </div>
               <div className={`mt-2 flex items-center justify-between rounded-lg border p-3 ${dangerApart ? "border-destructive/50 bg-destructive/10" : "border-border bg-secondary/30"}`}>
                 <div className="flex items-center gap-2 text-xs">
@@ -160,8 +235,17 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
 
             {/* Bench */}
             <div>
-              <div className="mb-2 text-xs font-bold text-foreground">💤 벤치 동기화</div>
-              <Stat label="동시 휴식 쿼터" value={`${result.benchSyncQuarters}`} suffix="Q" />
+              <div className="mb-2 text-xs font-bold text-foreground">💤 벤치 동기화 & 영향도</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Stat label="동시 휴식 쿼터" value={`${result.benchSyncQuarters}`} suffix="Q" />
+                <Stat
+                  label="벤치 다운 시 마진"
+                  value={`${result.benchDownMarginPerQ > 0 ? "+" : ""}${result.benchDownMarginPerQ.toFixed(2)}`}
+                  suffix="/Q"
+                  tone={result.benchDownMarginPerQ < -0.5 ? "bad" : result.benchDownMarginPerQ > 0.5 ? "good" : "neutral"}
+                />
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">동시 벤치 시 팀의 쿼터당 평균 마진 (- 일수록 팀이 밀림)</p>
             </div>
           </motion.div>
         )}

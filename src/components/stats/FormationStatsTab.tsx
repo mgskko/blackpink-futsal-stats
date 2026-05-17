@@ -50,7 +50,8 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     return result;
   }, [rosters]);
 
-  const has10Matches = (pid: number) => (playerMatchCount.get(pid) || 0) >= 10;
+  const validIds = useMemo(() => new Set(players.map(p => p.id)), [players]);
+  const has10Matches = (pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10;
 
   // ─── GK Stats ───
   const gkStats = useMemo(() => {
@@ -113,6 +114,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       if (pos === "DF") dfAssistMap.set(g.assist_player_id, (dfAssistMap.get(g.assist_player_id) || 0) + 1);
     });
     return [...dfAssistMap.entries()]
+      .filter(([pid]) => validIds.has(pid))
       .map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);

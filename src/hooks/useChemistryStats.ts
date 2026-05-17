@@ -624,6 +624,21 @@ export interface ChemistryAnalysis {
   benchSyncQuarters: number;
   reliable: boolean; // 10경기 이상 함께
   badge: { emoji: string; title: string; tone: "good" | "bad" | "neutral" };
+  // ── extended detail ──
+  goalSplit: { scorerId: number; scorerName: string; goals: number }[]; // selected scorers
+  assistSplit: { assisterId: number; assisterName: string; assists: number }[]; // selected assisters
+  comboBreakdown: { assisterId: number; assisterName: string; scorerId: number; scorerName: string; count: number }[];
+  comboTimeline: { matchId: number; quarter: number; assisterName: string; scorerName: string }[];
+  // 동시출전 종합 승무패
+  wins: number; draws: number; losses: number;
+  cleanSheetQuarters: number; // 합작 무실점 쿼터
+  cleanSheetRate: number; // %
+  // DF/GK 분리
+  dfQuarters: number; dfCleanSheets: number; dfConcededPerQ: number;
+  // 솔로 마진
+  soloMargins: { id: number; name: string; quarters: number; marginPerQ: number }[];
+  // 벤치 다운 마진
+  benchDownMarginPerQ: number;
 }
 
 export function analyzeChemistry(
@@ -638,8 +653,15 @@ export function analyzeChemistry(
   let scored = 0, conceded = 0, marginSum = 0;
   let silentQ = 0, collapseQ = 0;
   let wins = 0;
+  let draws = 0, losses = 0;
+  let cleanSheetQ = 0;
   let apartQ = 0, apartWins = 0;
   let benchSyncQ = 0;
+  let benchDownMargin = 0, benchDownQ = 0;
+  let dfQ = 0, dfConceded = 0, dfCleanSheet = 0;
+  // solo (this player is in field, none of the others)
+  const soloMap = new Map<number, { margin: number; q: number }>();
+  selectedIds.forEach(id => soloMap.set(id, { margin: 0, q: 0 }));
   const togetherMatchIds = new Set<number>();
   const togetherQKeys = new Set<string>(); // matchId-quarter for goal counting
 
@@ -662,7 +684,20 @@ export function analyzeChemistry(
         scored += sf; conceded += sa; marginSum += diff;
         if (sf === 0) silentQ++;
         if (sa >= 2) collapseQ++;
-        if (diff > 0) wins++;
+        if (sa === 0) cleanSheetQ++;
+        if (diff > 0) wins++; else if (diff === 0) draws++; else losses++;
+        // DF/GK lineup check: ALL selected are DF or GK in this quarter's lineup
+        const lineupForGroup = isCustomLineup(q.lineup) ? (gi === 0 ? (q.lineup as any).teamA : (q.lineup as any).teamB) : q.lineup;
+        const dfgkAll = selectedIds.every(id => {
+          const dfs = getPositionPlayersFlat(lineupForGroup, "DF");
+          const gks = getPositionPlayersFlat(lineupForGroup, "GK");
+          return dfs.includes(id) || gks.includes(id);
+        });
+        if (dfgkAll) {
+          dfQ++;
+          dfConceded += sa;
+          if (sa === 0) dfCleanSheet++;
+        }
         togetherMatchIds.add(q.match_id);
         togetherQKeys.add(`${q.match_id}-${q.quarter}`);
       } else if (anyIn) {
@@ -670,6 +705,17 @@ export function analyzeChemistry(
         const diff = getGroupMargin(q, gi, custom);
         apartQ++;
         if (diff > 0) apartWins++;
+        // Per-player solo: this group has exactly one of the selected (the only one present)
+        const inThisGroup = selectedIds.filter(id => field.includes(id));
+        if (inThisGroup.length === 1) {
+          // and no other selected is in the OTHER group of this quarter
+          const otherSelected = selectedIds.filter(id => id !== inThisGroup[0]);
+          const anyOtherInQuarter = otherSelected.some(oid => groups.some((f2, gi2) => gi2 !== gi && f2.includes(oid)));
+          if (!anyOtherInQuarter) {
+            const cur = soloMap.get(inThisGroup[0])!;
+            cur.margin += diff; cur.q++;
+          }
+        }
       }
     });
     // bench sync: all selected are on bench (and none on field)
@@ -682,18 +728,43 @@ export function analyzeChemistry(
         benches.push((Array.isArray(q.lineup.Bench) ? q.lineup.Bench : [q.lineup.Bench]).map(Number));
       }
       const allOnBench = selectedIds.every(id => benches.some(b => b.includes(id)));
-      if (allOnBench) benchSyncQ++;
+      if (allOnBench) {
+        benchSyncQ++;
+        const diff = (q.score_for || 0) - (q.score_against || 0);
+        benchDownMargin += diff; benchDownQ++;
+      }
     }
   });
 
-  // Combined goals: goal events in togetherQ quarters where scorer in selected & assister in selected
+  // Combined goals + breakdown
   const selectedSet = new Set(selectedIds);
   let combinedGoals = 0;
+  const goalSplitMap = new Map<number, number>();
+  const assistSplitMap = new Map<number, number>();
+  const comboMap = new Map<string, { assisterId: number; scorerId: number; count: number }>();
+  const comboTimeline: { matchId: number; quarter: number; assisterName: string; scorerName: string }[] = [];
   goalEvents.forEach(g => {
     if (g.is_own_goal) return;
     if (!togetherQKeys.has(`${g.match_id}-${g.quarter}`)) return;
+    // Track individual selected scorers/assisters during together quarters
+    if (g.goal_player_id && selectedSet.has(g.goal_player_id)) {
+      goalSplitMap.set(g.goal_player_id, (goalSplitMap.get(g.goal_player_id) || 0) + 1);
+    }
+    if (g.assist_player_id && selectedSet.has(g.assist_player_id)) {
+      assistSplitMap.set(g.assist_player_id, (assistSplitMap.get(g.assist_player_id) || 0) + 1);
+    }
     if (g.goal_player_id && g.assist_player_id && selectedSet.has(g.goal_player_id) && selectedSet.has(g.assist_player_id)) {
       combinedGoals++;
+      const key = `${g.assist_player_id}->${g.goal_player_id}`;
+      const cur = comboMap.get(key) || { assisterId: g.assist_player_id, scorerId: g.goal_player_id, count: 0 };
+      cur.count++;
+      comboMap.set(key, cur);
+      comboTimeline.push({
+        matchId: g.match_id,
+        quarter: g.quarter,
+        assisterName: getPlayerName(players, g.assist_player_id),
+        scorerName: getPlayerName(players, g.goal_player_id),
+      });
     }
   });
 
@@ -706,6 +777,36 @@ export function analyzeChemistry(
   const silentQuarterRate = Math.round((silentQ / togetherQ) * 100);
   const defenseCollapseRate = Math.round((collapseQ / togetherQ) * 100);
   const reliable = togetherMatchIds.size >= 10;
+  const cleanSheetRate = Math.round((cleanSheetQ / togetherQ) * 100);
+  const dfConcededPerQ = dfQ > 0 ? dfConceded / dfQ : 0;
+  const benchDownMarginPerQ = benchDownQ > 0 ? benchDownMargin / benchDownQ : 0;
+
+  const goalSplit = selectedIds
+    .map(id => ({ scorerId: id, scorerName: getPlayerName(players, id), goals: goalSplitMap.get(id) || 0 }))
+    .filter(d => d.goals > 0)
+    .sort((a, b) => b.goals - a.goals);
+  const assistSplit = selectedIds
+    .map(id => ({ assisterId: id, assisterName: getPlayerName(players, id), assists: assistSplitMap.get(id) || 0 }))
+    .filter(d => d.assists > 0)
+    .sort((a, b) => b.assists - a.assists);
+  const comboBreakdown = [...comboMap.values()]
+    .map(c => ({
+      assisterId: c.assisterId,
+      assisterName: getPlayerName(players, c.assisterId),
+      scorerId: c.scorerId,
+      scorerName: getPlayerName(players, c.scorerId),
+      count: c.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+  const soloMargins = selectedIds.map(id => {
+    const cur = soloMap.get(id)!;
+    return {
+      id,
+      name: getPlayerName(players, id),
+      quarters: cur.q,
+      marginPerQ: cur.q > 0 ? cur.margin / cur.q : 0,
+    };
+  });
 
   // Badge classification
   let badge: ChemistryAnalysis["badge"] = { emoji: "🤝", title: "평범한 동료", tone: "neutral" };
@@ -740,6 +841,18 @@ export function analyzeChemistry(
     benchSyncQuarters: benchSyncQ,
     reliable,
     badge,
+    goalSplit,
+    assistSplit,
+    comboBreakdown,
+    comboTimeline,
+    wins, draws, losses,
+    cleanSheetQuarters: cleanSheetQ,
+    cleanSheetRate,
+    dfQuarters: dfQ,
+    dfCleanSheets: dfCleanSheet,
+    dfConcededPerQ,
+    soloMargins,
+    benchDownMarginPerQ,
   };
 }
 

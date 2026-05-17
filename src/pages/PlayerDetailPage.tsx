@@ -58,8 +58,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   // 🇫🇷 France: Assists >= 10
   if (r5Assists.length >= 10) out.push({ country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." });
 
-  // ENG England: Court margin >= +5
-  if (r5Margin >= 5) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드 국대급 피지컬과 전술! 최근 5경기 마진 +5 이상의 승리 보증수표!" });
+  // ENG England: 10+ goals (own goals only) in last 5 matches
+  if (r5Goals.length >= 10) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드 프리미어리그급 폭발력! 최근 5경기 10골 이상을 때려 박은 득점 기계!" });
 
   // 🇰🇷 Korea: pressing/intercept AP >= 5
   const pressAP = goalEvents.filter(g => r5Ids.has(g.match_id) && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단") && (g.goal_player_id === playerId || g.assist_player_id === playerId)).length;
@@ -69,10 +69,19 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   const passAssists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId && (g.assist_type === "킬패스" || g.assist_type === "패스 플레이")).length;
   if (passAssists >= 5) out.push({ country: "🇪🇸 스페인", text: "스페인 무적함대급 패스워크! 최근 5경기 무자비한 킬패스로 수비진을 붕괴시켰습니다." });
 
-  // 🇩🇪 Germany: 15+ quarters in last 5 matches & quarter win rate >= 50%
-  if (r5Quarters.length >= 15) {
-    const qWins = r5Quarters.filter(q => (q.score_for || 0) > (q.score_against || 0)).length;
-    if (qWins / r5Quarters.length >= 0.5) out.push({ country: "🇩🇪 독일", text: "독일 전차군단의 냉혹함! 최근 출전 쿼터 승률 50% 이상의 무자비한 효율성!" });
+  // 🇩🇪 Germany: 30+ quarters in last 5 matches AND team win rate >= 50% in those 5 matches
+  if (r5Quarters.length >= 30) {
+    let teamWins = 0, teamCounted = 0;
+    recent5.forEach(m => {
+      const playerRosterTeams = rosters.filter(r => r.match_id === m.id && r.player_id === playerId).map(r => r.team_id);
+      playerRosterTeams.forEach(tid => {
+        const res = results.find(r => r.match_id === m.id && r.team_id === tid);
+        if (res) { teamCounted++; if (res.result === "승") teamWins++; }
+      });
+    });
+    if (teamCounted > 0 && teamWins / teamCounted >= 0.5) {
+      out.push({ country: "🇩🇪 독일", text: "게르만 전차 군단의 강철 체력과 위닝 멘탈리티! 최근 5경기 30쿼터 이상 출전 및 승률 50% 이상 달성!" });
+    }
   }
 
   // 🇮🇹 Italy: 12+ clean sheet quarters as DF/GK
