@@ -216,7 +216,7 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
                 {result.soloMargins.map(s => (
                   <div key={s.id} className="flex justify-between rounded-lg border border-border bg-secondary/30 p-2 text-[11px]">
                     <span className="text-foreground">{s.name} 단독</span>
-                    <span className={`font-bold ${s.q === 0 ? "text-muted-foreground" : s.marginPerQ > 0 ? "text-primary" : "text-destructive"}`}>
+                    <span className={`font-bold ${s.quarters === 0 ? "text-muted-foreground" : s.marginPerQ > 0 ? "text-primary" : "text-destructive"}`}>
                       {s.quarters === 0 ? "기록 없음" : `${s.marginPerQ > 0 ? "+" : ""}${s.marginPerQ.toFixed(2)}/Q (${s.quarters}Q)`}
                     </span>
                   </div>
