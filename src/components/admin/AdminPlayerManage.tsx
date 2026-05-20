@@ -31,15 +31,39 @@ const AdminPlayerManage = () => {
   const handleDeletePlayer = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
-    const { error } = await supabase.from("players").delete().eq("id", deleteTarget.id);
+    const pid = deleteTarget.id;
+    // Clean related rows first (no FK cascade in DB)
+    await Promise.all([
+      supabase.from("rosters").delete().eq("player_id", pid),
+      supabase.from("match_attendance").delete().eq("player_id", pid),
+      supabase.from("goal_events").delete().eq("goal_player_id", pid),
+      supabase.from("goal_events").delete().eq("assist_player_id", pid),
+      supabase.from("mom_votes").delete().eq("voted_player_id", pid),
+      supabase.from("worst_votes").delete().eq("voted_player_id", pid),
+      supabase.from("monthly_dues").delete().eq("player_id", pid),
+      supabase.from("player_comments").delete().eq("player_id", pid),
+    ]);
+    const { error, count } = await supabase
+      .from("players")
+      .delete({ count: "exact" })
+      .eq("id", pid);
     setIsDeleting(false);
     if (error) {
       toast.error("삭제 실패: " + error.message);
       return;
     }
+    if (!count || count === 0) {
+      toast.error("삭제 권한이 없거나 이미 삭제된 선수입니다");
+      return;
+    }
     toast.success(`${deleteTarget.name} 선수가 삭제되었습니다`);
     setDeleteTarget(null);
-    queryClient.invalidateQueries({ queryKey: ["players"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["players"] }),
+      queryClient.invalidateQueries({ queryKey: ["rosters"] }),
+      queryClient.invalidateQueries({ queryKey: ["goal_events"] }),
+    ]);
+    queryClient.refetchQueries({ queryKey: ["players"] });
   };
 
   const handleAddPlayer = async () => {

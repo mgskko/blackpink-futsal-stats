@@ -1,0 +1,1 @@
+CREATE POLICY "Admins can delete players" ON public.players FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
