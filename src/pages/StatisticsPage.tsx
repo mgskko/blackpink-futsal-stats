@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import POTMCard from "@/components/stats/POTMCard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
+import QuarterFormSection from "@/components/stats/QuarterFormSection";
 
 type FilterType = "all" | "custom" | string;
 
@@ -143,7 +144,8 @@ const StatisticsPage = () => {
 
   // Exclude long-term inactive (6+ months) from all rankings/charts.
   // `activePlayers` is the hard-filtered roster used across every statistic.
-  const activePlayers = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id));
+  const EXCLUDED_NAMES = new Set(["용병1", "용병2"]);
+  const activePlayers = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id) && !EXCLUDED_NAMES.has(p.name));
   const allStats = activePlayers.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
   const memberStats = allStats;
 
