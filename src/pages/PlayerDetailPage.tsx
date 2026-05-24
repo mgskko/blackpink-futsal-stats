@@ -58,8 +58,8 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
   // 🇫🇷 France: Assists >= 10
   if (r5Assists.length >= 10) out.push({ country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." });
 
-  // ENG England: 10+ goals (own goals only) in last 5 matches
-  if (r5Goals.length >= 10) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "득점 기계 강림! 최근 5경기 10골 이상을 융단폭격한 파괴 전차!" });
+  // ENG England: 10+ goals in last 5 matches
+  if (r5Goals.length >= 10) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드의 허리케인 강림! 최근 5경기 10골 이상을 폭격하며 프리미어리그 득점왕급 폼을 보여줍니다." });
 
   // 🇰🇷 Korea: pressing/intercept AP >= 5
   const pressAP = goalEvents.filter(g => r5Ids.has(g.match_id) && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단") && (g.goal_player_id === playerId || g.assist_player_id === playerId)).length;
