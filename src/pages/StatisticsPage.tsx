@@ -398,6 +398,9 @@ const StatisticsPage = () => {
               </Select>
             </div>
 
+            {/* Quarter Form Section (per-quarter W/L breakdown) */}
+            <QuarterFormSection players={memberPlayers} allQuarters={filteredQuarters} />
+
             <div className="mb-6">
               {renderSelectedRanking()}
             </div>
