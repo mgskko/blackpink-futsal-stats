@@ -376,34 +376,34 @@ const StatisticsPage = () => {
               </div>
             </div>
 
-            {/* Ranking Select Dropdown */}
-            <div className="mb-4">
-              <Select value={selectedRanking} onValueChange={(v) => setSelectedRanking(v as RankingOption)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="랭킹 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ap">📊 누적 공격포인트</SelectItem>
-                  <SelectItem value="goals">⚽ 골 순위</SelectItem>
-                  <SelectItem value="assists">🅰️ 어시스트 순위</SelectItem>
-                  <SelectItem value="ppq">⚡ PPQ (공포 효율)</SelectItem>
-                  <SelectItem value="courtMargin">📈 코트 마진 (+/-)</SelectItem>
-                  <SelectItem value="defense">🛡️ 수비 기여도</SelectItem>
-                  <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
-                  <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
-                  <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
-                  <SelectItem value="worst">👎 워스트 누적 랭킹</SelectItem>
-                  <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Ranking Select + List wrapped in Card */}
+            <div className="mb-6 rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 font-display text-lg tracking-wider text-primary">랭킹</h3>
+              <div className="mb-4">
+                <Select value={selectedRanking} onValueChange={(v) => setSelectedRanking(v as RankingOption)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="랭킹 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ap">📊 누적 공격포인트</SelectItem>
+                    <SelectItem value="goals">⚽ 골 순위</SelectItem>
+                    <SelectItem value="assists">🅰️ 어시스트 순위</SelectItem>
+                    <SelectItem value="ppq">⚡ PPQ (공포 효율)</SelectItem>
+                    <SelectItem value="courtMargin">📈 코트 마진 (+/-)</SelectItem>
+                    <SelectItem value="defense">🛡️ 수비 기여도</SelectItem>
+                    <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
+                    <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
+                    <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
+                    <SelectItem value="worst">👎 워스트 누적 랭킹</SelectItem>
+                    <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {renderSelectedRanking()}
             </div>
 
             {/* Quarter Form Section (per-quarter W/L breakdown) */}
             <QuarterFormSection players={memberPlayers} allQuarters={filteredQuarters} />
-
-            <div className="mb-6">
-              {renderSelectedRanking()}
-            </div>
           </motion.div>
         )}
 
