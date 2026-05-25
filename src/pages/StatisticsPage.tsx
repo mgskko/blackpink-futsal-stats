@@ -297,7 +297,7 @@ const StatisticsPage = () => {
         </button>
       </div>
 
-      <div className="px-4">
+      <div className="px-4 pt-2">
         {activeTab === "player" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* POTM Card */}
