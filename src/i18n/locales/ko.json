@@ -1,0 +1,46 @@
+{
+  "common": {
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "loading": "로딩 중...",
+    "back": "뒤로",
+    "confirm": "확인"
+  },
+  "nav": {
+    "matches": "경기",
+    "players": "선수",
+    "stats": "통계",
+    "tactics": "전술",
+    "club": "클럽",
+    "my": "MY",
+    "admin": "관리"
+  },
+  "matches": {
+    "title": "MATCHES",
+    "totalCount": "총 {{count}}경기",
+    "win": "승",
+    "loss": "패",
+    "draw": "무",
+    "scheduled": "예정",
+    "vs": "VS",
+    "manage": "경기 관리",
+    "selfMatch": "자체전",
+    "ourTeamFallback": "버니즈",
+    "opponentFallback": "상대팀"
+  },
+  "theme": {
+    "switchToLight": "라이트 모드로 전환",
+    "switchToDark": "다크 모드로 전환"
+  },
+  "language": {
+    "switchToKR": "한국어로 전환",
+    "switchToEN": "영어로 전환"
+  },
+  "admin": {
+    "playerNameKR": "한글 이름",
+    "playerNameEN": "영문 이름",
+    "saveEN": "영문명 저장"
+  }
+}
