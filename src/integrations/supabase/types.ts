@@ -419,6 +419,7 @@ export type Database = {
           is_guest: boolean
           join_date: string
           name: string
+          name_en: string | null
           profile_image_url: string | null
         }
         Insert: {
@@ -428,6 +429,7 @@ export type Database = {
           is_guest?: boolean
           join_date: string
           name: string
+          name_en?: string | null
           profile_image_url?: string | null
         }
         Update: {
@@ -437,6 +439,7 @@ export type Database = {
           is_guest?: boolean
           join_date?: string
           name?: string
+          name_en?: string | null
           profile_image_url?: string | null
         }
         Relationships: []
