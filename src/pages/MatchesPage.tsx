@@ -7,12 +7,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
+import { useTranslation } from "react-i18next";
+import { useTeamName } from "@/lib/displayName";
 
 const MatchesPage = () => {
   const navigate = useNavigate();
   const { matches, venues, teams, results, isLoading } = useAllFutsalData();
   const { isAdmin } = useAuth();
   const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
+  const { t } = useTranslation();
+  const teamName = useTeamName();
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -54,41 +58,44 @@ const MatchesPage = () => {
   };
 
   return (
-    <div className="pb-20">
-      <div className="flex items-center justify-between px-4">
-        <PageHeader title="MATCHES" subtitle={`총 ${matches.length}경기`} />
-        {isAdmin && (
-          <button
-            onClick={() => navigate("/admin")}
-            className="flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-          >
-            <PenSquare size={14} />
-            경기 관리
-          </button>
-        )}
-      </div>
-      <div className="space-y-2 px-4">
+    <div className="relative z-10 pb-28">
+      <PageHeader
+        title={t("matches.title")}
+        subtitle={t("matches.totalCount", { count: matches.length })}
+        rightSlot={
+          isAdmin ? (
+            <button
+              onClick={() => navigate("/admin")}
+              className="glass glass-hover flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-primary"
+            >
+              <PenSquare size={12} />
+              {t("matches.manage")}
+            </button>
+          ) : null
+        }
+      />
+      <div className="space-y-3 px-4">
         {sortedMatches.map((match, i) => {
           const venue = venues.find((v) => v.id === match.venue_id);
           const mr = getMatchResult(teams, results, match.id);
           const attendCount = attendanceCounts[match.id];
           const status = getMatchStatus(match);
 
-          const borderColor = status === "win"
-            ? "border-l-blue-500"
+          const stripColor = status === "win"
+            ? "bg-blue-500 shadow-[0_0_15px_hsl(217_91%_60%/0.5)]"
             : status === "loss"
-            ? "border-l-red-500"
+            ? "bg-pink-500 shadow-[0_0_15px_hsl(330_100%_71%/0.5)]"
             : status === "draw"
-            ? "border-l-muted-foreground"
-            : "border-l-muted";
+            ? "bg-amber-400 shadow-[0_0_15px_hsl(45_100%_55%/0.5)]"
+            : "bg-muted-foreground/50";
 
-          const bgColor = status === "win"
-            ? "bg-blue-500/5"
+          const badgeStyle = status === "win"
+            ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
             : status === "loss"
-            ? "bg-red-500/5"
-            : status === "scheduled"
-            ? "bg-muted/20"
-            : "bg-card";
+            ? "bg-pink-500/20 text-pink-400 border-pink-500/30"
+            : status === "draw"
+            ? "bg-amber-400/20 text-amber-400 border-amber-400/30"
+            : "bg-muted text-muted-foreground border-border";
 
           return (
             <motion.div
@@ -97,19 +104,20 @@ const MatchesPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.02 }}
               onClick={() => navigate(`/match/${match.id}`)}
-              className={`cursor-pointer rounded-lg border border-border border-l-4 ${borderColor} ${bgColor} p-4 transition-all hover:border-primary/40 active:scale-[0.98]`}
+              className="group relative cursor-pointer overflow-hidden rounded-3xl glass glass-hover active:scale-[0.98]"
             >
-              <div className="flex items-center justify-between">
+              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${stripColor}`} />
+              <div className="flex items-center justify-between p-5">
                 <div className="flex-1 min-w-0">
                   {/* Date & venue row */}
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     <span>{match.date}</span>
                     <span className="opacity-40">•</span>
                     <span className="truncate">{venue?.name}</span>
                     {match.is_custom && (
                       <>
                         <span className="opacity-40">•</span>
-                        <span className="text-primary/70">자체전</span>
+                        <span className="text-primary/80">{t("matches.selfMatch")}</span>
                       </>
                     )}
                     {attendCount != null && attendCount > 0 && (
@@ -124,16 +132,16 @@ const MatchesPage = () => {
 
                   {/* Score row */}
                   <div className="mt-2 flex items-center gap-3">
-                    <span className="text-sm font-bold text-foreground truncate max-w-[80px]">
-                      {mr?.ourTeam.name ?? "버니즈"}
+                    <span className="text-sm font-bold text-foreground truncate max-w-[100px]">
+                      {teamName(mr?.ourTeam.name) || t("matches.ourTeamFallback")}
                     </span>
 
                     {status === "scheduled" ? (
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-xl text-muted-foreground">VS</span>
+                        <span className="font-display text-xl text-muted-foreground">{t("matches.vs")}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 tabular-nums">
                         <span className={`font-display text-2xl tracking-wider ${
                           status === "win" ? "text-blue-400" : status === "loss" ? "text-red-400" : "text-muted-foreground"
                         }`}>
@@ -148,8 +156,8 @@ const MatchesPage = () => {
                       </div>
                     )}
 
-                    <span className="text-sm font-bold text-foreground truncate max-w-[80px]">
-                      {mr?.opponentTeam.name ?? "상대팀"}
+                    <span className="text-sm font-bold text-foreground truncate max-w-[100px]">
+                      {teamName(mr?.opponentTeam.name) || t("matches.opponentFallback")}
                     </span>
                   </div>
                 </div>
@@ -157,21 +165,15 @@ const MatchesPage = () => {
                 {/* Result badge */}
                 <div className="flex flex-col items-end gap-1 ml-3 flex-shrink-0">
                   {status === "scheduled" ? (
-                    <span className="flex items-center gap-1 rounded-full border border-muted bg-muted/30 px-2.5 py-0.5 text-xs font-bold text-muted-foreground">
-                      <Calendar size={10} /> 예정
+                    <span className="flex items-center gap-1 rounded-full border border-muted bg-muted/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Calendar size={10} /> {t("matches.scheduled")}
                     </span>
                   ) : (
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                      status === "win"
-                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                        : status === "loss"
-                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                        : "bg-muted text-muted-foreground border border-border"
-                    }`}>
-                      {mr?.ourResult.result ?? "-"}
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${badgeStyle}`}>
+                      {status === "win" ? t("matches.win") : status === "loss" ? t("matches.loss") : t("matches.draw")}
                     </span>
                   )}
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
                     {match.match_type}
                   </span>
                 </div>
