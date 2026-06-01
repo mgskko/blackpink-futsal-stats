@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import BottomNav from "@/components/BottomNav";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import BloomBackground from "@/components/BloomBackground";
+import { ThemeProvider } from "next-themes";
 import MatchesPage from "@/pages/MatchesPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
 import PlayersPage from "@/pages/PlayersPage";
@@ -22,13 +24,15 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <div className="mx-auto min-h-screen max-w-lg bg-background">
-            <Routes>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="bunnies-theme">
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="relative mx-auto min-h-screen max-w-lg overflow-hidden bg-background">
+              <BloomBackground />
+              <Routes>
               <Route path="/" element={<MatchesPage />} />
               <Route path="/match/:id" element={<MatchDetailPage />} />
               <Route path="/players" element={<PlayersPage />} />
@@ -41,13 +45,14 @@ const App = () => (
               <Route path="/my" element={<MyPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-            <BottomNav />
-            <PWAInstallPrompt />
-          </div>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+              </Routes>
+              <BottomNav />
+              <PWAInstallPrompt />
+            </div>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
