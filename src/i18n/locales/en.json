@@ -1,0 +1,46 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "back": "Back",
+    "confirm": "Confirm"
+  },
+  "nav": {
+    "matches": "Matches",
+    "players": "Players",
+    "stats": "Stats",
+    "tactics": "Tactics",
+    "club": "Club",
+    "my": "My",
+    "admin": "Admin"
+  },
+  "matches": {
+    "title": "MATCHES",
+    "totalCount": "{{count}} matches",
+    "win": "W",
+    "loss": "L",
+    "draw": "D",
+    "scheduled": "Upcoming",
+    "vs": "VS",
+    "manage": "Manage",
+    "selfMatch": "Intrasquad",
+    "ourTeamFallback": "Bunnies FC",
+    "opponentFallback": "Opponent"
+  },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "language": {
+    "switchToKR": "Switch to Korean",
+    "switchToEN": "Switch to English"
+  },
+  "admin": {
+    "playerNameKR": "Korean name",
+    "playerNameEN": "English name",
+    "saveEN": "Save EN name"
+  }
+}
