@@ -23,6 +23,7 @@ import ActivityHeatmap from "@/components/player/ActivityHeatmap";
 import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
+import { useDisplayName } from "@/lib/displayName";
 
 export type ConcacafBadge = { country: string; text: string };
 function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
