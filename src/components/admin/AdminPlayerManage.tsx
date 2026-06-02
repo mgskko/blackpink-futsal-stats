@@ -21,8 +21,10 @@ const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
   const queryClient = useQueryClient();
   const [editingNumbers, setEditingNumbers] = useState<Record<number, string>>({});
+  const [editingNamesEn, setEditingNamesEn] = useState<Record<number, string>>({});
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [savingNameEnId, setSavingNameEnId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
@@ -105,6 +107,19 @@ const AdminPlayerManage = () => {
     if (error) { toast.error("저장 실패"); return; }
     toast.success("등번호 저장 완료");
     setEditingNumbers(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
+  const saveNameEn = async (playerId: number) => {
+    const val = editingNamesEn[playerId];
+    if (val === undefined) return;
+    setSavingNameEnId(playerId);
+    const next = val.trim() === "" ? null : val.trim();
+    const { error } = await supabase.from("players").update({ name_en: next } as any).eq("id", playerId);
+    setSavingNameEnId(null);
+    if (error) { toast.error("EN 이름 저장 실패"); return; }
+    toast.success("영문 이름 저장 완료");
+    setEditingNamesEn(prev => { const n = { ...prev }; delete n[playerId]; return n; });
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
