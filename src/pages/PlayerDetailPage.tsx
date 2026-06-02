@@ -377,7 +377,7 @@ const PlayerDetailPage = () => {
                 fireTier !== "none" ? FIRE_TIER_CONFIG[fireTier].ringClass : "border-primary/50 shadow-primary/20"
               }`}>
                 {player.profile_image_url ? (
-                  <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
+                  <img src={player.profile_image_url} alt={displayName(player)} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center"><User size={44} className="text-primary/60" /></div>
                 )}
@@ -388,7 +388,7 @@ const PlayerDetailPage = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+                <h2 className="text-2xl font-bold text-foreground">{displayName(player)}</h2>
                 {fireTier !== "none" && <span className="text-lg sparkle-anim">{FIRE_TIER_CONFIG[fireTier].emoji}</span>}
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
