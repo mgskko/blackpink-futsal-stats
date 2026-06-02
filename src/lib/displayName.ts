@@ -9,7 +9,7 @@ export function resolveDisplayName(
   lang: string
 ): string {
   if (!player) return "";
-  if (lang.startsWith("en") && player.name_en && player.name_en.trim()) {
+  if (lang?.startsWith("en") && player.name_en && player.name_en.trim()) {
     return player.name_en;
   }
   return player.name ?? "";
@@ -35,7 +35,7 @@ const TEAM_NAME_MAP: Record<string, string> = {
 
 export function resolveTeamName(name: string | null | undefined, lang: string): string {
   if (!name) return "";
-  if (lang.startsWith("en") && TEAM_NAME_MAP[name]) return TEAM_NAME_MAP[name];
+  if (lang?.startsWith("en") && TEAM_NAME_MAP[name]) return TEAM_NAME_MAP[name];
   return name;
 }
 
