@@ -12,6 +12,7 @@ import AvatarModal from "@/components/player/AvatarModal";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MatchQuarter } from "@/hooks/useFutsalData";
+import { useDisplayName } from "@/lib/displayName";
 
 function getCardClass(tier: FireTier) {
   if (tier === "none") return "border-border bg-card hover:border-primary/40 hover:box-glow";
@@ -31,6 +32,7 @@ const PlayersPage = () => {
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const fireMap = useOnFirePlayers(matches, rosters);
   const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
+  const displayName = useDisplayName();
 
   const { data: allQuartersRaw } = useQuery({
     queryKey: ["all_match_quarters"],
@@ -76,9 +78,9 @@ const PlayersPage = () => {
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${getRingClass(tier)}`}
-                    onClick={(e) => { e.stopPropagation(); if (player.profile_image_url) setAvatarPlayer({ url: player.profile_image_url, name: player.name }); }}>
+                    onClick={(e) => { e.stopPropagation(); if (player.profile_image_url) setAvatarPlayer({ url: player.profile_image_url, name: displayName(player) }); }}>
                     {player.profile_image_url ? (
-                      <img src={player.profile_image_url} alt={player.name} className="h-full w-full object-cover" />
+                      <img src={player.profile_image_url} alt={displayName(player)} className="h-full w-full object-cover" />
                     ) : (
                       <User size={28} className="text-primary" />
                     )}
@@ -89,7 +91,7 @@ const PlayersPage = () => {
                   {tier !== "none" && <span className="absolute -top-1 -right-1 text-sm sparkle-anim">{getFireEmoji(tier)}</span>}
                 </div>
                 <div className="flex items-center gap-1 flex-wrap justify-center">
-                  <span className="font-medium text-foreground">{player.name}</span>
+                  <span className="font-medium text-foreground">{displayName(player)}</span>
                   <span className={`text-sm ${condition.colorClass}`}>{condition.emoji}</span>
                   {tier !== "none" && <span className="sparkle-anim inline-block text-xs">✨</span>}
                   {inactive && (
