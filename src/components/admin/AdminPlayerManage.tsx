@@ -151,9 +151,12 @@ const AdminPlayerManage = () => {
   const PlayerRow = ({ player }: { player: typeof players[0] }) => {
     const currentVal = editingNumbers[player.id] ?? (player.back_number?.toString() ?? "");
     const hasChanged = editingNumbers[player.id] !== undefined;
+    const currentNameEn = editingNamesEn[player.id] ?? ((player as any).name_en ?? "");
+    const hasNameEnChanged = editingNamesEn[player.id] !== undefined;
 
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-3">
         {/* Profile Image */}
         <div className="relative flex-shrink-0">
           <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-border bg-secondary flex items-center justify-center">
@@ -214,6 +217,28 @@ const AdminPlayerManage = () => {
           >
             <Trash2 size={14} />
           </Button>
+        </div>
+        </div>
+        {/* EN Name editor */}
+        <div className="flex items-center gap-2 pl-15">
+          <span className="text-[10px] font-bold text-muted-foreground w-10">EN</span>
+          <Input
+            value={currentNameEn}
+            onChange={(e) => setEditingNamesEn(prev => ({ ...prev, [player.id]: e.target.value }))}
+            placeholder="English name (e.g. Myungseok Kim)"
+            className="h-8 flex-1 text-sm bg-secondary border-border"
+          />
+          {hasNameEnChanged && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-primary hover:text-primary"
+              onClick={() => saveNameEn(player.id)}
+              disabled={savingNameEnId === player.id}
+            >
+              <Save size={14} />
+            </Button>
+          )}
         </div>
       </div>
     );
