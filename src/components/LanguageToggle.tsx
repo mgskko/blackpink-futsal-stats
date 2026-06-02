@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 
 const LanguageToggle = () => {
   const { i18n, t } = useTranslation();
-  const lang = i18n.language.startsWith("en") ? "en" : "ko";
+  const lang = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en") ? "en" : "ko";
 
   const set = (next: "ko" | "en") => {
     void i18n.changeLanguage(next);
