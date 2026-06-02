@@ -143,6 +143,7 @@ const PlayerDetailPage = () => {
   const [showWrapped, setShowWrapped] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "matches" | "stats">("profile");
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const displayName = useDisplayName();
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
