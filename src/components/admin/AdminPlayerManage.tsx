@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Camera, Save, User, Plus, Trash2 } from "lucide-react";
+import { Camera, Save, User, Plus, Trash2, X } from "lucide-react";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
@@ -128,23 +128,48 @@ const AdminPlayerManage = () => {
     if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하 파일만 가능합니다"); return; }
 
     setUploadingId(playerId);
-    const ext = file.name.split(".").pop();
+    const extRaw = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const ext = extRaw === "jpeg" ? "jpg" : extRaw;
     const path = `${playerId}.${ext}`;
 
-    // Delete old image if exists
-    await supabase.storage.from("player-images").remove([path]);
+    // Remove any previous file with common extensions (different ext could be stale)
+    const candidates = ["jpg", "jpeg", "png", "webp", "gif"].map(e => `${playerId}.${e}`);
+    const { error: removeErr } = await supabase.storage.from("player-images").remove(candidates);
+    if (removeErr) console.warn("[player-image] remove warn:", removeErr);
 
-    const { error: uploadError } = await supabase.storage.from("player-images").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("업로드 실패: " + uploadError.message); setUploadingId(null); return; }
+    const { error: uploadError } = await supabase.storage
+      .from("player-images")
+      .upload(path, file, { upsert: true, contentType: file.type, cacheControl: "0" });
+    if (uploadError) {
+      console.error("[player-image] upload error:", uploadError);
+      toast.error("업로드 실패: " + (uploadError.message || "권한 없음"));
+      setUploadingId(null);
+      return;
+    }
 
     const { data: urlData } = supabase.storage.from("player-images").getPublicUrl(path);
     const url = urlData.publicUrl + "?t=" + Date.now();
 
     const { error: updateError } = await supabase.from("players").update({ profile_image_url: url } as any).eq("id", playerId);
     setUploadingId(null);
-    if (updateError) { toast.error("URL 저장 실패"); return; }
+    if (updateError) {
+      console.error("[player-image] db update error:", updateError);
+      toast.error("URL 저장 실패: " + updateError.message);
+      return;
+    }
 
     toast.success("프로필 사진 업로드 완료");
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
+  const handleRemoveImage = async (playerId: number) => {
+    setUploadingId(playerId);
+    const candidates = ["jpg", "jpeg", "png", "webp", "gif"].map(e => `${playerId}.${e}`);
+    await supabase.storage.from("player-images").remove(candidates);
+    const { error } = await supabase.from("players").update({ profile_image_url: null } as any).eq("id", playerId);
+    setUploadingId(null);
+    if (error) { toast.error("삭제 실패: " + error.message); return; }
+    toast.success("프로필 사진 삭제 완료");
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
@@ -175,10 +200,22 @@ const AdminPlayerManage = () => {
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleImageUpload(player.id, f);
+                if (e.target) e.target.value = "";
               }}
               disabled={uploadingId === player.id}
             />
           </label>
+          {player.profile_image_url && (
+            <button
+              type="button"
+              onClick={() => handleRemoveImage(player.id)}
+              disabled={uploadingId === player.id}
+              className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:scale-110 transition-transform"
+              title="프로필 사진 삭제"
+            >
+              <X size={10} />
+            </button>
+          )}
         </div>
 
         {/* Name */}
