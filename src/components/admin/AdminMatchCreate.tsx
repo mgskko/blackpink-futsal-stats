@@ -184,6 +184,28 @@ const AdminMatchCreate = () => {
     }
   };
 
+  const handleAddVenue = async () => {
+    const name = newVenueName.trim();
+    if (!name) return;
+    setAddingVenue(true);
+    try {
+      const { data, error } = await supabase
+        .from("venues")
+        .insert({ name })
+        .select()
+        .single();
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["venues"] });
+      setNewVenueName("");
+      if (data?.id) setVenueId(String(data.id));
+      toast({ title: "구장이 추가되었습니다 🏟️" });
+    } catch (err: any) {
+      toast({ title: "구장 추가 실패", description: err.message, variant: "destructive" });
+    } finally {
+      setAddingVenue(false);
+    }
+  };
+
   return (
     <div className="space-y-4 mt-4">
       <div>
@@ -199,6 +221,24 @@ const AdminMatchCreate = () => {
             {venues.map(v => <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="mt-2 flex items-center gap-2">
+          <Input
+            value={newVenueName}
+            onChange={e => setNewVenueName(e.target.value)}
+            placeholder="새 구장 이름 추가"
+            className="h-8 text-xs bg-card border-border"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={addingVenue || !newVenueName.trim()}
+            onClick={handleAddVenue}
+            className="h-8 border-primary/30 text-primary text-xs whitespace-nowrap"
+          >
+            {addingVenue ? "추가중..." : "+ 추가"}
+          </Button>
+        </div>
       </div>
 
       <div>
