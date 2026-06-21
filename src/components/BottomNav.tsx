@@ -33,7 +33,10 @@ const BottomNav = () => {
   }, [activePath]);
 
   return (
-    <nav className="fixed bottom-3 left-1/2 z-50 w-[calc(100%-1.5rem)] max-w-lg -translate-x-1/2 px-2">
+    <nav
+      className="fixed left-1/2 z-50 w-[calc(100%-1.5rem)] max-w-lg -translate-x-1/2 px-2"
+      style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+    >
       <motion.div
         key={pulseKey}
         initial={{ backdropFilter: "blur(40px) saturate(200%)" }}
