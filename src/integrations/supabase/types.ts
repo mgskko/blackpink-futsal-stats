@@ -273,6 +273,7 @@ export type Database = {
           has_detail_log: boolean
           id: number
           is_custom: boolean
+          is_internal: boolean
           match_type: string
           venue_id: number | null
           youtube_link: string | null
@@ -282,6 +283,7 @@ export type Database = {
           has_detail_log?: boolean
           id?: number
           is_custom?: boolean
+          is_internal?: boolean
           match_type?: string
           venue_id?: number | null
           youtube_link?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           has_detail_log?: boolean
           id?: number
           is_custom?: boolean
+          is_internal?: boolean
           match_type?: string
           venue_id?: number | null
           youtube_link?: string | null
