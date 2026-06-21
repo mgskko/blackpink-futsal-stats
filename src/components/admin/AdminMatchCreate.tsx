@@ -189,9 +189,10 @@ const AdminMatchCreate = () => {
     if (!name) return;
     setAddingVenue(true);
     try {
+      const nextId = (venues.reduce((m, v) => Math.max(m, v.id), 0) || 0) + 1;
       const { data, error } = await supabase
         .from("venues")
-        .insert({ name })
+        .insert({ id: nextId, name })
         .select()
         .single();
       if (error) throw error;
