@@ -112,6 +112,11 @@
     font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
+    /* iPhone Safe Area: 다이내믹 아일랜드 + 홈 인디케이터 회피 */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   h1, h2, h3, .font-display {
