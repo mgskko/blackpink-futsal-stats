@@ -20,6 +20,8 @@ const AdminMatchCreate = () => {
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
   const [venueId, setVenueId] = useState("");
+  const [newVenueName, setNewVenueName] = useState("");
+  const [addingVenue, setAddingVenue] = useState(false);
   const [matchType, setMatchType] = useState("6:6 풋살");
   const [isCustom, setIsCustom] = useState(false);
   const [opponentName, setOpponentName] = useState("");
@@ -72,6 +74,7 @@ const AdminMatchCreate = () => {
           venue_id: venueId ? Number(venueId) : null,
           match_type: matchType,
           is_custom: isCustom,
+          is_internal: isCustom,
           youtube_link: youtubeLink || null,
         })
         .select()
@@ -131,8 +134,16 @@ const AdminMatchCreate = () => {
       for (const team of createdTeams) {
         const isOurs = team.is_ours;
         if (overrideScore) {
-          const sf = isOurs ? scoreFor : scoreAgainst;
-          const sa = isOurs ? scoreAgainst : scoreFor;
+          let sf: number;
+          let sa: number;
+          if (isCustom) {
+            const isTeamA = team.name === teamAName;
+            sf = isTeamA ? scoreFor : scoreAgainst;
+            sa = isTeamA ? scoreAgainst : scoreFor;
+          } else {
+            sf = isOurs ? scoreFor : scoreAgainst;
+            sa = isOurs ? scoreAgainst : scoreFor;
+          }
           const result = sf > sa ? "승" : sf < sa ? "패" : "무";
           await supabase.from("results").insert({
             match_id: match.id,
@@ -173,6 +184,29 @@ const AdminMatchCreate = () => {
     }
   };
 
+  const handleAddVenue = async () => {
+    const name = newVenueName.trim();
+    if (!name) return;
+    setAddingVenue(true);
+    try {
+      const nextId = (venues.reduce((m, v) => Math.max(m, v.id), 0) || 0) + 1;
+      const { data, error } = await supabase
+        .from("venues")
+        .insert({ id: nextId, name })
+        .select()
+        .single();
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["venues"] });
+      setNewVenueName("");
+      if (data?.id) setVenueId(String(data.id));
+      toast({ title: "구장이 추가되었습니다 🏟️" });
+    } catch (err: any) {
+      toast({ title: "구장 추가 실패", description: err.message, variant: "destructive" });
+    } finally {
+      setAddingVenue(false);
+    }
+  };
+
   return (
     <div className="space-y-4 mt-4">
       <div>
@@ -188,6 +222,24 @@ const AdminMatchCreate = () => {
             {venues.map(v => <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="mt-2 flex items-center gap-2">
+          <Input
+            value={newVenueName}
+            onChange={e => setNewVenueName(e.target.value)}
+            placeholder="새 구장 이름 추가"
+            className="h-8 text-xs bg-card border-border"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={addingVenue || !newVenueName.trim()}
+            onClick={handleAddVenue}
+            className="h-8 border-primary/30 text-primary text-xs whitespace-nowrap"
+          >
+            {addingVenue ? "추가중..." : "+ 추가"}
+          </Button>
+        </div>
       </div>
 
       <div>
