@@ -20,6 +20,8 @@ const AdminMatchCreate = () => {
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
   const [venueId, setVenueId] = useState("");
+  const [newVenueName, setNewVenueName] = useState("");
+  const [addingVenue, setAddingVenue] = useState(false);
   const [matchType, setMatchType] = useState("6:6 풋살");
   const [isCustom, setIsCustom] = useState(false);
   const [opponentName, setOpponentName] = useState("");
@@ -72,6 +74,7 @@ const AdminMatchCreate = () => {
           venue_id: venueId ? Number(venueId) : null,
           match_type: matchType,
           is_custom: isCustom,
+          is_internal: isCustom,
           youtube_link: youtubeLink || null,
         })
         .select()
@@ -131,8 +134,16 @@ const AdminMatchCreate = () => {
       for (const team of createdTeams) {
         const isOurs = team.is_ours;
         if (overrideScore) {
-          const sf = isOurs ? scoreFor : scoreAgainst;
-          const sa = isOurs ? scoreAgainst : scoreFor;
+          let sf: number;
+          let sa: number;
+          if (isCustom) {
+            const isTeamA = team.name === teamAName;
+            sf = isTeamA ? scoreFor : scoreAgainst;
+            sa = isTeamA ? scoreAgainst : scoreFor;
+          } else {
+            sf = isOurs ? scoreFor : scoreAgainst;
+            sa = isOurs ? scoreAgainst : scoreFor;
+          }
           const result = sf > sa ? "승" : sf < sa ? "패" : "무";
           await supabase.from("results").insert({
             match_id: match.id,
