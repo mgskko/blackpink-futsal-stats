@@ -175,7 +175,7 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
     }
   }
 
-  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.5 미만
+  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.0 미만
   {
     const gkQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "GK");
     if (gkQs.length >= 5) {
@@ -185,7 +185,7 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
         return s + ga;
       }, 0);
       const rate = conceded / gkQs.length;
-      if (rate < 1.5) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 압도적인 골키퍼 퍼포먼스!` });
+      if (rate < 1.0) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 1.0 미만의 압도적인 골키퍼 퍼포먼스!` });
     }
   }
 
