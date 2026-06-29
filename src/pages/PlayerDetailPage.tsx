@@ -124,6 +124,69 @@ function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], 
     if (fwMargin >= 3 && dfMargin >= 3) out.push({ country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" });
   }
 
+  // 🇪🇸 스페인의 티키타카: 최근 10경기 연속 AP(골+도움) 1 이상
+  {
+    const recent10 = sortedMatches.slice(0, 10);
+    if (recent10.length >= 10) {
+      const streakOk = recent10.every(m => {
+        const g = goalEvents.filter(ge => ge.match_id === m.id && ge.goal_player_id === playerId && !ge.is_own_goal).length;
+        const a = goalEvents.filter(ge => ge.match_id === m.id && ge.assist_player_id === playerId).length;
+        return (g + a) >= 1;
+      });
+      if (streakOk) out.push({ country: "🇪🇸 스페인의 티키타카", text: "최근 10경기 연속으로 공격포인트를 기록 중! 멈추지 않는 지배력의 화신입니다." });
+    }
+  }
+
+  // 🇲🇦 모로코의 철벽: 최근 5경기 DF 출전 쿼터 합산 골득실 > 0
+  {
+    const dfQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
+    if (dfQs.length > 0) {
+      const margin = dfQs.reduce((s, q) => {
+        const d = (q.score_for || 0) - (q.score_against || 0);
+        return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d);
+      }, 0);
+      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `최근 5경기 수비수 출전 시 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
+    }
+  }
+
+  // 🇰🇷 홍명보의 강림: 최근 5경기 4패 이상 OR 본인 출전 쿼터 패배율 70% 이상
+  {
+    let teamLosses = 0, teamCounted = 0;
+    recent5.forEach(m => {
+      const playerRosterTeams = rosters.filter(r => r.match_id === m.id && r.player_id === playerId).map(r => r.team_id);
+      playerRosterTeams.forEach(tid => {
+        const res = results.find(r => r.match_id === m.id && r.team_id === tid);
+        if (res) { teamCounted++; if (res.result === "패") teamLosses++; }
+      });
+    });
+    let qLosses = 0, qCounted = 0;
+    r5Quarters.forEach(q => {
+      const baseDiff = (q.score_for || 0) - (q.score_against || 0);
+      const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
+      const diff = pTeam === "teamB" ? -baseDiff : baseDiff;
+      qCounted++;
+      if (diff < 0) qLosses++;
+    });
+    const qLossRate = qCounted > 0 ? qLosses / qCounted : 0;
+    if (teamLosses >= 4 || qLossRate >= 0.7) {
+      out.push({ country: "🇰🇷 홍명보의 강림", text: `최근 5경기 ${teamLosses}패 / 출전 쿼터 패배율 ${Math.round(qLossRate * 100)}%. 데이터가 냉정하게 알려주는 부진 시그널입니다.` });
+    }
+  }
+
+  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.5 미만
+  {
+    const gkQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "GK");
+    if (gkQs.length >= 3) {
+      const conceded = gkQs.reduce((s, q) => {
+        const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
+        const ga = pTeam === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
+        return s + ga;
+      }, 0);
+      const rate = conceded / gkQs.length;
+      if (rate < 1.5) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 압도적인 골키퍼 퍼포먼스!` });
+    }
+  }
+
   return out;
 }
 
