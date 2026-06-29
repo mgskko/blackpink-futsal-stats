@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MatchQuarter } from "@/hooks/useFutsalData";
 import { useDisplayName } from "@/lib/displayName";
+import { getConcacafMode } from "@/pages/PlayerDetailPage";
 
 function getCardClass(tier: FireTier) {
   if (tier === "none") return "border-border bg-card hover:border-primary/40 hover:box-glow";
@@ -32,6 +33,7 @@ const PlayersPage = () => {
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const fireMap = useOnFirePlayers(matches, rosters);
   const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
+  const [concacafMode, setConcacafMode] = useState(false);
   const displayName = useDisplayName();
 
   const { data: allQuartersRaw } = useQuery({
@@ -51,10 +53,33 @@ const PlayersPage = () => {
   });
   const allQuarters = allQuartersRaw ?? [];
 
+  const { data: momVotes } = useQuery({
+    queryKey: ["mom_votes_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mom_votes").select("match_id, voted_player_id");
+      return (data ?? []) as { match_id: number; voted_player_id: number }[];
+    },
+  });
+
   if (isLoading) return <SplashScreen />;
 
   const activePlayers = players.filter(p => !(p as any).is_guest);
+  const concacafSet = useMemo(() => {
+    if (!concacafMode) return new Set<number>();
+    const s = new Set<number>();
+    activePlayers.forEach(p => {
+      const badges = getConcacafMode(p.id, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
+      if (badges.length > 0) s.add(p.id);
+    });
+    return s;
+  }, [concacafMode, activePlayers, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players]);
+
   const sortedPlayers = [...activePlayers].sort((a, b) => {
+    if (concacafMode) {
+      const aHas = concacafSet.has(a.id) ? 1 : 0;
+      const bHas = concacafSet.has(b.id) ? 1 : 0;
+      if (aHas !== bHas) return bHas - aHas;
+    }
     const sa = getPlayerStats(players, matches, teams, results, rosters, goalEvents, a.id);
     const sb = getPlayerStats(players, matches, teams, results, rosters, goalEvents, b.id);
     return sb.attackPoints - sa.attackPoints;
@@ -64,6 +89,18 @@ const PlayersPage = () => {
     <div className="pb-20">
       <AvatarModal imageUrl={avatarPlayer?.url || null} name={avatarPlayer?.name || ""} open={!!avatarPlayer} onClose={() => setAvatarPlayer(null)} />
       <PageHeader title="PLAYERS" subtitle={`총 ${activePlayers.length}명`} />
+      <div className="px-4 pb-3">
+        <button
+          onClick={() => setConcacafMode(v => !v)}
+          className={`w-full rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] ${
+            concacafMode
+              ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300 sparkle-anim"
+              : "border-border bg-card/60 text-muted-foreground hover:border-emerald-500/40"
+          }`}
+        >
+          🏆 북중미 월드컵 모드 {concacafMode ? "ON" : "OFF"}
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
           const stats = getPlayerStats(players, matches, teams, results, rosters, goalEvents, player.id);
@@ -71,10 +108,11 @@ const PlayersPage = () => {
           const tier = fire?.tier || "none";
           const condition = getPlayerCondition(player.id, matches, rosters, goalEvents, allQuarters);
           const inactive = isPlayerInactive(player.id, matches, rosters);
+          const isConcacaf = concacafSet.has(player.id);
           return (
             <motion.div key={player.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
-              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)} ${inactive ? "opacity-50 grayscale" : ""}`}>
+              className={`cursor-pointer rounded-lg border p-4 transition-all active:scale-[0.97] ${getCardClass(tier)} ${inactive ? "opacity-50 grayscale" : ""} ${isConcacaf ? "ring-2 ring-emerald-500/60" : ""}`}>
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 relative">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-full border-2 bg-secondary overflow-hidden ${getRingClass(tier)}`}
