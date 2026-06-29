@@ -27,7 +27,7 @@ import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export type ConcacafBadge = { country: string; text: string };
-function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
+export function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
   // Get last 5 matches this player appeared in
   const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
   const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
