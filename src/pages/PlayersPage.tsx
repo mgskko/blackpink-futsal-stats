@@ -61,8 +61,6 @@ const PlayersPage = () => {
     },
   });
 
-  if (isLoading) return <SplashScreen />;
-
   const activePlayers = players.filter(p => !(p as any).is_guest);
   const concacafSet = useMemo(() => {
     if (!concacafMode) return new Set<number>();
@@ -73,6 +71,8 @@ const PlayersPage = () => {
     });
     return s;
   }, [concacafMode, activePlayers, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players]);
+
+  if (isLoading) return <SplashScreen />;
 
   const sortedPlayers = [...activePlayers].sort((a, b) => {
     if (concacafMode) {
