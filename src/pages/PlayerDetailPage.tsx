@@ -988,6 +988,17 @@ const PlayerDetailPage = () => {
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />
       )}
+
+      <Dialog open={!!openConcacaf} onOpenChange={(o) => !o && setOpenConcacaf(null)}>
+        <DialogContent className="border-emerald-500/40 bg-card/80 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-emerald-400">🏆 북중미모드 — {openConcacaf?.country}</DialogTitle>
+            <DialogDescription className="text-foreground/90 leading-relaxed pt-2">
+              {openConcacaf?.text}
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
