@@ -138,17 +138,18 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
     }
   }
 
-  // 🇲🇦 모로코의 철벽: 최근 5경기 DF 출전 쿼터 합산 골득실 > 0
+  // 🇲🇦 모로코의 철벽: 최근 5경기 중 DF로 투입된 10쿼터 합산 골득실 > 0
   {
     const dfQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
-    if (dfQs.length > 0) {
+    if (dfQs.length >= 10) {
       const margin = dfQs.reduce((s, q) => {
         const d = (q.score_for || 0) - (q.score_against || 0);
         return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d);
       }, 0);
-      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `최근 5경기 수비수 출전 시 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
+      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `수비수(DF)로 투입된 최근 10쿼터 합산 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
     }
   }
+
 
   // 🇰🇷 홍명보의 강림: 최근 5경기 4패 이상 OR 본인 출전 쿼터 패배율 70% 이상
   {
@@ -174,17 +175,17 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
     }
   }
 
-  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.5 미만
+  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.0 미만
   {
     const gkQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "GK");
-    if (gkQs.length >= 3) {
+    if (gkQs.length >= 5) {
       const conceded = gkQs.reduce((s, q) => {
         const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
         const ga = pTeam === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
         return s + ga;
       }, 0);
       const rate = conceded / gkQs.length;
-      if (rate < 1.5) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 압도적인 골키퍼 퍼포먼스!` });
+      if (rate < 1.0) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 1.0 미만의 압도적인 골키퍼 퍼포먼스!` });
     }
   }
 

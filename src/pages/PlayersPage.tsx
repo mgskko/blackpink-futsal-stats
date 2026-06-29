@@ -100,6 +100,21 @@ const PlayersPage = () => {
         >
           🏆 북중미 월드컵 모드 {concacafMode ? "ON" : "OFF"}
         </button>
+        <motion.div
+          initial={false}
+          animate={{ height: concacafMode ? "auto" : 0, opacity: concacafMode ? 1 : 0 }}
+          className="overflow-hidden"
+        >
+          <div className="mt-2 rounded-lg border border-border/60 bg-card/40 backdrop-blur-md p-3 text-xs text-muted-foreground shadow-sm">
+            <p className="mb-2 font-semibold text-foreground">상단 우선 배지 기준</p>
+            <ul className="space-y-1.5 leading-relaxed">
+              <li>🇪🇸 스페인의 티키타카 — 최근 10경기 연속 공격포인트(골+도움 ≥1)</li>
+              <li>🇲🇦 모로코의 철벽 — 수비수(DF)로 투입된 10쿼터 합산 골득실 +</li>
+              <li>🇰🇷 홍명보의 강림 — 최근 5경기 4패 이상 OR 출전 쿼터 패배율 70% 이상</li>
+              <li>🇨🇻보베르데의 벽 — 최근 5경기 GK 출전 쿼터당 실점율 1.0 미만</li>
+            </ul>
+          </div>
+        </motion.div>
       </div>
       <div className="grid grid-cols-2 gap-3 px-4">
         {sortedPlayers.map((player, i) => {
