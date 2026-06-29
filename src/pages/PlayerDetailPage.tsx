@@ -178,7 +178,7 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
   // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.5 미만
   {
     const gkQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "GK");
-    if (gkQs.length >= 3) {
+    if (gkQs.length >= 5) {
       const conceded = gkQs.reduce((s, q) => {
         const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
         const ga = pTeam === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
