@@ -138,17 +138,18 @@ export function getConcacafMode(playerId: number, matches: Match[], rosters: Ros
     }
   }
 
-  // 🇲🇦 모로코의 철벽: 최근 5경기 DF 출전 쿼터 합산 골득실 > 0
+  // 🇲🇦 모로코의 철벽: 최근 5경기 중 DF로 투입된 10쿼터 합산 골득실 > 0
   {
     const dfQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
-    if (dfQs.length > 0) {
+    if (dfQs.length >= 10) {
       const margin = dfQs.reduce((s, q) => {
         const d = (q.score_for || 0) - (q.score_against || 0);
         return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d);
       }, 0);
-      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `최근 5경기 수비수 출전 시 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
+      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `수비수(DF)로 투입된 최근 10쿼터 합산 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
     }
   }
+
 
   // 🇰🇷 홍명보의 강림: 최근 5경기 4패 이상 OR 본인 출전 쿼터 패배율 70% 이상
   {
