@@ -24,6 +24,7 @@ import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export type ConcacafBadge = { country: string; text: string };
 function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
@@ -206,6 +207,7 @@ const PlayerDetailPage = () => {
   const [showWrapped, setShowWrapped] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "matches" | "stats">("profile");
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [openConcacaf, setOpenConcacaf] = useState<ConcacafBadge | null>(null);
   const displayName = useDisplayName();
 
   const { data: momVotes } = useQuery({
@@ -460,10 +462,16 @@ const PlayerDetailPage = () => {
               {isConcacaf && (
                 <div className="mt-1 space-y-2">
                   {concacafBadges.map((b, i) => (
-                    <div key={i} className="space-y-1">
-                      <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim">🏆 북중미모드 — {b.country} 🏆</div>
-                      <p className="text-[10px] text-emerald-400/80 leading-snug">{b.text}</p>
-                    </div>
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setOpenConcacaf(b)}
+                      className="block text-left"
+                    >
+                      <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-emerald-500/20 transition">
+                        🏆 북중미모드 — {b.country} 🏆
+                      </div>
+                    </button>
                   ))}
                 </div>
               )}
