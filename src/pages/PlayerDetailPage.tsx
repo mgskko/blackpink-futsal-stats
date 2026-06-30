@@ -474,6 +474,16 @@ const PlayerDetailPage = () => {
                       </div>
                     </button>
                   ))}
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-300/90 backdrop-blur-sm">
+                    <p className="mb-1 font-semibold text-emerald-300">🏆 북중미 모드 — 실시간 동적 칭호 시스템</p>
+                    <p className="mb-1">최근 폼을 데이터로 분석해 국가 대표급 특징을 부여합니다.</p>
+                    <ul className="space-y-0.5 text-emerald-300/70">
+                      <li>🇪🇸 스페인 — 10경기 연속 공격포인트</li>
+                      <li>🇲🇦 모로코 — DF 10쿼터 합산 골득실 +</li>
+                      <li>🇰🇷 홍명보 — 5경기 4패 이상 / 쿼터 패배율 70%↑</li>
+                      <li>🇨🇻보베르데 — GK 쿼터당 실점 1.0 미만</li>
+                    </ul>
+                  </div>
                 </div>
               )}
               {fireTier !== "none" && (
