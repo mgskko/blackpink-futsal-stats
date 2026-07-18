@@ -691,9 +691,13 @@ const AdminMatchEdit = () => {
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)} className="border-border">취소</Button>
             <Button variant="destructive" disabled={saving} onClick={() => {
-              if (deleteTarget?.type === "match") handleDeleteMatch(deleteTarget.id);
-              else if (deleteTarget?.type === "goal") handleDeleteGoal(deleteTarget.id);
-              else if (deleteTarget?.type === "roster") handleRemoveFromRoster(deleteTarget.id);
+              const target = deleteTarget;
+              if (!target) return;
+              // Close dialog immediately for snappy UX; the action runs in background.
+              setDeleteTarget(null);
+              if (target.type === "match") handleDeleteMatch(target.id);
+              else if (target.type === "goal") handleDeleteGoal(target.id);
+              else if (target.type === "roster") handleRemoveFromRoster(target.id);
             }}>
               {saving ? "삭제 중..." : "삭제"}
             </Button>
