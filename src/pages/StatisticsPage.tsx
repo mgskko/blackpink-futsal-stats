@@ -210,7 +210,7 @@ const StatisticsPage = () => {
       <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">{icon} {title}</h3>
       <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
         <table className="w-full text-xs">
-          <thead><tr className="border-b border-border text-muted-foreground"><th className="px-3 py-2 text-left font-medium">이름</th><th className="px-2 py-2 text-center font-medium">경기</th><th className="px-2 py-2 text-center font-medium">승</th><th className="px-2 py-2 text-center font-medium">무</th><th className="px-2 py-2 text-center font-medium">패</th><th className="px-2 py-2 text-center font-medium">승률</th></tr></thead>
+          <thead><tr className="border-b border-border text-muted-foreground"><th className="px-3 py-2 text-left font-medium">{L("이름", "Name")}</th><th className="px-2 py-2 text-center font-medium">{L("경기", "GP")}</th><th className="px-2 py-2 text-center font-medium">{L("승", "W")}</th><th className="px-2 py-2 text-center font-medium">{L("무", "D")}</th><th className="px-2 py-2 text-center font-medium">{L("패", "L")}</th><th className="px-2 py-2 text-center font-medium">{L("승률", "Win%")}</th></tr></thead>
           <tbody>
             {data.map((r, i) => (
               <tr key={r.name} className={`${i < data.length - 1 ? "border-b border-border" : ""} hover:bg-secondary/50 transition-colors`}>
@@ -416,10 +416,10 @@ const StatisticsPage = () => {
 
         {activeTab === "team" && !isCustomFilter && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <RecordTable title="상대팀별 전적" icon={<Shield size={18} />} data={opponentRecords} />
-            <RecordTable title="구장별 전적" icon={<MapPin size={18} />} data={venueRecords} />
+            <RecordTable title={L("상대팀별 전적", "Record by Opponent")} icon={<Shield size={18} />} data={opponentRecords} />
+            <RecordTable title={L("구장별 전적", "Record by Venue")} icon={<MapPin size={18} />} data={venueRecords} />
             <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Target size={18} /> 연령대별 승률</h3>
+              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Target size={18} /> {L("연령대별 승률", "Win Rate by Age Group")}</h3>
               <div className="space-y-2">
                 {ageRecords.map(r => (
                   <div key={r.category} className="rounded-lg border border-border bg-card p-3">
@@ -427,7 +427,7 @@ const StatisticsPage = () => {
                       <span className="text-sm font-medium text-foreground">{r.category}</span>
                       <span className={`font-display text-lg ${r.winRate >= 50 ? "text-primary text-glow" : "text-muted-foreground"}`}>{r.winRate}%</span>
                     </div>
-                    <div className="flex gap-2 text-[10px] text-muted-foreground"><span>{r.matches}경기</span><span className="text-primary">{r.wins}승</span><span>{r.draws}무</span><span>{r.losses}패</span></div>
+                    <div className="flex gap-2 text-[10px] text-muted-foreground"><span>{r.matches}{L("경기", " GP")}</span><span className="text-primary">{r.wins}{L("승", "W")}</span><span>{r.draws}{L("무", "D")}</span><span>{r.losses}{L("패", "L")}</span></div>
                     <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden"><div className="h-full gradient-pink rounded-full transition-all" style={{ width: `${r.winRate}%` }} /></div>
                   </div>
                 ))}
