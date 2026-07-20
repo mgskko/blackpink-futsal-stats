@@ -318,27 +318,27 @@ const StatisticsPage = () => {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">💸</span>
-                    <span className="text-xs font-bold text-red-400">버니즈 역대 최고의 먹튀 (에당 아자르 빙의)</span>
+                    <span className="text-xs font-bold text-red-400">{L("버니즈 역대 최고의 먹튀 (에당 아자르 빙의)", "Biggest Crasher of All Time (Hazard Mode)")}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${crasher.playerId}`)}>{crasher.name}</span>
-                    <span className="font-display text-lg text-red-400">📉 -{crasher.crashPercent}% 폭락</span>
+                    <span className="font-display text-lg text-red-400">📉 -{crasher.crashPercent}% {L("폭락", "drop")}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">피크 대비 가상 몸값 최대 하락률 기준</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{L("피크 대비 가상 몸값 최대 하락률 기준", "Peak-to-current market value decline rate")}</p>
                 </motion.div>
               );
             })()}
 
             {/* AP Chart */}
             <div className="mb-6">
-              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">TOP 5 공격포인트</h3>
+              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">{L("TOP 5 공격포인트", "TOP 5 Attack Points")}</h3>
               <div className="rounded-lg border border-border bg-card p-4">
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={apChartData} layout="vertical">
                     <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={11} />
                     <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={12} width={50} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="공격포인트" fill="url(#pinkGradient)" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="공격포인트" name={L("공격포인트", "Attack Points")} fill="url(#pinkGradient)" radius={[0, 4, 4, 0]} />
                     <defs><linearGradient id="pinkGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="hsl(330 80% 45%)" /><stop offset="100%" stopColor="hsl(330 100% 71%)" /></linearGradient></defs>
                   </BarChart>
                 </ResponsiveContainer>
@@ -347,7 +347,7 @@ const StatisticsPage = () => {
 
             {/* Quarter trend */}
             <div className="mb-6">
-              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">쿼터별 득점/실점 추이</h3>
+              <h3 className="mb-3 font-display text-xl tracking-wider text-primary">{L("쿼터별 득점/실점 추이", "Goals Scored / Conceded by Quarter")}</h3>
               <div className="rounded-lg border border-border bg-card p-4">
                 <ResponsiveContainer width="100%" height={220}>
                   <ComposedChart data={quarterData}>
@@ -355,8 +355,8 @@ const StatisticsPage = () => {
                     <XAxis dataKey="quarter" stroke="hsl(0 0% 40%)" fontSize={11} tickFormatter={v => `${v}Q`} />
                     <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="goals" fill="hsl(330 100% 71%)" name="득점" radius={[4, 4, 0, 0]} />
-                    <Line type="monotone" dataKey="conceded" stroke="hsl(0 80% 60%)" strokeWidth={2.5} name="실점" dot={{ fill: "hsl(0 80% 60%)", r: 4 }} />
+                    <Bar dataKey="goals" fill="hsl(330 100% 71%)" name={L("득점", "Goals Scored")} radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="conceded" stroke="hsl(0 80% 60%)" strokeWidth={2.5} name={L("실점", "Conceded")} dot={{ fill: "hsl(0 80% 60%)", r: 4 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -376,7 +376,7 @@ const StatisticsPage = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`font-display text-2xl ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{duo.count}</span>
-                      <span className="text-xs text-muted-foreground">합작</span>
+                      <span className="text-xs text-muted-foreground">{L("합작", "combined")}</span>
                     </div>
                   </div>
                 ))}
@@ -385,24 +385,24 @@ const StatisticsPage = () => {
 
             {/* Ranking Select + List wrapped in Card */}
             <div className="mb-6 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-3 font-display text-lg tracking-wider text-primary">랭킹</h3>
+              <h3 className="mb-3 font-display text-lg tracking-wider text-primary">{L("랭킹", "Rankings")}</h3>
               <div className="mb-4">
                 <Select value={selectedRanking} onValueChange={(v) => setSelectedRanking(v as RankingOption)}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="랭킹 선택" />
+                    <SelectValue placeholder={L("랭킹 선택", "Select ranking")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ap">📊 누적 공격포인트</SelectItem>
-                    <SelectItem value="goals">⚽ 골 순위</SelectItem>
-                    <SelectItem value="assists">🅰️ 어시스트 순위</SelectItem>
-                    <SelectItem value="ppq">⚡ PPQ (공포 효율)</SelectItem>
-                    <SelectItem value="courtMargin">📈 코트 마진 (+/-)</SelectItem>
-                    <SelectItem value="defense">🛡️ 수비 기여도</SelectItem>
-                    <SelectItem value="dataMom">👑 Data MOM 획득</SelectItem>
-                    <SelectItem value="appearances">🏟️ 출전 횟수</SelectItem>
-                    <SelectItem value="mom">⭐ MOM 투표 랭킹</SelectItem>
-                    <SelectItem value="worst">👎 워스트 누적 랭킹</SelectItem>
-                    <SelectItem value="fun">🎭 이색/예능 기록</SelectItem>
+                    <SelectItem value="ap">📊 {L("누적 공격포인트", "Attack Points")}</SelectItem>
+                    <SelectItem value="goals">⚽ {L("골 순위", "Goals")}</SelectItem>
+                    <SelectItem value="assists">🅰️ {L("어시스트 순위", "Assists")}</SelectItem>
+                    <SelectItem value="ppq">⚡ {L("PPQ (공포 효율)", "PPQ (AP Efficiency)")}</SelectItem>
+                    <SelectItem value="courtMargin">📈 {L("코트 마진 (+/-)", "Court Margin (+/-)")}</SelectItem>
+                    <SelectItem value="defense">🛡️ {L("수비 기여도", "Defense Contribution")}</SelectItem>
+                    <SelectItem value="dataMom">👑 {L("Data MOM 획득", "Data MOM Awards")}</SelectItem>
+                    <SelectItem value="appearances">🏟️ {L("출전 횟수", "Appearances")}</SelectItem>
+                    <SelectItem value="mom">⭐ {L("MOM 투표 랭킹", "MOM Votes")}</SelectItem>
+                    <SelectItem value="worst">👎 {L("워스트 누적 랭킹", "Worst Votes")}</SelectItem>
+                    <SelectItem value="fun">🎭 {L("이색/예능 기록", "Fun Stats")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
