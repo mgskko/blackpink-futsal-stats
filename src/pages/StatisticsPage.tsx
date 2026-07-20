@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, ComposedChart } from "recharts";
 import { useAllFutsalData, getPlayerName, getDeadlyDuos, getQuarterGoalDistribution, computeNonDuplicatedAP, computeMatchAP } from "@/hooks/useFutsalData";
 import type { Player, Match, Result, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
@@ -64,6 +65,12 @@ type RankingOption = "ap" | "goals" | "assists" | "ppq" | "courtMargin" | "defen
 
 const StatisticsPage = () => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  // UI-only bilingual helper. NEVER use for values compared against DB (e.g. "승"/"무"/"패").
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  // Result label mapper: DB stores Korean; we only translate the display.
+  const resultLabel = (r: string) => (isEn ? (r === "승" ? "W" : r === "패" ? "L" : r === "무" ? "D" : r) : r);
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "formation" | "toto">("player");
