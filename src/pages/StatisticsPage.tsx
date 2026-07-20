@@ -749,7 +749,7 @@ const StatisticsPage = () => {
               const trioWinRate = trioTotal > 0 ? Math.round((trioWins / trioTotal) * 100) : 0;
               return (
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🚧 방해꾼 트리오</h3>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🚧 {L("방해꾼 트리오", "Wrecker Trio")}</h3>
                   <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5 box-glow">
                     <div className="flex items-center justify-center gap-3 mb-4">
                       {TRIO_IDS.map(pid => { const p = players.find(pp => pp.id === pid); return (
@@ -762,11 +762,11 @@ const StatisticsPage = () => {
                       ); })}
                     </div>
                     <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-primary text-glow">{trioWinRate}%</div><div className="text-[10px] text-muted-foreground">동시출전 승률</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-destructive">{trioQCount > 0 ? (trioConceded / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">쿼터당 실점</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-foreground">{trioQCount > 0 ? (trioScored / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">쿼터당 득점</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-primary text-glow">{trioWinRate}%</div><div className="text-[10px] text-muted-foreground">{L("동시출전 승률", "Together Win%")}</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-destructive">{trioQCount > 0 ? (trioConceded / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">{L("쿼터당 실점", "Conceded/Q")}</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-3"><div className="font-display text-2xl text-foreground">{trioQCount > 0 ? (trioScored / trioQCount).toFixed(1) : "0"}</div><div className="text-[10px] text-muted-foreground">{L("쿼터당 득점", "Scored/Q")}</div></div>
                     </div>
-                    <p className="mt-3 text-center text-[10px] text-muted-foreground">총 {trioMatchIds.length}경기 동시 출격 (외부전 {trioTotal}경기) | 합산 마진 <span className="text-destructive font-bold">{trioMargin > 0 ? "+" : ""}{trioMargin}</span></p>
+                    <p className="mt-3 text-center text-[10px] text-muted-foreground">{L("총", "Total")} {trioMatchIds.length}{L("경기 동시 출격 (외부전 ", " matches together (external ")}{trioTotal}{L("경기) | 합산 마진 ", " matches) | Combined Margin ")}<span className="text-destructive font-bold">{trioMargin > 0 ? "+" : ""}{trioMargin}</span></p>
                   </div>
                 </div>
               );
@@ -775,8 +775,8 @@ const StatisticsPage = () => {
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
               <div className="mb-6">
-                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> 명예의 전당</h3>
-                <p className="mb-2 text-xs text-muted-foreground">한 경기 공격포인트 10개 이상 달성</p>
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Trophy size={18} /> {L("명예의 전당", "Hall of Fame")}</h3>
+                <p className="mb-2 text-xs text-muted-foreground">{L("한 경기 공격포인트 10개 이상 달성", "10+ attack points in a single match")}</p>
                 <div className="space-y-2">
                   {hallOfFame.slice(0, 15).map((e) => (
                     <div key={`${e.playerId}-${e.matchId}`} onClick={() => navigate(`/match/${e.matchId}`)} className="cursor-pointer rounded-lg border border-primary/30 bg-card p-3 transition-colors hover:bg-secondary box-glow">
@@ -784,7 +784,7 @@ const StatisticsPage = () => {
                         <div className="flex items-center gap-2"><span className="text-lg">🏆</span><span className="cursor-pointer text-sm font-bold text-foreground hover:text-primary" onClick={(ev) => { ev.stopPropagation(); navigate(`/player/${e.playerId}`); }}>{e.name}</span></div>
                         <span className="text-xs text-muted-foreground">{e.date}</span>
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">⚽ {e.goals}골 🅰️ {e.assists}어시 = <span className="text-primary font-bold">{e.ap}AP</span></div>
+                      <div className="mt-1 text-xs text-muted-foreground">⚽ {e.goals}{L("골", "G")} 🅰️ {e.assists}{L("어시", "A")} = <span className="text-primary font-bold">{e.ap}AP</span></div>
                     </div>
                   ))}
                 </div>
@@ -794,12 +794,12 @@ const StatisticsPage = () => {
             {/* Win Fairy */}
             {!isCustomFilter && (
               <div className="mb-6">
-                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🧚 승리 요정 판독기</h3>
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🧚 {L("승리 요정 판독기", "Win Fairy Detector")}</h3>
                 <div className="space-y-2">
                   {winFairy.slice(0, 10).map((d, i) => (
                     <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`cursor-pointer rounded-lg border bg-card p-3 transition-colors hover:bg-secondary ${i === 0 ? "border-primary/50 box-glow" : i >= winFairy.length - 3 ? "border-destructive/30" : "border-border"}`}>
                       <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="text-lg">{d.diff >= 15 ? "🧚" : d.diff <= -15 ? "👻" : "🤔"}</span><span className="text-sm font-medium text-foreground">{d.name}</span></div><div className={`font-display text-lg ${d.diff > 0 ? "text-primary" : "text-muted-foreground"}`}>{d.diff > 0 ? "+" : ""}{d.diff}%</div></div>
-                      <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground"><span>출석 시 승률 <span className="text-primary">{d.presentWinRate}%</span> ({d.presentMatches}경기)</span><span>결장 시 승률 {d.absentWinRate}% ({d.absentMatches}경기)</span></div>
+                      <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground"><span>{L("출석 시 승률", "Present Win%")} <span className="text-primary">{d.presentWinRate}%</span> ({d.presentMatches}{L("경기", " GP")})</span><span>{L("결장 시 승률", "Absent Win%")} {d.absentWinRate}% ({d.absentMatches}{L("경기", " GP")})</span></div>
                     </div>
                   ))}
                 </div>
@@ -808,13 +808,13 @@ const StatisticsPage = () => {
 
             {/* Last Quarter */}
             <div className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Clock size={18} /> 극장골 장인</h3>
-              <p className="mb-2 text-xs text-muted-foreground">경기 마지막 쿼터 최다 득점자</p>
+              <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Clock size={18} /> {L("극장골 장인", "Clutch Finisher")}</h3>
+              <p className="mb-2 text-xs text-muted-foreground">{L("경기 마지막 쿼터 최다 득점자", "Most goals scored in the final quarter")}</p>
               <div className="rounded-lg border border-border bg-card overflow-hidden">
                 {lastQSpecialists.map((d, i) => (
                   <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < lastQSpecialists.length - 1 ? "border-b border-border" : ""}`}>
                     <div className="flex items-center gap-3"><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span><span className="text-sm font-medium text-foreground">{d.name}</span></div>
-                    <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.lastQGoals}골</span>
+                    <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.lastQGoals}{L("골", "G")}</span>
                   </div>
                 ))}
               </div>
@@ -824,24 +824,24 @@ const StatisticsPage = () => {
             {!isCustomFilter && (
               <>
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Users size={18} /> 환상의 짝꿍 TOP 3</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">10경기 이상 함께 출전한 듀오 기준</p>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Users size={18} /> {L("환상의 짝꿍 TOP 3", "Perfect Combo TOP 3")}</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("10경기 이상 함께 출전한 듀오 기준", "Duos with 10+ shared matches")}</p>
                   <div className="space-y-2">
                     {duoSynergy.best.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border bg-card p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"}`}>
                         <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="text-lg">✨</span><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span><span className="text-primary">×</span><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span></div><span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.winRate}%</span></div>
-                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}{L("경기 중 ", " GP, ")}{d.wins}{L("승", "W")}</div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive"><Ghost size={18} /> 파멸의 듀오 TOP 3</h3>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive"><Ghost size={18} /> {L("파멸의 듀오 TOP 3", "Doom Duo TOP 3")}</h3>
                   <div className="space-y-2">
                     {duoSynergy.worst.map((d) => (
                       <div key={`${d.p1}-${d.p2}`} className="rounded-lg border border-destructive/30 bg-card p-3">
                         <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="text-lg">💀</span><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p1}`)}>{d.name1}</span><span className="text-destructive">×</span><span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span></div><span className="font-display text-lg text-destructive">{d.winRate}%</span></div>
-                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}경기 중 {d.wins}승</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.together}{L("경기 중 ", " GP, ")}{d.wins}{L("승", "W")}</div>
                       </div>
                     ))}
                   </div>
@@ -852,12 +852,12 @@ const StatisticsPage = () => {
             {/* Own Goals */}
             {ownGoals.length > 0 && (
               <div className="mb-6">
-                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Skull size={18} /> X맨 / 자책골 랭킹</h3>
+                <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Skull size={18} /> {L("X맨 / 자책골 랭킹", "X-Man / Own-Goal Ranking")}</h3>
                 <div className="rounded-lg border border-border bg-card overflow-hidden">
                   {ownGoals.map((d, i) => (
                     <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < ownGoals.length - 1 ? "border-b border-border" : ""}`}>
                       <div className="flex items-center gap-3"><span className="text-lg">💀</span><span className="text-sm font-medium text-foreground">{d.name}</span></div>
-                      <span className="font-display text-lg text-destructive">{d.count}골</span>
+                      <span className="font-display text-lg text-destructive">{d.count}{L("골", "G")}</span>
                     </div>
                   ))}
                 </div>
