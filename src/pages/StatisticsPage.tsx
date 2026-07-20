@@ -233,30 +233,30 @@ const StatisticsPage = () => {
       case "ap":
         return <GenericRanking data={topAP10} valueLabel="AP" valueFn={(p: any) => p.attackPoints} />;
       case "goals":
-        return <GenericRanking data={topGoals} valueLabel="골" valueFn={(p: any) => p.goals} />;
+        return <GenericRanking data={topGoals} valueLabel={L("골", "G")} valueFn={(p: any) => p.goals} />;
       case "assists":
-        return <GenericRanking data={topAssists} valueLabel="도움" valueFn={(p: any) => p.assists} />;
+        return <GenericRanking data={topAssists} valueLabel={L("도움", "A")} valueFn={(p: any) => p.assists} />;
       case "ppq":
         return <GenericRanking data={topPPQ.map(p => ({ id: p.playerId, name: p.name, ppq: p.ppq }))} valueLabel="PPQ" valueFn={(p: any) => p.ppq.toFixed(2)} />;
       case "courtMargin":
         return <GenericRanking data={topCourtMargin.map(p => ({ id: p.playerId, name: p.name, margin: p.margin }))} valueLabel="+/-" valueFn={(p: any) => (p.margin > 0 ? "+" : "") + p.margin} />;
       case "defense":
-        return <GenericRanking data={defenseRanking.map(p => ({ id: p.id, name: p.name, diff: p.diff }))} valueLabel="실점차" valueFn={(p: any) => p.diff.toFixed(2)} />;
+        return <GenericRanking data={defenseRanking.map(p => ({ id: p.id, name: p.name, diff: p.diff }))} valueLabel={L("실점차", "Goal Diff Allowed")} valueFn={(p: any) => p.diff.toFixed(2)} />;
       case "dataMom":
-        return <GenericRanking data={dataMomRanking.map(d => ({ id: d.id, name: d.name, count: d.count }))} valueLabel="횟수" valueFn={(d: any) => `${d.count}회`} />;
+        return <GenericRanking data={dataMomRanking.map(d => ({ id: d.id, name: d.name, count: d.count }))} valueLabel={L("횟수", "Count")} valueFn={(d: any) => `${d.count}${L("회", "x")}`} />;
       case "appearances":
-        return <GenericRanking data={topAppearances} valueLabel="출전" valueFn={(p: any) => p.appearances} />;
+        return <GenericRanking data={topAppearances} valueLabel={L("출전", "GP")} valueFn={(p: any) => p.appearances} />;
       case "mom":
         return momRanking.length > 0
-          ? <GenericRanking data={momRanking.slice(0, 10).map(d => ({ id: d.playerId, name: d.name, count: d.count }))} valueLabel="MOM" valueFn={(d: any) => `${d.count}회`} />
-          : <p className="text-center text-sm text-muted-foreground py-4">MOM 투표 데이터가 없습니다</p>;
+          ? <GenericRanking data={momRanking.slice(0, 10).map(d => ({ id: d.playerId, name: d.name, count: d.count }))} valueLabel="MOM" valueFn={(d: any) => `${d.count}${L("회", "x")}`} />
+          : <p className="text-center text-sm text-muted-foreground py-4">{L("MOM 투표 데이터가 없습니다", "No MOM vote data")}</p>;
       case "worst": {
         const worstCounts = new Map<number, number>();
         (worstVotesAll || []).forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
         const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
         return worstRanking.length > 0
-          ? <GenericRanking data={worstRanking} valueLabel="워스트" valueFn={(d: any) => `${d.count}표`} />
-          : <p className="text-center text-sm text-muted-foreground py-4">워스트 투표 데이터가 없습니다</p>;
+          ? <GenericRanking data={worstRanking} valueLabel={L("워스트", "Worst")} valueFn={(d: any) => `${d.count}${L("표", " votes")}`} />
+          : <p className="text-center text-sm text-muted-foreground py-4">{L("워스트 투표 데이터가 없습니다", "No worst-vote data")}</p>;
       }
       default:
         return null;
