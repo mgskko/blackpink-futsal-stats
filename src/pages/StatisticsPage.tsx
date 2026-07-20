@@ -446,7 +446,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">💀 THE DEATH LINEUP</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">같은 쿼터에 필드에 선 최강의 5인 조합 (최소 5쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("같은 쿼터에 필드에 선 최강의 5인 조합 (최소 5쿼터)", "Strongest 5-player lineup on the field together (min. 5 quarters)")}</p>
                   <div className="rounded-xl border border-primary/30 bg-card p-4 box-glow">
                     <div className="flex flex-wrap gap-2 mb-3">
                       {deathLineup.names.map((name, i) => (
@@ -454,9 +454,9 @@ const StatisticsPage = () => {
                       ))}
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary text-glow">{deathLineup.margin > 0 ? "+" : ""}{deathLineup.margin}</div><div className="text-[9px] text-muted-foreground">총 마진</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-foreground">{deathLineup.quarters}</div><div className="text-[9px] text-muted-foreground">쿼터</div></div>
-                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary">{deathLineup.avgMargin > 0 ? "+" : ""}{deathLineup.avgMargin.toFixed(1)}</div><div className="text-[9px] text-muted-foreground">쿼터당 마진</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary text-glow">{deathLineup.margin > 0 ? "+" : ""}{deathLineup.margin}</div><div className="text-[9px] text-muted-foreground">{L("총 마진", "Total Margin")}</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-foreground">{deathLineup.quarters}</div><div className="text-[9px] text-muted-foreground">{L("쿼터", "Quarters")}</div></div>
+                      <div className="rounded-lg bg-secondary/50 p-2"><div className="font-display text-xl text-primary">{deathLineup.avgMargin > 0 ? "+" : ""}{deathLineup.avgMargin.toFixed(1)}</div><div className="text-[9px] text-muted-foreground">{L("쿼터당 마진", "Margin/Q")}</div></div>
                     </div>
                   </div>
                 </div>
@@ -469,8 +469,8 @@ const StatisticsPage = () => {
               if (passNet.length === 0) return null;
               return (
                 <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 환상의 짝꿍 TOP 10</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">A의 패스를 받아 B가 골을 넣은 횟수 (10경기 이상 함께 출전)</p>
+                  <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 {L("환상의 짝꿍 TOP 10", "Perfect Combo TOP 10")}</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("A의 패스를 받아 B가 골을 넣은 횟수 (10경기 이상 함께 출전)", "Goals scored by B assisted by A (min. 10 shared matches)")}</p>
                   <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {passNet.map((d, i) => (
                       <div key={`${d.assisterId}-${d.scorerId}`} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < passNet.length - 1 ? "border-b border-border" : ""}`}>
@@ -480,7 +480,7 @@ const StatisticsPage = () => {
                           <span className="text-primary">→</span>
                           <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.scorerId}`)}>{d.scorerName}</span>
                         </div>
-                        <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.count}회</span>
+                        <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.count}{L("회", "x")}</span>
                       </div>
                     ))}
                   </div>
@@ -495,7 +495,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive">☠️ TOXIC DUO</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">같은 필드에 설 때 팀 실점률이 가장 높은 조합 (최소 5쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("같은 필드에 설 때 팀 실점률이 가장 높은 조합 (최소 5쿼터)", "Highest team conceded rate when on the field together (min. 5 quarters)")}</p>
                   <div className="space-y-2">
                     {toxicDuos.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
@@ -508,7 +508,7 @@ const StatisticsPage = () => {
                           </div>
                           <span className="font-display text-lg text-destructive">{d.concededPerQ.toFixed(1)}</span>
                         </div>
-                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 동안 {d.totalConceded}실점</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}{L("쿼터 동안 ", "Q, ")}{d.totalConceded}{L("실점", " conceded")}</div>
                       </div>
                     ))}
                   </div>
@@ -523,7 +523,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🛡️ BEST DEFENSIVE LINE</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">DF 포지션 최소 실점 조합 (최소 5쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("DF 포지션 최소 실점 조합 (최소 5쿼터)", "DF pairing with lowest conceded (min. 5 quarters)")}</p>
                   <div className="space-y-2">
                     {defLines.map((d, i) => (
                       <div key={d.names.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
@@ -539,7 +539,7 @@ const StatisticsPage = () => {
                           </div>
                           <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.concededPerQ.toFixed(2)}</span>
                         </div>
-                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | 쿼터당 실점</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}{L("쿼터 | 쿼터당 실점", "Q | conceded/Q")}</div>
                       </div>
                     ))}
                   </div>
@@ -554,7 +554,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">⚡ SYNERGY MARGIN</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">같이 뛸 때 vs 따로 뛸 때 마진 차이</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("같이 뛸 때 vs 따로 뛸 때 마진 차이", "Margin gap when playing together vs. apart")}</p>
                   <div className="space-y-2">
                     {synergy.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
@@ -568,8 +568,8 @@ const StatisticsPage = () => {
                           <span className={`font-display text-lg ${d.synergy > 0 ? "text-primary text-glow" : "text-destructive"}`}>{d.synergy > 0 ? "+" : ""}{d.synergy.toFixed(2)}</span>
                         </div>
                         <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
-                          <span>같이: <span className="text-primary">{d.togetherMarginPerQ > 0 ? "+" : ""}{d.togetherMarginPerQ.toFixed(2)}/Q</span> ({d.togetherQ}Q)</span>
-                          <span>따로: {d.apartMarginPerQ > 0 ? "+" : ""}{d.apartMarginPerQ.toFixed(2)}/Q</span>
+                          <span>{L("같이", "Together")}: <span className="text-primary">{d.togetherMarginPerQ > 0 ? "+" : ""}{d.togetherMarginPerQ.toFixed(2)}/Q</span> ({d.togetherQ}Q)</span>
+                          <span>{L("따로", "Apart")}: {d.apartMarginPerQ > 0 ? "+" : ""}{d.apartMarginPerQ.toFixed(2)}/Q</span>
                         </div>
                       </div>
                     ))}
@@ -585,7 +585,7 @@ const StatisticsPage = () => {
               return (
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🫥 WITHOUT YOU</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">선수가 벤치에 앉을 때 팀 마진 변화</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{L("선수가 벤치에 앉을 때 팀 마진 변화", "How team margin changes when the player is on the bench")}</p>
                   <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {withoutYou.map((d, i) => (
                       <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < withoutYou.length - 1 ? "border-b border-border" : ""}`}>
@@ -593,12 +593,12 @@ const StatisticsPage = () => {
                           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
                           <div>
                             <span className="text-sm font-medium text-foreground">{d.name}</span>
-                            <div className="text-[10px] text-muted-foreground">출전 {d.onFieldQ}Q | 벤치 {d.benchQ}Q</div>
+                            <div className="text-[10px] text-muted-foreground">{L("출전", "On")} {d.onFieldQ}Q | {L("벤치", "Bench")} {d.benchQ}Q</div>
                           </div>
                         </div>
                         <div className="text-right">
                           <span className={`font-display text-lg ${d.impact > 0 ? "text-primary" : "text-muted-foreground"}`}>{d.impact > 0 ? "+" : ""}{d.impact.toFixed(2)}</span>
-                          <div className="text-[9px] text-muted-foreground">임팩트</div>
+                          <div className="text-[9px] text-muted-foreground">{L("임팩트", "Impact")}</div>
                         </div>
                       </div>
                     ))}
