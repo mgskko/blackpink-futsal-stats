@@ -265,16 +265,16 @@ const StatisticsPage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="STATISTICS" subtitle="버니즈 통계" />
+      <PageHeader title="STATISTICS" subtitle={L("버니즈 통계", "Bunnies Stats")} />
 
       {/* Filter */}
       <div className="px-4 mb-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
-          <button onClick={() => setSelectedFilter("all")} className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "all" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>전체</button>
+          <button onClick={() => setSelectedFilter("all")} className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "all" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>{L("전체", "All")}</button>
           {years.map(y => (
             <button key={y} onClick={() => setSelectedFilter(y)} className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === y ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>{y}</button>
           ))}
-          <button onClick={() => setSelectedFilter("custom")} className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "custom" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>⚔️ 자체전</button>
+          <button onClick={() => setSelectedFilter("custom")} className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold transition-all ${selectedFilter === "custom" ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"}`}>⚔️ {L("자체전", "Intrasquad")}</button>
         </div>
       </div>
 
@@ -282,12 +282,12 @@ const StatisticsPage = () => {
       <div className="px-4 mb-6">
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
           {([
-            ["player", "👤 개인"] as const,
-            ...(!isCustomFilter ? [["team", "⚔️ 팀"] as const] : []),
-            ["chemistry", "🤝 케미"] as const,
-            ["formation", "📋 포메이션"] as const,
-            ["fun", "📊 기록"] as const,
-            ["toto", "🎯 토토"] as const,
+            ["player", `👤 ${L("개인", "Player")}`] as const,
+            ...(!isCustomFilter ? [["team", `⚔️ ${L("팀", "Team")}`] as const] : []),
+            ["chemistry", `🤝 ${L("케미", "Chemistry")}`] as const,
+            ["formation", `📋 ${L("포메이션", "Formation")}`] as const,
+            ["fun", `📊 ${L("기록", "Fun")}`] as const,
+            ["toto", `🎯 ${L("토토", "Toto")}`] as const,
           ]).map(([key, label]) => (
             <button key={key + label} onClick={() => setActiveTab(key as any)}
               className={`flex-1 py-2.5 text-[10px] font-bold transition-all ${activeTab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -300,7 +300,7 @@ const StatisticsPage = () => {
       {/* Compare button */}
       <div className="px-4 mb-4">
         <button onClick={() => navigate("/compare")} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20">
-          <Swords size={16} /> 1:1 라이벌 비교
+          <Swords size={16} /> {L("1:1 라이벌 비교", "1:1 Rival Compare")}
         </button>
       </div>
 
