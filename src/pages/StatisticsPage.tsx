@@ -618,7 +618,7 @@ const StatisticsPage = () => {
               const DuoSection = ({ title, emoji, data, isWorst, isFW }: { title: string; emoji: string; data: typeof bestFW; isWorst?: boolean; isFW?: boolean }) => data.length === 0 ? null : (
                 <div className="mb-6">
                   <h3 className={`mb-3 flex items-center gap-2 font-display text-xl tracking-wider ${isWorst ? "text-destructive" : "text-primary"}`}>{emoji} {title}</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">{isFW ? "합작 골 기준" : "승률 기준"} (최소 10쿼터)</p>
+                  <p className="mb-2 text-xs text-muted-foreground">{isFW ? L("합작 골 기준", "By Combined Goals") : L("승률 기준", "By Win Rate")} ({L("최소 10쿼터", "min. 10 quarters")})</p>
                   <div className="space-y-2">
                     {data.map((d, i) => (
                       <div key={`${d.p1}-${d.p2}`} className={`rounded-lg border p-3 ${!isWorst && i === 0 ? "border-primary/50 box-glow" : isWorst && i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
@@ -628,13 +628,13 @@ const StatisticsPage = () => {
                             <span className={isWorst ? "text-destructive" : "text-primary"}>×</span>
                             <span className="cursor-pointer text-sm font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${d.p2}`)}>{d.name2}</span>
                           </div>
-                          <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{isFW ? `⚽ ${d.combinedGoals}골` : `${d.winRate}%`}</span>
+                          <span className={`font-display text-lg ${isWorst ? "text-destructive" : "text-primary text-glow"}`}>{isFW ? `⚽ ${d.combinedGoals}${L("골", "G")}` : `${d.winRate}%`}</span>
                         </div>
                         <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                          <span>{d.quarters}쿼터</span>
-                          <span>마진 {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}/Q</span>
-                          {isFW && <span className={`${isWorst ? "text-destructive" : "text-primary"} font-bold`}>승률 {d.winRate}%</span>}
-                          {!isFW && !isWorst && <span className="text-primary font-bold">🛡️ 합작 무실점 {d.cleanSheetQuarters}Q</span>}
+                          <span>{d.quarters}{L("쿼터", "Q")}</span>
+                          <span>{L("마진", "Margin")} {d.marginPerQ > 0 ? "+" : ""}{d.marginPerQ.toFixed(1)}/Q</span>
+                          {isFW && <span className={`${isWorst ? "text-destructive" : "text-primary"} font-bold`}>{L("승률", "Win%")} {d.winRate}%</span>}
+                          {!isFW && !isWorst && <span className="text-primary font-bold">🛡️ {L("합작 무실점", "Clean sheets")} {d.cleanSheetQuarters}Q</span>}
                         </div>
                       </div>
                     ))}
@@ -656,8 +656,8 @@ const StatisticsPage = () => {
               return (<>
                 {bestTrios.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">✨ 황금 삼각편대 (Best Trio)</h3>
-                    <p className="mb-2 text-xs text-muted-foreground">3명 동시 출전 시 팀 승률 TOP (최소 10쿼터)</p>
+                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">✨ {L("황금 삼각편대", "Golden Trio")} (Best Trio)</h3>
+                    <p className="mb-2 text-xs text-muted-foreground">{L("3명 동시 출전 시 팀 승률 TOP (최소 10쿼터)", "Highest team win rate when 3 are on field together (min. 10 quarters)")}</p>
                     <div className="space-y-2">
                       {bestTrios.map((d, i) => (
                         <div key={d.ids.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-primary/50 box-glow" : "border-border"} bg-card`}>
@@ -667,7 +667,7 @@ const StatisticsPage = () => {
                             </div>
                             <span className="font-display text-lg text-primary text-glow">{d.winRate}%</span>
                           </div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}쿼터 | {d.wins}승</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">{d.quarters}{L("쿼터", "Q")} | {d.wins}{L("승", "W")}</div>
                         </div>
                       ))}
                     </div>
@@ -675,8 +675,8 @@ const StatisticsPage = () => {
                 )}
                 {worstTrios.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive">☠️ 버뮤다 삼각지대 (Worst Trio)</h3>
-                    <p className="mb-2 text-xs text-muted-foreground">3명 동시 출전 시 팀 승률 최하위 (최소 10쿼터)</p>
+                    <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-destructive">☠️ {L("버뮤다 삼각지대", "Bermuda Triangle")} (Worst Trio)</h3>
+                    <p className="mb-2 text-xs text-muted-foreground">{L("3명 동시 출전 시 팀 승률 최하위 (최소 10쿼터)", "Lowest team win rate when 3 are on field together (min. 10 quarters)")}</p>
                     <div className="space-y-2">
                       {worstTrios.map((d, i) => (
                         <div key={d.ids.join("-")} className={`rounded-lg border p-3 ${i === 0 ? "border-destructive/50" : "border-border"} bg-card`}>
@@ -687,10 +687,10 @@ const StatisticsPage = () => {
                             <span className="font-display text-lg text-destructive">{d.winRate}%</span>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                            <span>{d.quarters}쿼터 동시 출격</span>
-                            <span>합산 마진 <span className="text-destructive font-bold">{d.margin > 0 ? "+" : ""}{d.margin}</span></span>
-                            <span>쿼터당 <span className="text-destructive font-bold">{(d.totalConceded / d.quarters).toFixed(1)}</span>실점</span>
-                            <span>쿼터당 <span className="text-foreground">{(d.totalScored / d.quarters).toFixed(1)}</span>득점</span>
+                            <span>{d.quarters}{L("쿼터 동시 출격", "Q together")}</span>
+                            <span>{L("합산 마진", "Combined Margin")} <span className="text-destructive font-bold">{d.margin > 0 ? "+" : ""}{d.margin}</span></span>
+                            <span>{L("쿼터당", "Per Q")} <span className="text-destructive font-bold">{(d.totalConceded / d.quarters).toFixed(1)}</span>{L("실점", " conceded")}</span>
+                            <span>{L("쿼터당", "Per Q")} <span className="text-foreground">{(d.totalScored / d.quarters).toFixed(1)}</span>{L("득점", " scored")}</span>
                           </div>
                         </div>
                       ))}
