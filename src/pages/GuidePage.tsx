@@ -141,16 +141,21 @@ const _LEGACY_UNUSED_GUIDE_SECTIONS = [
   },
 ];
 
-const GuidePage = () => (
+const GuidePage = () => {
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const GUIDE_SECTIONS = useGuideSections();
+  return (
   <div className="pb-20">
-    <PageHeader title="GUIDE" subtitle="버니즈 축구 백과사전" />
+    <PageHeader title="GUIDE" subtitle={L("버니즈 축구 백과사전", "Bunnies Football Encyclopedia")} />
     <div className="px-4">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
         <div className="flex items-center gap-2 text-primary font-bold text-sm mb-1">
-          <Book size={16} /> 앱에서 사용되는 모든 용어와 기준을 설명합니다
+          <Book size={16} /> {L("앱에서 사용되는 모든 용어와 기준을 설명합니다", "Every term and metric used across the app.")}
         </div>
-        <p className="text-xs text-muted-foreground">각 항목을 탭하면 상세 설명과 축구 레전드 밈의 유래를 확인할 수 있습니다.</p>
+        <p className="text-xs text-muted-foreground">{L("각 항목을 탭하면 상세 설명과 축구 레전드 밈의 유래를 확인할 수 있습니다.", "Tap each item for the full description and legend-meme origin.")}</p>
       </motion.div>
 
       {GUIDE_SECTIONS.map((section, si) => (
@@ -175,6 +180,7 @@ const GuidePage = () => (
       ))}
     </div>
   </div>
-);
+  );
+};
 
 export default GuidePage;
