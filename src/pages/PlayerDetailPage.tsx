@@ -380,7 +380,7 @@ const PlayerDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
-  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">선수를 찾을 수 없습니다</div>;
+  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">{L("선수를 찾을 수 없습니다", "Player not found")}</div>;
 
   const stats = getPlayerStats(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, playerId);
   const bestAP = getPlayerBestAPMatch(filtered.matches, filtered.rosters, filtered.goalEvents, playerId);
@@ -418,7 +418,7 @@ const PlayerDetailPage = () => {
     : scoutingReport.trend === "special" ? <Sparkles size={16} className="text-primary" />
     : <Minus size={16} className="text-muted-foreground" />;
 
-  const filterLabel = filterMode === "all" ? "종합" : filterMode === "year" ? `${selectedYear}시즌` : "자체전";
+  const filterLabel = filterMode === "all" ? L("종합", "All-time") : filterMode === "year" ? (isEn ? `${selectedYear} Season` : `${selectedYear}시즌`) : L("자체전", "Intrasquad");
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" };
 
@@ -426,8 +426,8 @@ const PlayerDetailPage = () => {
   const goalTypeChartData = goalTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
   const assistTypeChartData = assistTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
   const soloTeamData = soloVsTeam.total > 0 ? [
-    { name: "솔로 골", value: soloVsTeam.solo },
-    { name: "팀 어시스트 골", value: soloVsTeam.team },
+    { name: L("솔로 골", "Solo goal"), value: soloVsTeam.solo },
+    { name: L("팀 어시스트 골", "Assisted goal"), value: soloVsTeam.team },
   ] : [];
 
   const PartnerList = ({ title, data, subLabel }: { title: string; data: { partnerId: number; count: number }[]; subLabel: string }) => (
