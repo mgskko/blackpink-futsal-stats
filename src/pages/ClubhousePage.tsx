@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { GUIDE_SECTIONS } from "@/data/guideSections";
+import { useGuideSections } from "@/data/guideSections";
+import { useTranslation } from "react-i18next";
 
 interface HistoryItem {
   id: string;
@@ -20,6 +21,10 @@ interface HistoryItem {
 const ClubhousePage = () => {
   const [activeSection, setActiveSection] = useState<"guide" | "history">("guide");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const GUIDE_SECTIONS = useGuideSections();
 
   const { data: historyItems = [] } = useQuery({
     queryKey: ["team_history"],
@@ -35,7 +40,7 @@ const ClubhousePage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="CLUBHOUSE" subtitle="버니즈 클럽하우스" />
+          <PageHeader title="CLUBHOUSE" subtitle={L("버니즈 클럽하우스", "Bunnies Clubhouse")} />
       <div className="px-4">
         {/* Section switcher */}
         <div className="flex rounded-lg border border-border bg-card overflow-hidden mb-6">
