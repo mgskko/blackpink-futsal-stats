@@ -2,8 +2,10 @@ import { motion } from "framer-motion";
 import { Book } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useGuideSections } from "@/data/guideSections";
+import { useTranslation } from "react-i18next";
 
-const GUIDE_SECTIONS = [
+const _LEGACY_UNUSED_GUIDE_SECTIONS = [
   {
     title: "📊 기본 스탯 용어",
     items: [
