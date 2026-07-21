@@ -513,12 +513,12 @@ const PlayerDetailPage = () => {
                         className="block text-left"
                       >
                         <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-emerald-500/20 transition">
-                          🏆 북중미모드 — {b.country} 🏆
+                          🏆 {L("북중미모드", "Concacaf Mode")} — {trCountry(b.country)} 🏆
                         </div>
                       </button>
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-300/90 backdrop-blur-sm">
-                        <p className="font-semibold text-emerald-300 mb-0.5">{b.country}</p>
-                        <p className="text-emerald-300/80">{b.text}</p>
+                        <p className="font-semibold text-emerald-300 mb-0.5">{trCountry(b.country)}</p>
+                        <p className="text-emerald-300/80">{trConcacafText(b.country, b.text)}</p>
                       </div>
                     </div>
                   ))}
@@ -526,10 +526,10 @@ const PlayerDetailPage = () => {
               )}
               {fireTier !== "none" && (
                 <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${FIRE_TIER_CONFIG[fireTier].bgClass} ${FIRE_TIER_CONFIG[fireTier].textClass}`}>
-                  {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}연속 출석!
+                  {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}{L("연속 출석!", " in a row!")}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-1">가입일: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
+              <p className="text-xs text-muted-foreground mt-1">{L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
             </div>
           </div>
         </div>
@@ -548,7 +548,7 @@ const PlayerDetailPage = () => {
 
       {inactive && (
         <div className="mx-4 mt-3 rounded-xl border border-muted-foreground/30 bg-muted/30 px-4 py-3 text-center">
-          <p className="text-xs font-bold text-muted-foreground">⚠️ 최근 6개월간 출전 기록이 없는 비활동 멤버입니다.</p>
+          <p className="text-xs font-bold text-muted-foreground">⚠️ {L("최근 6개월간 출전 기록이 없는 비활동 멤버입니다.", "Inactive — no appearances in the last 6 months.")}</p>
         </div>
       )}
 
