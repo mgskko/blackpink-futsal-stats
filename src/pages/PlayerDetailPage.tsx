@@ -589,12 +589,12 @@ const PlayerDetailPage = () => {
       {/* Summary stats bar */}
       <div className="mx-4 mt-3 grid grid-cols-4 gap-2">
         {[
-          { label: "골", value: stats.goals },
-          { label: "도움", value: stats.assists },
+          { label: L("골", "G"), value: stats.goals },
+          { label: L("도움", "A"), value: stats.assists },
           { label: "AP", value: stats.attackPoints },
-          { label: "G/경기", value: goalsPerGame },
-          { label: "출전", value: stats.appearances },
-          { label: "승률", value: `${stats.winRate}%` },
+          { label: L("G/경기", "G/GP"), value: goalsPerGame },
+          { label: L("출전", "GP"), value: stats.appearances },
+          { label: L("승률", "Win%"), value: `${stats.winRate}%` },
           { label: "+/-", value: courtStats ? (courtStats.margin > 0 ? `+${courtStats.margin}` : `${courtStats.margin}`) : "-" },
           { label: "PPQ", value: courtStats ? courtStats.ppq.toFixed(2) : "-" },
         ].map(s => (
@@ -611,7 +611,7 @@ const PlayerDetailPage = () => {
           {(["profile", "matches", "stats"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === tab ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "profile" ? "👤 프로필" : tab === "matches" ? "⚽ 경기" : "📊 통계"}
+              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : `📊 ${L("통계", "Stats")}`}
             </button>
           ))}
         </div>
@@ -622,7 +622,7 @@ const PlayerDetailPage = () => {
       )}
 
       {filterMode !== "all" && (activeTab === "matches" || activeTab === "stats") && (
-        <div className="mx-4 mt-2 text-center text-[11px] text-primary font-bold">📊 {filterLabel} 기준 데이터</div>
+        <div className="mx-4 mt-2 text-center text-[11px] text-primary font-bold">📊 {isEn ? `Filtered: ${filterLabel}` : `${filterLabel} 기준 데이터`}</div>
       )}
 
       {/* ===== PROFILE TAB ===== */}
