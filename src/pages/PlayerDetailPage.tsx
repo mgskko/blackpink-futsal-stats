@@ -560,13 +560,13 @@ const PlayerDetailPage = () => {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">💰</span>
-                <span className="text-xs font-bold text-yellow-400">현재 가치</span>
+                <span className="text-xs font-bold text-yellow-400">{L("현재 가치", "Market Value")}</span>
               </div>
               <div className="text-right">
-                <span className="font-display text-xl text-yellow-400">{mv.currentValue.toLocaleString()}만 원</span>
+                <span className="font-display text-xl text-yellow-400">{mv.currentValue.toLocaleString()}{L("만 원", "0k KRW")}</span>
                 {mv.change !== 0 && (
                   <div className={`text-[10px] font-bold ${mv.change > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {mv.change > 0 ? "🔺" : "🔻"} {mv.change > 0 ? "+" : ""}{mv.change.toLocaleString()}만 원 ({mv.changePercent > 0 ? "+" : ""}{mv.changePercent}%)
+                    {mv.change > 0 ? "🔺" : "🔻"} {mv.change > 0 ? "+" : ""}{mv.change.toLocaleString()}{L("만 원", "0k")} ({mv.changePercent > 0 ? "+" : ""}{mv.changePercent}%)
                   </div>
                 )}
               </div>
@@ -577,7 +577,7 @@ const PlayerDetailPage = () => {
                   <LineChart data={mv.history.slice(-15)}>
                     <Line type="monotone" dataKey="value" stroke="hsl(45, 100%, 60%)" strokeWidth={2} dot={false} />
                     <Tooltip contentStyle={{ backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(45 100% 60% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" }}
-                      formatter={(v: any) => [`${Number(v).toLocaleString()}만 원`, "몸값"]} labelFormatter={(l: any) => l} />
+                      formatter={(v: any) => [`${Number(v).toLocaleString()}${L("만 원", "0k")}`, L("몸값", "Value")]} labelFormatter={(l: any) => l} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
