@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { GUIDE_SECTIONS } from "@/data/guideSections";
+import { useGuideSections } from "@/data/guideSections";
+import { useTranslation } from "react-i18next";
 
 interface HistoryItem {
   id: string;
@@ -20,6 +21,10 @@ interface HistoryItem {
 const ClubhousePage = () => {
   const [activeSection, setActiveSection] = useState<"guide" | "history">("guide");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const GUIDE_SECTIONS = useGuideSections();
 
   const { data: historyItems = [] } = useQuery({
     queryKey: ["team_history"],
@@ -35,17 +40,17 @@ const ClubhousePage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="CLUBHOUSE" subtitle="버니즈 클럽하우스" />
+          <PageHeader title="CLUBHOUSE" subtitle={L("버니즈 클럽하우스", "Bunnies Clubhouse")} />
       <div className="px-4">
         {/* Section switcher */}
         <div className="flex rounded-lg border border-border bg-card overflow-hidden mb-6">
           <button onClick={() => setActiveSection("guide")}
             className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeSection === "guide" ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            📖 가이드
+            📖 {L("가이드", "Guide")}
           </button>
           <button onClick={() => setActiveSection("history")}
             className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeSection === "history" ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            🏛️ 구단 역사
+            🏛️ {L("구단 역사", "Club History")}
           </button>
         </div>
 
@@ -53,9 +58,9 @@ const ClubhousePage = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
               <div className="flex items-center gap-2 text-primary font-bold text-sm mb-1">
-                <Book size={16} /> 앱에서 사용되는 모든 용어와 기준을 설명합니다
+                <Book size={16} /> {L("앱에서 사용되는 모든 용어와 기준을 설명합니다", "Every term and metric used across the app.")}
               </div>
-              <p className="text-xs text-muted-foreground">각 항목을 탭하면 상세 설명을 확인할 수 있습니다.</p>
+              <p className="text-xs text-muted-foreground">{L("각 항목을 탭하면 상세 설명을 확인할 수 있습니다.", "Tap each item to expand the full description.")}</p>
             </div>
 
             {GUIDE_SECTIONS.map((section, si) => (
@@ -81,8 +86,8 @@ const ClubhousePage = () => {
             {historyItems.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <Shield size={48} className="mb-3 opacity-30" />
-                <p className="text-sm">아직 등록된 구단 역사가 없습니다</p>
-                <p className="text-xs mt-1">관리자가 클럽하우스 컨텐츠를 추가할 수 있습니다</p>
+                <p className="text-sm">{L("아직 등록된 구단 역사가 없습니다", "No club history entries yet.")}</p>
+                <p className="text-xs mt-1">{L("관리자가 클럽하우스 컨텐츠를 추가할 수 있습니다", "Admins can add clubhouse content.")}</p>
               </div>
             )}
 
@@ -90,7 +95,7 @@ const ClubhousePage = () => {
             {logos.length > 0 && (
               <div className="mb-8">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">
-                  <Shield size={18} /> 엠블럼 변천사
+                  <Shield size={18} /> {L("엠블럼 변천사", "Emblem Evolution")}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {logos.map(item => (
@@ -117,7 +122,7 @@ const ClubhousePage = () => {
             {uniforms.length > 0 && (
               <div className="mb-8">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">
-                  <Shirt size={18} /> 유니폼 컬렉션
+                  <Shirt size={18} /> {L("유니폼 컬렉션", "Kit Collection")}
                 </h3>
                 <div className="space-y-3">
                   {uniforms.map(item => (
@@ -144,7 +149,7 @@ const ClubhousePage = () => {
             {milestones.length > 0 && (
               <div className="mb-8">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">
-                  <Newspaper size={18} /> 보도자료
+                  <Newspaper size={18} /> {L("보도자료", "Press")}
                 </h3>
                 <div className="space-y-3">
                   {milestones.map((item, i) => (

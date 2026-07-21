@@ -25,6 +25,40 @@ import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
+
+// Concacaf country label → EN translation
+const CONCACAF_COUNTRY_EN: Record<string, string> = {
+  "🇧🇷 브라질": "🇧🇷 Brazil",
+  "🇫🇷 프랑스": "🇫🇷 France",
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England",
+  "🇰🇷 한국": "🇰🇷 Korea",
+  "🇪🇸 스페인": "🇪🇸 Spain",
+  "🇩🇪 독일": "🇩🇪 Germany",
+  "🇮🇹 이탈리아": "🇮🇹 Italy",
+  "🇦🇷 아르헨티나": "🇦🇷 Argentina",
+  "🇳🇱 네덜란드": "🇳🇱 Netherlands",
+  "🇪🇸 스페인의 티키타카": "🇪🇸 Spain's Tiki-Taka",
+  "🇲🇦 모로코의 철벽": "🇲🇦 Morocco's Iron Wall",
+  "🇰🇷 홍명보의 강림": "🇰🇷 Hong Myung-Bo Alert",
+  "🇨🇻 카보베르데의 벽": "🇨🇻 Cape Verde Wall",
+};
+// Concacaf badge text → EN
+const CONCACAF_TEXT_EN: Record<string, string> = {
+  "🇧🇷 브라질": "Samba-level form! 30+ AP over the last 10 matches — dominating the league.",
+  "🇫🇷 프랑스": "Art football reborn — 10+ assists across the last 5 matches, the maestro is here.",
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "England's hurricane! 10+ personal goals across the last 5 — Premier League Golden Boot form.",
+  "🇰🇷 한국": "National-team grit — pressing and interceptions turning into 5+ AP over the last 5 matches.",
+  "🇪🇸 스페인": "Armada-grade passing — 5+ kill-pass / pass-play assists carving defences apart.",
+  "🇩🇪 독일": "Unrelenting gegenpress — 30+ quarters over the last 5 at 50%+ win rate. Iron heart.",
+  "🇮🇹 이탈리아": "Catenaccio incarnate — 12 clean-sheet quarters over the last 5 matches. The wall.",
+  "🇦🇷 아르헨티나": "Tango-squad ace — 2+ Data MOM awards in the last 5 matches, hard-carrying the side.",
+  "🇳🇱 네덜란드": "Total football textbook — dominating both boxes as an all-pitch multi-tool.",
+  "🇪🇸 스페인의 티키타카": "An AP in each of the last 10 matches — unstoppable creative rhythm.",
+  "🇲🇦 모로코의 철벽": "Positive combined +/- across the last 10 DF quarters — Moroccan-defence stability.",
+  "🇰🇷 홍명보의 강림": "The data cold-reads a slump — heavy losses or a 70%+ on-pitch losing streak.",
+  "🇨🇻 카보베르데의 벽": "Elite GK form — under 1.0 goals conceded per GK quarter across the last 5 matches.",
+};
 
 export type ConcacafBadge = { country: string; text: string };
 export function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
@@ -210,6 +244,15 @@ const PlayerDetailPage = () => {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [openConcacaf, setOpenConcacaf] = useState<ConcacafBadge | null>(null);
   const displayName = useDisplayName();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const trCountry = (c: string) => (isEn ? (CONCACAF_COUNTRY_EN[c] ?? c) : c);
+  const trConcacafText = (c: string, text: string) => {
+    if (!isEn) return text;
+    // If dynamic (like Morocco with margin), keep raw text unless in dict
+    return CONCACAF_TEXT_EN[c] ?? text;
+  };
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -337,7 +380,7 @@ const PlayerDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
-  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">선수를 찾을 수 없습니다</div>;
+  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">{L("선수를 찾을 수 없습니다", "Player not found")}</div>;
 
   const stats = getPlayerStats(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, playerId);
   const bestAP = getPlayerBestAPMatch(filtered.matches, filtered.rosters, filtered.goalEvents, playerId);
@@ -375,7 +418,7 @@ const PlayerDetailPage = () => {
     : scoutingReport.trend === "special" ? <Sparkles size={16} className="text-primary" />
     : <Minus size={16} className="text-muted-foreground" />;
 
-  const filterLabel = filterMode === "all" ? "종합" : filterMode === "year" ? `${selectedYear}시즌` : "자체전";
+  const filterLabel = filterMode === "all" ? L("종합", "All-time") : filterMode === "year" ? (isEn ? `${selectedYear} Season` : `${selectedYear}시즌`) : L("자체전", "Intrasquad");
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" };
 
@@ -383,8 +426,8 @@ const PlayerDetailPage = () => {
   const goalTypeChartData = goalTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
   const assistTypeChartData = assistTypeStats.slice(0, 6).map(([name, value]) => ({ name, value }));
   const soloTeamData = soloVsTeam.total > 0 ? [
-    { name: "솔로 골", value: soloVsTeam.solo },
-    { name: "팀 어시스트 골", value: soloVsTeam.team },
+    { name: L("솔로 골", "Solo goal"), value: soloVsTeam.solo },
+    { name: L("팀 어시스트 골", "Assisted goal"), value: soloVsTeam.team },
   ] : [];
 
   const PartnerList = ({ title, data, subLabel }: { title: string; data: { partnerId: number; count: number }[]; subLabel: string }) => (
@@ -470,12 +513,12 @@ const PlayerDetailPage = () => {
                         className="block text-left"
                       >
                         <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-emerald-500/20 transition">
-                          🏆 북중미모드 — {b.country} 🏆
+                          🏆 {L("북중미모드", "Concacaf Mode")} — {trCountry(b.country)} 🏆
                         </div>
                       </button>
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-300/90 backdrop-blur-sm">
-                        <p className="font-semibold text-emerald-300 mb-0.5">{b.country}</p>
-                        <p className="text-emerald-300/80">{b.text}</p>
+                        <p className="font-semibold text-emerald-300 mb-0.5">{trCountry(b.country)}</p>
+                        <p className="text-emerald-300/80">{trConcacafText(b.country, b.text)}</p>
                       </div>
                     </div>
                   ))}
@@ -483,10 +526,10 @@ const PlayerDetailPage = () => {
               )}
               {fireTier !== "none" && (
                 <div className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold sparkle-anim ${FIRE_TIER_CONFIG[fireTier].bgClass} ${FIRE_TIER_CONFIG[fireTier].textClass}`}>
-                  {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}연속 출석!
+                  {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}{L("연속 출석!", " in a row!")}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-1">가입일: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
+              <p className="text-xs text-muted-foreground mt-1">{L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
             </div>
           </div>
         </div>
@@ -505,7 +548,7 @@ const PlayerDetailPage = () => {
 
       {inactive && (
         <div className="mx-4 mt-3 rounded-xl border border-muted-foreground/30 bg-muted/30 px-4 py-3 text-center">
-          <p className="text-xs font-bold text-muted-foreground">⚠️ 최근 6개월간 출전 기록이 없는 비활동 멤버입니다.</p>
+          <p className="text-xs font-bold text-muted-foreground">⚠️ {L("최근 6개월간 출전 기록이 없는 비활동 멤버입니다.", "Inactive — no appearances in the last 6 months.")}</p>
         </div>
       )}
 
@@ -517,13 +560,13 @@ const PlayerDetailPage = () => {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">💰</span>
-                <span className="text-xs font-bold text-yellow-400">현재 가치</span>
+                <span className="text-xs font-bold text-yellow-400">{L("현재 가치", "Market Value")}</span>
               </div>
               <div className="text-right">
-                <span className="font-display text-xl text-yellow-400">{mv.currentValue.toLocaleString()}만 원</span>
+                <span className="font-display text-xl text-yellow-400">{mv.currentValue.toLocaleString()}{L("만 원", "0k KRW")}</span>
                 {mv.change !== 0 && (
                   <div className={`text-[10px] font-bold ${mv.change > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {mv.change > 0 ? "🔺" : "🔻"} {mv.change > 0 ? "+" : ""}{mv.change.toLocaleString()}만 원 ({mv.changePercent > 0 ? "+" : ""}{mv.changePercent}%)
+                    {mv.change > 0 ? "🔺" : "🔻"} {mv.change > 0 ? "+" : ""}{mv.change.toLocaleString()}{L("만 원", "0k")} ({mv.changePercent > 0 ? "+" : ""}{mv.changePercent}%)
                   </div>
                 )}
               </div>
@@ -534,7 +577,7 @@ const PlayerDetailPage = () => {
                   <LineChart data={mv.history.slice(-15)}>
                     <Line type="monotone" dataKey="value" stroke="hsl(45, 100%, 60%)" strokeWidth={2} dot={false} />
                     <Tooltip contentStyle={{ backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(45 100% 60% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)", fontSize: "11px" }}
-                      formatter={(v: any) => [`${Number(v).toLocaleString()}만 원`, "몸값"]} labelFormatter={(l: any) => l} />
+                      formatter={(v: any) => [`${Number(v).toLocaleString()}${L("만 원", "0k")}`, L("몸값", "Value")]} labelFormatter={(l: any) => l} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -546,12 +589,12 @@ const PlayerDetailPage = () => {
       {/* Summary stats bar */}
       <div className="mx-4 mt-3 grid grid-cols-4 gap-2">
         {[
-          { label: "골", value: stats.goals },
-          { label: "도움", value: stats.assists },
+          { label: L("골", "G"), value: stats.goals },
+          { label: L("도움", "A"), value: stats.assists },
           { label: "AP", value: stats.attackPoints },
-          { label: "G/경기", value: goalsPerGame },
-          { label: "출전", value: stats.appearances },
-          { label: "승률", value: `${stats.winRate}%` },
+          { label: L("G/경기", "G/GP"), value: goalsPerGame },
+          { label: L("출전", "GP"), value: stats.appearances },
+          { label: L("승률", "Win%"), value: `${stats.winRate}%` },
           { label: "+/-", value: courtStats ? (courtStats.margin > 0 ? `+${courtStats.margin}` : `${courtStats.margin}`) : "-" },
           { label: "PPQ", value: courtStats ? courtStats.ppq.toFixed(2) : "-" },
         ].map(s => (
@@ -568,7 +611,7 @@ const PlayerDetailPage = () => {
           {(["profile", "matches", "stats"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === tab ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "profile" ? "👤 프로필" : tab === "matches" ? "⚽ 경기" : "📊 통계"}
+              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : `📊 ${L("통계", "Stats")}`}
             </button>
           ))}
         </div>
@@ -579,7 +622,7 @@ const PlayerDetailPage = () => {
       )}
 
       {filterMode !== "all" && (activeTab === "matches" || activeTab === "stats") && (
-        <div className="mx-4 mt-2 text-center text-[11px] text-primary font-bold">📊 {filterLabel} 기준 데이터</div>
+        <div className="mx-4 mt-2 text-center text-[11px] text-primary font-bold">📊 {isEn ? `Filtered: ${filterLabel}` : `${filterLabel} 기준 데이터`}</div>
       )}
 
       {/* ===== PROFILE TAB ===== */}
