@@ -244,6 +244,15 @@ const PlayerDetailPage = () => {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [openConcacaf, setOpenConcacaf] = useState<ConcacafBadge | null>(null);
   const displayName = useDisplayName();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const trCountry = (c: string) => (isEn ? (CONCACAF_COUNTRY_EN[c] ?? c) : c);
+  const trConcacafText = (c: string, text: string) => {
+    if (!isEn) return text;
+    // If dynamic (like Morocco with margin), keep raw text unless in dict
+    return CONCACAF_TEXT_EN[c] ?? text;
+  };
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
