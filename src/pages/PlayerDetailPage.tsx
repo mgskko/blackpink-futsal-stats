@@ -25,6 +25,40 @@ import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
+
+// Concacaf country label → EN translation
+const CONCACAF_COUNTRY_EN: Record<string, string> = {
+  "🇧🇷 브라질": "🇧🇷 Brazil",
+  "🇫🇷 프랑스": "🇫🇷 France",
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England",
+  "🇰🇷 한국": "🇰🇷 Korea",
+  "🇪🇸 스페인": "🇪🇸 Spain",
+  "🇩🇪 독일": "🇩🇪 Germany",
+  "🇮🇹 이탈리아": "🇮🇹 Italy",
+  "🇦🇷 아르헨티나": "🇦🇷 Argentina",
+  "🇳🇱 네덜란드": "🇳🇱 Netherlands",
+  "🇪🇸 스페인의 티키타카": "🇪🇸 Spain's Tiki-Taka",
+  "🇲🇦 모로코의 철벽": "🇲🇦 Morocco's Iron Wall",
+  "🇰🇷 홍명보의 강림": "🇰🇷 Hong Myung-Bo Alert",
+  "🇨🇻 카보베르데의 벽": "🇨🇻 Cape Verde Wall",
+};
+// Concacaf badge text → EN
+const CONCACAF_TEXT_EN: Record<string, string> = {
+  "🇧🇷 브라질": "Samba-level form! 30+ AP over the last 10 matches — dominating the league.",
+  "🇫🇷 프랑스": "Art football reborn — 10+ assists across the last 5 matches, the maestro is here.",
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "England's hurricane! 10+ personal goals across the last 5 — Premier League Golden Boot form.",
+  "🇰🇷 한국": "National-team grit — pressing and interceptions turning into 5+ AP over the last 5 matches.",
+  "🇪🇸 스페인": "Armada-grade passing — 5+ kill-pass / pass-play assists carving defences apart.",
+  "🇩🇪 독일": "Unrelenting gegenpress — 30+ quarters over the last 5 at 50%+ win rate. Iron heart.",
+  "🇮🇹 이탈리아": "Catenaccio incarnate — 12 clean-sheet quarters over the last 5 matches. The wall.",
+  "🇦🇷 아르헨티나": "Tango-squad ace — 2+ Data MOM awards in the last 5 matches, hard-carrying the side.",
+  "🇳🇱 네덜란드": "Total football textbook — dominating both boxes as an all-pitch multi-tool.",
+  "🇪🇸 스페인의 티키타카": "An AP in each of the last 10 matches — unstoppable creative rhythm.",
+  "🇲🇦 모로코의 철벽": "Positive combined +/- across the last 10 DF quarters — Moroccan-defence stability.",
+  "🇰🇷 홍명보의 강림": "The data cold-reads a slump — heavy losses or a 70%+ on-pitch losing streak.",
+  "🇨🇻 카보베르데의 벽": "Elite GK form — under 1.0 goals conceded per GK quarter across the last 5 matches.",
+};
 
 export type ConcacafBadge = { country: string; text: string };
 export function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
