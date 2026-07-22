@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
+import { useTranslation } from "react-i18next";
+import { translateTerm, resolveTeamName } from "@/lib/displayName";
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?#]+)/);
@@ -72,10 +74,16 @@ function getPlayerPositionFromLineup(lineup: any, playerId: number): string | nu
 
 const MatchDetailPage = () => {
   const { isAdmin } = useAuth();
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
   const { id } = useParams();
   const navigate = useNavigate();
   const matchId = Number(id);
   const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const pn = (id: number | null | undefined) => (id ? getPlayerName(players, id, lang) : "???");
+  const tn = (name: string | null | undefined) => resolveTeamName(name ?? "", lang);
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { data: matchQuarters } = useMatchQuarters(matchId);
@@ -190,7 +198,7 @@ const MatchDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const match = matches.find((m) => m.id === matchId);
-  if (!match) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">경기를 찾을 수 없습니다</div>;
+  if (!match) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">{L("경기를 찾을 수 없습니다", "Match not found")}</div>;
 
   const venue = venues.find((v) => v.id === match.venue_id);
   const mr = getMatchResult(teams, results, matchId);
@@ -212,9 +220,11 @@ const MatchDetailPage = () => {
   // Use quarter total if available, otherwise use results table
   const displayScoreFor = quarterTotalScore?.scoreFor ?? mr?.ourResult.score_for ?? null;
   const displayScoreAgainst = quarterTotalScore?.scoreAgainst ?? mr?.ourResult.score_against ?? null;
+  // NOTE: keep DB-valued Korean labels ("승"/"무"/"패") for logic; translate only at render.
   const displayResult = displayScoreFor !== null && displayScoreAgainst !== null
     ? (displayScoreFor > displayScoreAgainst ? "승" : displayScoreFor < displayScoreAgainst ? "패" : "무")
     : mr?.ourResult.result ?? null;
+  const displayResultLabel = displayResult ? (isEn ? (displayResult === "승" ? "W" : displayResult === "패" ? "L" : "D") : displayResult) : null;
 
   const getPlayerMatchStats = () => {
     const statsMap = new Map<number, { goals: number; assists: number; teamId: number }>();
@@ -266,12 +276,12 @@ const MatchDetailPage = () => {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-center gap-6">
           <div className="text-center">
-            <div className="text-sm font-medium text-foreground">{mr?.ourTeam.name ?? "버니즈"}</div>
+            <div className="text-sm font-medium text-foreground">{tn(mr?.ourTeam.name ?? "버니즈")}</div>
             <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "승" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreFor ?? "-"}</div>
           </div>
           <div className="text-2xl text-muted-foreground">:</div>
           <div className="text-center">
-            <div className="text-sm font-medium text-foreground">{mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}</div>
+            <div className="text-sm font-medium text-foreground">{tn(mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀")}</div>
             <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "패" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreAgainst ?? "-"}</div>
           </div>
         </div>
@@ -279,21 +289,21 @@ const MatchDetailPage = () => {
           <span>{venue?.name}</span>
           <span className="text-primary/50">•</span>
           <span>{match.match_type}</span>
-          {match.is_custom && (<><span className="text-primary/50">•</span><span className="text-primary">자체전</span></>)}
+          {match.is_custom && (<><span className="text-primary/50">•</span><span className="text-primary">{L("자체전", "Intrasquad")}</span></>)}
         </div>
         {opponentTeam?.age_category && (
           <div className="mt-2 flex justify-center">
-            <span className="text-[10px] text-muted-foreground">상대 연령대: {opponentTeam.original_age_desc || opponentTeam.age_category}</span>
+            <span className="text-[10px] text-muted-foreground">{L("상대 연령대", "Age Group")}: {opponentTeam.original_age_desc || opponentTeam.age_category}</span>
           </div>
         )}
-        {displayResult && (
+        {displayResultLabel && (
           <div className="mt-3 flex justify-center">
-            <span className={`rounded-full px-4 py-1 text-sm font-bold ${displayResult === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : displayResult === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{displayResult}</span>
+            <span className={`rounded-full px-4 py-1 text-sm font-bold ${displayResult === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : displayResult === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{displayResultLabel}</span>
           </div>
         )}
         {isScheduled && !displayResult && (
           <div className="mt-3 flex justify-center">
-            <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">예정</span>
+            <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">{L("예정", "Scheduled")}</span>
           </div>
         )}
       </motion.div>
@@ -317,22 +327,22 @@ const MatchDetailPage = () => {
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="text-lg">👑</span>
                 <div>
-                  <div className="text-[9px] font-bold tracking-wider text-primary">DATA MOM · {teamName}</div>
-                  <div className="text-sm font-bold text-foreground">{mom.name}</div>
+                  <div className="text-[9px] font-bold tracking-wider text-primary">DATA MOM · {tn(teamName)}</div>
+                  <div className="text-sm font-bold text-foreground">{pn(mom.playerId)}</div>
                 </div>
               </div>
               <div className="text-xl font-display text-primary text-glow mb-2">{mom.score.toFixed(1)}</div>
               <div className="grid grid-cols-3 gap-1">
                 <div className="rounded bg-secondary/50 p-1.5 text-center">
-                  <div className="text-[8px] text-muted-foreground">공격</div>
+                  <div className="text-[8px] text-muted-foreground">{L("공격", "Attack")}</div>
                   <div className="text-xs font-bold text-foreground">{mom.breakdown.attack.toFixed(1)}</div>
                 </div>
                 <div className="rounded bg-secondary/50 p-1.5 text-center">
-                  <div className="text-[8px] text-muted-foreground">수비</div>
+                  <div className="text-[8px] text-muted-foreground">{L("수비", "Defense")}</div>
                   <div className="text-xs font-bold text-foreground">{mom.breakdown.defense.toFixed(1)}</div>
                 </div>
                 <div className="rounded bg-secondary/50 p-1.5 text-center">
-                  <div className="text-[8px] text-muted-foreground">감점</div>
+                  <div className="text-[8px] text-muted-foreground">{L("감점", "Penalty")}</div>
                   <div className="text-xs font-bold text-foreground">{mom.breakdown.penalty.toFixed(1)}</div>
                 </div>
               </div>
@@ -346,25 +356,25 @@ const MatchDetailPage = () => {
               <span className="text-2xl">👑</span>
               <div>
                 <div className="text-[10px] font-bold tracking-wider text-primary">DATA MOM</div>
-                <div className="text-lg font-bold text-foreground">{dataMOM.name}</div>
+                <div className="text-lg font-bold text-foreground">{pn(dataMOM.playerId)}</div>
               </div>
             </div>
             <div className="text-right">
               <div className="text-2xl font-display text-primary text-glow">{dataMOM.score.toFixed(1)}</div>
-              <div className="text-[9px] text-muted-foreground">종합 점수</div>
+              <div className="text-[9px] text-muted-foreground">{L("종합 점수", "Total Score")}</div>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-md bg-secondary/50 p-2 text-center">
-              <div className="text-[9px] text-muted-foreground">공격</div>
+              <div className="text-[9px] text-muted-foreground">{L("공격", "Attack")}</div>
               <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.attack.toFixed(1)}</div>
             </div>
             <div className="rounded-md bg-secondary/50 p-2 text-center">
-              <div className="text-[9px] text-muted-foreground">수비</div>
+              <div className="text-[9px] text-muted-foreground">{L("수비", "Defense")}</div>
               <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.defense.toFixed(1)}</div>
             </div>
             <div className="rounded-md bg-secondary/50 p-2 text-center">
-              <div className="text-[9px] text-muted-foreground">감점</div>
+              <div className="text-[9px] text-muted-foreground">{L("감점", "Penalty")}</div>
               <div className="text-sm font-bold text-foreground">{dataMOM.breakdown.penalty.toFixed(1)}</div>
             </div>
           </div>
@@ -376,8 +386,8 @@ const MatchDetailPage = () => {
         <div className="mx-4 mt-4">
           <QuarterScoreboard
             quarters={matchQuarters}
-            ourTeamName={mr?.ourTeam.name ?? matchTeams.find(t => t.is_ours)?.name ?? "버니즈"}
-            opponentTeamName={mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀"}
+            ourTeamName={tn(mr?.ourTeam.name ?? matchTeams.find(t => t.is_ours)?.name ?? "버니즈")}
+            opponentTeamName={tn(mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀")}
           />
         </div>
       )}
@@ -410,25 +420,25 @@ const MatchDetailPage = () => {
                         {g.video_timestamp && !youtubeId && (
                           <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{formatTimestamp(g.video_timestamp)}</span>
                         )}
-                        {g.is_own_goal ? <span className="text-destructive">⚽ 자책골 ({g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"})</span> : (
+                        {g.is_own_goal ? <span className="text-destructive">⚽ {L("자책골", "Own Goal")} ({g.goal_player_id ? pn(g.goal_player_id) : "???"})</span> : (
                           <>
                             <span className="text-primary">⚽</span>
-                            <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? getPlayerName(players, g.goal_player_id) : "???"}</span>
+                            <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => g.goal_player_id && navigate(`/player/${g.goal_player_id}`)}>{g.goal_player_id ? pn(g.goal_player_id) : "???"}</span>
                             {g.assist_player_id && (
                               <>
                                 <span className="text-muted-foreground">←</span>
-                                <span className="cursor-pointer text-muted-foreground hover:text-primary" onClick={() => navigate(`/player/${g.assist_player_id}`)}>{getPlayerName(players, g.assist_player_id)}</span>
+                                <span className="cursor-pointer text-muted-foreground hover:text-primary" onClick={() => navigate(`/player/${g.assist_player_id}`)}>{pn(g.assist_player_id)}</span>
                               </>
                             )}
                           </>
                         )}
-                        {match.is_custom && <span className="ml-auto text-[10px] text-muted-foreground">{matchTeams.find(t => t.id === g.team_id)?.name}</span>}
+                        {match.is_custom && <span className="ml-auto text-[10px] text-muted-foreground">{tn(matchTeams.find(t => t.id === g.team_id)?.name)}</span>}
                       </div>
                       {(g.goal_type || g.assist_type || g.build_up_process) && (
                         <div className="flex items-center gap-1 flex-wrap">
-                          {g.goal_type && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary border border-primary/20">{g.goal_type}</span>}
-                          {g.assist_type && <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400 border border-blue-500/20">{g.assist_type}</span>}
-                          {g.build_up_process && <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] text-green-400 border border-green-500/20">{g.build_up_process}</span>}
+                          {g.goal_type && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary border border-primary/20">{translateTerm("goal", g.goal_type, lang)}</span>}
+                          {g.assist_type && <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400 border border-blue-500/20">{translateTerm("assist", g.assist_type, lang)}</span>}
+                          {g.build_up_process && <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] text-green-400 border border-green-500/20">{translateTerm("buildup", g.build_up_process, lang)}</span>}
                         </div>
                       )}
                     </div>
@@ -443,8 +453,8 @@ const MatchDetailPage = () => {
       {/* Match Summary with Court Margin + Clean Sheet Badge */}
       {playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
-          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? "종합 기록" : "MATCH SUMMARY"}</h2>
-          {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">쿼터별 상세 기록이 없는 경기입니다.</p>}
+          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? L("종합 기록", "MATCH SUMMARY") : "MATCH SUMMARY"}</h2>
+          {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">{L("쿼터별 상세 기록이 없는 경기입니다.", "No per-quarter detail log for this match.")}</p>}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             {playerMatchStats.map((p, i) => {
               const cm = courtMargins?.get(p.playerId);
@@ -456,8 +466,8 @@ const MatchDetailPage = () => {
                   className={`px-4 py-2.5 transition-colors hover:bg-secondary ${i < playerMatchStats.length - 1 ? "border-b border-border" : ""}`}>
                   <div className="flex cursor-pointer items-center justify-between" onClick={() => navigate(`/player/${p.playerId}`)}>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{getPlayerName(players, p.playerId)}</span>
-                      {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 슈퍼 서브</span>}
+                      <span className="text-sm font-medium text-foreground">{pn(p.playerId)}</span>
+                      {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 {L("슈퍼 서브", "Super Sub")}</span>}
                     </div>
                     <div className="flex items-center gap-3">
                       {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
@@ -476,7 +486,7 @@ const MatchDetailPage = () => {
                   </div>
                   {csCount > 0 && (
                     <div className="mt-1 text-[11px] text-green-400">
-                      🛡️ DF/GK로 출전하여 무실점 쿼터를 {csCount}회 기록했습니다!
+                      🛡️ {L(`DF/GK로 출전하여 무실점 쿼터를 ${csCount}회 기록했습니다!`, `${csCount} clean-sheet quarter${csCount > 1 ? "s" : ""} while playing DF/GK!`)}
                     </div>
                   )}
                 </div>
@@ -499,20 +509,20 @@ const MatchDetailPage = () => {
           <div className="space-y-2">
             {attendingPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-green-400"><Check size={12} /> 참석 ({attendingPlayers.length}명)</div>
-                <div className="flex flex-wrap gap-1.5">{attendingPlayers.map(p => <span key={p.id} className="rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-0.5 text-xs text-green-400">{p.name}</span>)}</div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-green-400"><Check size={12} /> {L(`참석 (${attendingPlayers.length}명)`, `Attending (${attendingPlayers.length})`)}</div>
+                <div className="flex flex-wrap gap-1.5">{attendingPlayers.map(p => <span key={p.id} className="rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-0.5 text-xs text-green-400">{pn(p.id)}</span>)}</div>
               </div>
             )}
             {absentPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-red-400"><X size={12} /> 불참 ({absentPlayers.length}명)</div>
-                <div className="flex flex-wrap gap-1.5">{absentPlayers.map(p => <span key={p.id} className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">{p.name}</span>)}</div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-red-400"><X size={12} /> {L(`불참 (${absentPlayers.length}명)`, `Absent (${absentPlayers.length})`)}</div>
+                <div className="flex flex-wrap gap-1.5">{absentPlayers.map(p => <span key={p.id} className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">{pn(p.id)}</span>)}</div>
               </div>
             )}
             {undecidedPlayers.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-yellow-400"><HelpCircle size={12} /> 미정 ({undecidedPlayers.length}명)</div>
-                <div className="flex flex-wrap gap-1.5">{undecidedPlayers.map(p => <span key={p.id} className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2.5 py-0.5 text-xs text-yellow-400">{p.name}</span>)}</div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-yellow-400"><HelpCircle size={12} /> {L(`미정 (${undecidedPlayers.length}명)`, `Undecided (${undecidedPlayers.length})`)}</div>
+                <div className="flex flex-wrap gap-1.5">{undecidedPlayers.map(p => <span key={p.id} className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2.5 py-0.5 text-xs text-yellow-400">{pn(p.id)}</span>)}</div>
               </div>
             )}
           </div>
@@ -527,7 +537,7 @@ const MatchDetailPage = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
-                  <th className="px-3 py-2 text-left font-bold text-foreground">{match.is_custom ? "팀 / 이름" : "이름"}</th>
+                  <th className="px-3 py-2 text-left font-bold text-foreground">{match.is_custom ? L("팀 / 이름", "Team / Name") : L("이름", "Name")}</th>
                   {lineupSummary.quarters.map(q => (
                     <th key={q} className="px-2 py-2 text-center font-bold text-primary">{q}Q</th>
                   ))}
@@ -549,7 +559,7 @@ const MatchDetailPage = () => {
                         {rows.map(([pid, posMap]) => (
                           <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
                             <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                              {getPlayerName(players, pid)}
+                              {pn(pid)}
                             </td>
                             {lineupSummary.quarters.map(q => {
                               const pos = posMap.get(q);
@@ -562,15 +572,15 @@ const MatchDetailPage = () => {
                     );
                     return (
                       <>
-                        {renderRows(teamAEntries, `🅰️ ${matchTeams[0]?.name || "A팀"}`, "border-blue-500")}
-                        {renderRows(teamBEntries, `🅱️ ${matchTeams[1]?.name || "B팀"}`, "border-orange-500")}
+                        {renderRows(teamAEntries, `🅰️ ${tn(matchTeams[0]?.name) || L("A팀", "Team A")}`, "border-blue-500")}
+                        {renderRows(teamBEntries, `🅱️ ${tn(matchTeams[1]?.name) || L("B팀", "Team B")}`, "border-orange-500")}
                       </>
                     );
                   }
                   return entries.map(([pid, posMap]) => (
                     <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
                       <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                        {getPlayerName(players, pid)}
+                        {pn(pid)}
                       </td>
                       {lineupSummary.quarters.map(q => {
                         const pos = posMap.get(q);
@@ -598,12 +608,12 @@ const MatchDetailPage = () => {
           const teamRoster = roster.filter((r) => r.team_id === team.id);
           return (
             <div key={team.id} className="mb-3">
-              {matchTeams.filter(t => t.is_ours).length > 1 && <div className="mb-2 text-xs font-bold text-primary">{team.name}</div>}
+              {matchTeams.filter(t => t.is_ours).length > 1 && <div className="mb-2 text-xs font-bold text-primary">{tn(team.name)}</div>}
               <div className="flex flex-wrap gap-2">
                 {teamRoster.map((r) => (
                   <span key={r.id} onClick={() => navigate(`/player/${r.player_id}`)}
                     className="cursor-pointer rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-all hover:bg-primary/20 hover:border-primary/50">
-                    {getPlayerName(players, r.player_id)}
+                    {pn(r.player_id)}
                   </span>
                 ))}
               </div>

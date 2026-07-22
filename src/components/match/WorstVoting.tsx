@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { ThumbsDown, Skull } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface WorstVotingProps {
   matchId: number;
@@ -14,6 +15,10 @@ interface WorstVotingProps {
 
 const WorstVoting = ({ matchId }: WorstVotingProps) => {
   const { user } = useAuth();
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
   const { players, rosters } = useAllFutsalData();
   const queryClient = useQueryClient();
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
@@ -50,9 +55,9 @@ const WorstVoting = ({ matchId }: WorstVotingProps) => {
         await (supabase as any).from("worst_votes").insert({ match_id: matchId, voted_player_id: selectedPlayer, voter_id: user.id });
       }
       queryClient.invalidateQueries({ queryKey: ["worst_votes", matchId] });
-      toast({ title: "워스트 투표 완료! 💀" });
+      toast({ title: L("워스트 투표 완료! 💀", "Worst vote submitted! 💀") });
     } catch (err: any) {
-      toast({ title: "오류", description: err.message, variant: "destructive" });
+      toast({ title: L("오류", "Error"), description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -63,7 +68,7 @@ const WorstVoting = ({ matchId }: WorstVotingProps) => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-destructive/30 bg-card p-4">
       <h3 className="mb-3 flex items-center gap-2 font-display text-lg text-destructive">
-        <Skull size={18} /> 오늘의 워스트 <span className="text-xs text-muted-foreground font-normal ml-auto">{totalVotes}표</span>
+        <Skull size={18} /> {L("오늘의 워스트", "Worst of the Day")} <span className="text-xs text-muted-foreground font-normal ml-auto">{totalVotes}{L("표", " votes")}</span>
       </h3>
 
       {topVoted.length > 0 && (
@@ -72,13 +77,13 @@ const WorstVoting = ({ matchId }: WorstVotingProps) => {
             <div key={pid} className="flex items-center justify-between rounded-md bg-secondary/50 px-3 py-1.5">
               <div className="flex items-center gap-2">
                 <span className={`text-sm ${i === 0 ? "text-destructive" : "text-muted-foreground"}`}>{i === 0 ? "💀" : `${i + 1}`}</span>
-                <span className="text-xs font-medium text-foreground">{getPlayerName(players, pid)}</span>
+                <span className="text-xs font-medium text-foreground">{getPlayerName(players, pid, lang)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-16 rounded-full bg-secondary overflow-hidden">
                   <div className="h-full bg-destructive/60 rounded-full" style={{ width: `${totalVotes > 0 ? (count / totalVotes) * 100 : 0}%` }} />
                 </div>
-                <span className="text-[10px] text-muted-foreground">{count}표</span>
+                <span className="text-[10px] text-muted-foreground">{count}{L("표", " votes")}</span>
               </div>
             </div>
           ))}
@@ -96,7 +101,7 @@ const WorstVoting = ({ matchId }: WorstVotingProps) => {
                 : "border-border bg-secondary text-muted-foreground hover:border-destructive/40"
             }`}
           >
-            {p.name}
+            {getPlayerName(players, p.id, lang)}
           </button>
         ))}
       </div>
@@ -107,7 +112,7 @@ const WorstVoting = ({ matchId }: WorstVotingProps) => {
         className="w-full bg-destructive/80 hover:bg-destructive text-destructive-foreground font-bold text-xs"
         size="sm"
       >
-        <ThumbsDown size={14} /> {myVote ? "투표 변경" : "워스트 투표하기"}
+        <ThumbsDown size={14} /> {myVote ? L("투표 변경", "Change vote") : L("워스트 투표하기", "Vote worst")}
       </Button>
     </motion.div>
   );

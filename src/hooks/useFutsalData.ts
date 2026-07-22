@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export interface Player { id: number; name: string; is_active: boolean; join_date: string; back_number: number | null; profile_image_url: string | null; }
+export interface Player { id: number; name: string; name_en?: string | null; is_active: boolean; join_date: string; back_number: number | null; profile_image_url: string | null; }
 export interface Venue { id: number; name: string; }
 export interface Match { id: number; date: string; venue_id: number; match_type: string; is_custom: boolean; has_detail_log: boolean; youtube_link: string | null; }
 export interface Team { id: number; match_id: number; name: string; is_ours: boolean; original_age_desc: string | null; age_category: string | null; }
@@ -133,9 +133,18 @@ export function computeMatchAP(
   }
 }
 
-// Helper functions
-export function getPlayerName(players: Player[], id: number): string {
-  return players.find(p => p.id === id)?.name ?? `선수#${id}`;
+// Helper functions. `lang` is optional — when the active app language starts with
+// "en" the English-only display name (name_en) is returned when populated.
+export function getPlayerName(players: Player[], id: number, lang?: string): string {
+  const p = players.find(pp => pp.id === id);
+  if (!p) return lang?.startsWith("en") ? `Player #${id}` : `선수#${id}`;
+  if (lang?.startsWith("en")) {
+    if (p.name_en && p.name_en.trim()) return p.name_en;
+    // Well-known guests: 용병1 → Guest 1
+    const guestMatch = p.name.match(/^용병(\d+)$/);
+    if (guestMatch) return `Guest ${guestMatch[1]}`;
+  }
+  return p.name;
 }
 
 export function getVenueName(venues: Venue[], id: number): string {
