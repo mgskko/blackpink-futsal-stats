@@ -103,11 +103,21 @@ const AdminMatchEdit = () => {
     setEditingYoutube(false);
     const mid = Number(v);
     const mTeams = teams.filter(t => t.match_id === mid);
-    const ot = mTeams.find(t => t.is_ours);
-    const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
-    setScoreFor(or2?.score_for || 0);
-    setScoreAgainst(or2?.score_against || 0);
     const m = matches.find(m => m.id === mid);
+    if (m?.is_custom) {
+      // For intrasquad matches: scoreFor = Team A's goals, scoreAgainst = Team B's goals
+      const tA = mTeams[0];
+      const tB = mTeams[1];
+      const rA = tA ? results.find(r => r.team_id === tA.id && r.match_id === mid) : null;
+      const rB = tB ? results.find(r => r.team_id === tB.id && r.match_id === mid) : null;
+      setScoreFor(rA?.score_for || 0);
+      setScoreAgainst(rB?.score_for || 0);
+    } else {
+      const ot = mTeams.find(t => t.is_ours);
+      const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
+      setScoreFor(or2?.score_for || 0);
+      setScoreAgainst(or2?.score_against || 0);
+    }
     setEditYoutubeLink(m?.youtube_link || "");
   };
 
@@ -115,12 +125,20 @@ const AdminMatchEdit = () => {
     if (!matchId) return;
     setSaving(true);
     try {
-      for (const team of matchTeams) {
-        const isOurs = team.is_ours;
-        const sf = isOurs ? scoreFor : scoreAgainst;
-        const sa = isOurs ? scoreAgainst : scoreFor;
-        const result = sf > sa ? "승" : sf < sa ? "패" : "무";
-        await supabase.from("results").update({ score_for: sf, score_against: sa, result }).eq("match_id", matchId).eq("team_id", team.id);
+      if (isCustomMatch && teamA && teamB) {
+        // Intrasquad: scoreFor = Team A goals, scoreAgainst = Team B goals
+        const aResult = scoreFor > scoreAgainst ? "승" : scoreFor < scoreAgainst ? "패" : "무";
+        const bResult = scoreFor > scoreAgainst ? "패" : scoreFor < scoreAgainst ? "승" : "무";
+        await supabase.from("results").update({ score_for: scoreFor, score_against: scoreAgainst, result: aResult }).eq("match_id", matchId).eq("team_id", teamA.id);
+        await supabase.from("results").update({ score_for: scoreAgainst, score_against: scoreFor, result: bResult }).eq("match_id", matchId).eq("team_id", teamB.id);
+      } else {
+        for (const team of matchTeams) {
+          const isOurs = team.is_ours;
+          const sf = isOurs ? scoreFor : scoreAgainst;
+          const sa = isOurs ? scoreAgainst : scoreFor;
+          const result = sf > sa ? "승" : sf < sa ? "패" : "무";
+          await supabase.from("results").update({ score_for: sf, score_against: sa, result }).eq("match_id", matchId).eq("team_id", team.id);
+        }
       }
       invalidateAll();
       toast({ title: "스코어가 수정되었습니다! ✅" });
@@ -354,20 +372,35 @@ const AdminMatchEdit = () => {
             {editingScore ? (
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">{ourTeam?.name || "우리팀"}</label>
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamA?.name || "팀 A") : (ourTeam?.name || "우리팀")}</label>
                   <Input type="number" value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
                 </div>
                 <span className="text-muted-foreground font-bold">:</span>
                 <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">상대팀</label>
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamB?.name || "팀 B") : "상대팀"}</label>
                   <Input type="number" value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
                 </div>
               </div>
             ) : (
-              <div className="text-center font-display text-2xl text-foreground">
-                {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
-                <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
-              </div>
+              isCustomMatch && teamA && teamB ? (
+                (() => {
+                  const rA = matchResults.find(r => r.team_id === teamA.id);
+                  const rB = matchResults.find(r => r.team_id === teamB.id);
+                  return (
+                    <div className="text-center font-display text-xl text-foreground">
+                      <span className="text-xs text-muted-foreground mr-1">{teamA.name}</span>
+                      {rA?.score_for ?? "-"} : {rB?.score_for ?? "-"}
+                      <span className="text-xs text-muted-foreground ml-1">{teamB.name}</span>
+                      <div className="mt-1 text-[10px] text-muted-foreground">{teamA.name}: {rA?.result} · {teamB.name}: {rB?.result}</div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center font-display text-2xl text-foreground">
+                  {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
+                  <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
+                </div>
+              )
             )}
           </div>
 
