@@ -372,20 +372,35 @@ const AdminMatchEdit = () => {
             {editingScore ? (
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">{ourTeam?.name || "우리팀"}</label>
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamA?.name || "팀 A") : (ourTeam?.name || "우리팀")}</label>
                   <Input type="number" value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
                 </div>
                 <span className="text-muted-foreground font-bold">:</span>
                 <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">상대팀</label>
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamB?.name || "팀 B") : "상대팀"}</label>
                   <Input type="number" value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
                 </div>
               </div>
             ) : (
-              <div className="text-center font-display text-2xl text-foreground">
-                {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
-                <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
-              </div>
+              isCustomMatch && teamA && teamB ? (
+                (() => {
+                  const rA = matchResults.find(r => r.team_id === teamA.id);
+                  const rB = matchResults.find(r => r.team_id === teamB.id);
+                  return (
+                    <div className="text-center font-display text-xl text-foreground">
+                      <span className="text-xs text-muted-foreground mr-1">{teamA.name}</span>
+                      {rA?.score_for ?? "-"} : {rB?.score_for ?? "-"}
+                      <span className="text-xs text-muted-foreground ml-1">{teamB.name}</span>
+                      <div className="mt-1 text-[10px] text-muted-foreground">{teamA.name}: {rA?.result} · {teamB.name}: {rB?.result}</div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center font-display text-2xl text-foreground">
+                  {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
+                  <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
+                </div>
+              )
             )}
           </div>
 
