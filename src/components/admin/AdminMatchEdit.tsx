@@ -103,11 +103,21 @@ const AdminMatchEdit = () => {
     setEditingYoutube(false);
     const mid = Number(v);
     const mTeams = teams.filter(t => t.match_id === mid);
-    const ot = mTeams.find(t => t.is_ours);
-    const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
-    setScoreFor(or2?.score_for || 0);
-    setScoreAgainst(or2?.score_against || 0);
     const m = matches.find(m => m.id === mid);
+    if (m?.is_custom) {
+      // For intrasquad matches: scoreFor = Team A's goals, scoreAgainst = Team B's goals
+      const tA = mTeams[0];
+      const tB = mTeams[1];
+      const rA = tA ? results.find(r => r.team_id === tA.id && r.match_id === mid) : null;
+      const rB = tB ? results.find(r => r.team_id === tB.id && r.match_id === mid) : null;
+      setScoreFor(rA?.score_for || 0);
+      setScoreAgainst(rB?.score_for || 0);
+    } else {
+      const ot = mTeams.find(t => t.is_ours);
+      const or2 = ot ? results.find(r => r.team_id === ot.id && r.match_id === mid) : null;
+      setScoreFor(or2?.score_for || 0);
+      setScoreAgainst(or2?.score_against || 0);
+    }
     setEditYoutubeLink(m?.youtube_link || "");
   };
 
@@ -115,12 +125,20 @@ const AdminMatchEdit = () => {
     if (!matchId) return;
     setSaving(true);
     try {
-      for (const team of matchTeams) {
-        const isOurs = team.is_ours;
-        const sf = isOurs ? scoreFor : scoreAgainst;
-        const sa = isOurs ? scoreAgainst : scoreFor;
-        const result = sf > sa ? "승" : sf < sa ? "패" : "무";
-        await supabase.from("results").update({ score_for: sf, score_against: sa, result }).eq("match_id", matchId).eq("team_id", team.id);
+      if (isCustomMatch && teamA && teamB) {
+        // Intrasquad: scoreFor = Team A goals, scoreAgainst = Team B goals
+        const aResult = scoreFor > scoreAgainst ? "승" : scoreFor < scoreAgainst ? "패" : "무";
+        const bResult = scoreFor > scoreAgainst ? "패" : scoreFor < scoreAgainst ? "승" : "무";
+        await supabase.from("results").update({ score_for: scoreFor, score_against: scoreAgainst, result: aResult }).eq("match_id", matchId).eq("team_id", teamA.id);
+        await supabase.from("results").update({ score_for: scoreAgainst, score_against: scoreFor, result: bResult }).eq("match_id", matchId).eq("team_id", teamB.id);
+      } else {
+        for (const team of matchTeams) {
+          const isOurs = team.is_ours;
+          const sf = isOurs ? scoreFor : scoreAgainst;
+          const sa = isOurs ? scoreAgainst : scoreFor;
+          const result = sf > sa ? "승" : sf < sa ? "패" : "무";
+          await supabase.from("results").update({ score_for: sf, score_against: sa, result }).eq("match_id", matchId).eq("team_id", team.id);
+        }
       }
       invalidateAll();
       toast({ title: "스코어가 수정되었습니다! ✅" });
