@@ -175,7 +175,7 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
                         onClick={() => navigate(`/match/${t.matchId}`)}
                         className="w-full text-left rounded px-2 py-1 text-[10px] text-foreground hover:bg-primary/10 transition"
                       >
-                        Q{t.quarter} · {nm(t.assisterId)} → {nm(t.scorerId)}
+                        Q{t.quarter} · {t.assisterName} → {t.scorerName}
                       </button>
                     ))}
                   </div>
