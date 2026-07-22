@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { Player, Match, Result, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerName, computeNonDuplicatedAP } from "@/hooks/useFutsalData";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   players: Player[];
@@ -24,6 +25,10 @@ function getFieldPlayers(lineup: any): number[] {
 
 const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQuarters }: Props) => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const ranking = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -111,7 +116,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
       const blowoutRate = Math.round((blowout / totalAP) * 100);
       return {
         id: p.id,
-        name: p.name,
+        name: getPlayerName(players, p.id, lang),
         blowoutRate,
         garbageAP: garbage,
         totalAP,
@@ -119,15 +124,15 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
         score: blowoutRate + garbage,
       };
     }).sort((a, b) => b.score - a.score).slice(0, 5);
-  }, [players, matches, results, rosters, goalEvents, allQuarters]);
+  }, [players, matches, results, rosters, goalEvents, allQuarters, lang]);
 
   if (ranking.length === 0) return null;
 
   return (
     <div className="mb-6">
-      <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">💸 민생지원금 수령자</h3>
+      <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">💸 {L("민생지원금 수령자", "Stimulus-Check Collector")}</h3>
       <p className="mb-2 text-[10px] text-muted-foreground">
-        팀이 위기일 땐 안 보이지만, 4점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.
+        {L("팀이 위기일 땐 안 보이지만, 4점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.", "Invisible when the team is under pressure but magically racks up stats in 4+ point blowouts and garbage time — the true capitalist ace.")}
       </p>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         {ranking.map((d, i) => (
@@ -137,7 +142,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : i === 1 ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span>
               <div>
                 <span className="text-sm font-medium text-foreground">{d.name}</span>
-                <div className="text-[10px] text-muted-foreground">대승경기 AP {d.blowoutAP}개({d.blowoutRate}%) | 가비지타임 {d.garbageAP}AP (4골차+)</div>
+                <div className="text-[10px] text-muted-foreground">{L("대승경기 AP", "Blowout AP")} {d.blowoutAP} ({d.blowoutRate}%) | {L("가비지타임", "Garbage-Time")} {d.garbageAP}AP (4+)</div>
               </div>
             </div>
             <span className={`font-display text-lg ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{d.score}pt</span>

@@ -67,6 +67,8 @@ const StatisticsPage = () => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
+  const nm = (id: number) => getPlayerName(players, id, lang);
   // UI-only bilingual helper. NEVER use for values compared against DB (e.g. "승"/"무"/"패").
   const L = (ko: string, en: string) => (isEn ? en : ko);
   // Result label mapper: DB stores Korean; we only translate the display.
@@ -144,7 +146,8 @@ const StatisticsPage = () => {
     });
     return [...momCounts.entries()].map(([pid, count]) => ({
       id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
-    })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
+    })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10)
+      .map(d => ({ ...d, name: nm(d.id) }));
   }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results, inactiveIds]);
 
   if (isLoading) return <SplashScreen />;
@@ -153,7 +156,7 @@ const StatisticsPage = () => {
   // `activePlayers` is the hard-filtered roster used across every statistic.
   const EXCLUDED_NAMES = new Set(["용병1", "용병2"]);
   const activePlayers = players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id) && !EXCLUDED_NAMES.has(p.name));
-  const allStats = activePlayers.map(p => ({ ...p, ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
+  const allStats = activePlayers.map(p => ({ ...p, name: nm(p.id), ...getFilteredPlayerStats(p.id, matches, results, rosters, goalEvents, selectedFilter) }));
   const memberStats = allStats;
 
   const topGoals = [...memberStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
@@ -370,9 +373,9 @@ const StatisticsPage = () => {
                   <div key={`${duo.p1}-${duo.p2}`} className={`flex items-center justify-between rounded-lg border bg-card p-4 ${i === 0 ? "border-primary/50 box-glow" : "border-border"}`}>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>#{i + 1}</span>
-                      <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p1}`)}>{getPlayerName(players, duo.p1)}</span>
+                      <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p1}`)}>{nm(duo.p1)}</span>
                       <span className="text-primary">×</span>
-                      <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p2}`)}>{getPlayerName(players, duo.p2)}</span>
+                      <span className="cursor-pointer font-medium text-foreground hover:text-primary" onClick={() => navigate(`/player/${duo.p2}`)}>{nm(duo.p2)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`font-display text-2xl ${i === 0 ? "text-primary text-glow" : "text-foreground"}`}>{duo.count}</span>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import type { Player } from "@/hooks/useFutsalData";
+import { useTranslation } from "react-i18next";
 
 interface MatchQuarter {
   id: number;
@@ -66,7 +67,9 @@ function getBenchFromFlat(lineup: any): number[] {
   return (Array.isArray(raw) ? raw : [raw]).map(Number);
 }
 
-function renderField(positions: { playerId: number; x: number; y: number; role: string }[], players: Player[], bench: number[], label?: string, borderColor?: string) {
+function renderField(positions: { playerId: number; x: number; y: number; role: string }[], players: Player[], bench: number[], label?: string, borderColor?: string, lang?: string, L?: (ko: string, en: string) => string) {
+  const pn = (id: number) => getPlayerName(players, id, lang);
+  const benchLabel = L ? L("벤치:", "Bench:") : "벤치:";
   return (
     <div className={`flex-1 ${borderColor ? `border-t-2 ${borderColor}` : ""}`}>
       {label && <div className="text-[10px] font-bold text-center py-1 text-muted-foreground">{label}</div>}
@@ -86,18 +89,18 @@ function renderField(positions: { playerId: number; x: number; y: number; role: 
               {p.role}
             </div>
             <span className="text-[8px] text-white font-medium drop-shadow-lg whitespace-nowrap">
-              {getPlayerName(players, p.playerId)}
+              {pn(p.playerId)}
             </span>
           </div>
         ))}
       </div>
       {bench.length > 0 && (
         <div className="mt-1 flex items-center gap-1 px-1">
-          <span className="text-[9px] text-muted-foreground font-bold">벤치:</span>
+          <span className="text-[9px] text-muted-foreground font-bold">{benchLabel}</span>
           <div className="flex flex-wrap gap-0.5">
             {bench.map((id: number, i: number) => (
               <span key={`bench-${id}-${i}`} className="rounded-full border border-border bg-card px-1.5 py-0.5 text-[9px] text-muted-foreground">
-                {getPlayerName(players, id)}
+                {pn(id)}
               </span>
             ))}
           </div>
@@ -108,6 +111,9 @@ function renderField(positions: { playerId: number; x: number; y: number; role: 
 }
 
 export default function QuarterLineupViewer({ quarters, players }: Props) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const L = (ko: string, en: string) => (lang.startsWith("en") ? en : ko);
   const quartersWithLineup = quarters.filter(q => {
     if (!q.lineup || typeof q.lineup !== "object") return false;
     if (isCustomLineup(q.lineup)) return true;
@@ -144,14 +150,16 @@ export default function QuarterLineupViewer({ quarters, players }: Props) {
             players,
             getBenchFromFlat(current.lineup.teamA),
             `🅰️ ${current.lineup.teamA?.formation || ""}`,
-            "border-blue-500"
+            "border-blue-500",
+            lang, L
           )}
           {renderField(
             getPositionsFromFlat(current.lineup.teamB),
             players,
             getBenchFromFlat(current.lineup.teamB),
             `🅱️ ${current.lineup.teamB?.formation || ""}`,
-            "border-orange-500"
+            "border-orange-500",
+            lang, L
           )}
         </div>
       ) : (
@@ -159,7 +167,10 @@ export default function QuarterLineupViewer({ quarters, players }: Props) {
           {renderField(
             getPositionsFromFlat(current.lineup),
             players,
-            getBenchFromFlat(current.lineup)
+            getBenchFromFlat(current.lineup),
+            undefined,
+            undefined,
+            lang, L
           )}
         </>
       )}
