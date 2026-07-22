@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { Player, Match, Team, Result, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerName, computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computeAllCourtMargins, getPlayerPosition } from "@/hooks/useCourtStats";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   players: Player[];
@@ -26,6 +27,11 @@ function getFieldPlayers(lineup: any): number[] {
 
 const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, allQuarters }: Props) => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const nm = (id: number) => getPlayerName(players, id, lang);
 
   // Global 10-match filter
   const playerMatchCount = useMemo(() => {
@@ -92,10 +98,10 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         if (g.quarter >= 6 && g.quarter <= 8) lateMap.set(g.assist_player_id, (lateMap.get(g.assist_player_id) || 0) + 1);
       }
     });
-    const earlyBirds = [...earlyMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
-    const slowStarters = [...lateMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const earlyBirds = [...earlyMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: nm(pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
+    const slowStarters = [...lateMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: nm(pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
     return { earlyBirds, slowStarters };
-  }, [goalEvents, players, playerMatchCount]);
+  }, [goalEvents, players, playerMatchCount, lang]);
 
   // 4. 패배 요정: AP를 올린 경기의 팀 승률이 가장 낮은
   const jinxRanking = useMemo(() => {
@@ -121,10 +127,10 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         const res = results.find(r => r.team_id === pRoster.team_id && r.match_id === mid);
         if (res?.result === "승") wins++;
       });
-      ranking.push({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((wins / matchIds.size) * 100), wins, total: matchIds.size });
+      ranking.push({ id: pid, name: nm(pid), winRate: Math.round((wins / matchIds.size) * 100), wins, total: matchIds.size });
     });
     return ranking.sort((a, b) => a.winRate - b.winRate).slice(0, 5);
-  }, [goalEvents, rosters, results, players]);
+  }, [goalEvents, rosters, results, players, lang]);
 
   // 5. 낭만 원툴: 고난도 골 비율
   const highlightRanking = useMemo(() => {
@@ -139,10 +145,10 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     });
     return [...playerGoals.entries()]
       .filter(([pid, d]) => d.total >= 5 && d.hard >= 2 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.hard / d.total) * 100), hard: d.hard, total: d.total }))
+      .map(([pid, d]) => ({ id: pid, name: nm(pid), rate: Math.round((d.hard / d.total) * 100), hard: d.hard, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
-  }, [goalEvents, players, playerMatchCount]);
+  }, [goalEvents, players, playerMatchCount, lang]);
 
   const RankItem = ({ i, name, id, value, sub, total }: { i: number; name: string; id: number; value: string; sub?: string; total?: number }) => (
     <div onClick={() => navigate(`/player/${id}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${total !== undefined && i < total - 1 ? "border-b border-border" : ""}`}>
@@ -168,34 +174,34 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {cardioRanking.length > 0 && (
-        <Section title="유산소의 신" emoji="🏃" desc="15쿼터+ 출전, AP 극소, 누적 마진 0 이하인 러닝머신 선수">
+        <Section title={L("유산소의 신", "The Cardio God")} emoji="🏃" desc={L("15쿼터+ 출전, AP 극소, 누적 마진 0 이하인 러닝머신 선수", "15+ Q played, minimal AP, and non-positive margin — the treadmill player")}>
           {cardioRanking.map((d, i) => (
-            <RankItem key={d.playerId} i={i} name={d.name} id={d.playerId} value={`${d.quartersPlayed}Q`} sub={`AP ${d.ap} | 마진 ${d.margin > 0 ? "+" : ""}${d.margin}`} total={cardioRanking.length} />
+            <RankItem key={d.playerId} i={i} name={nm(d.playerId)} id={d.playerId} value={`${d.quartersPlayed}Q`} sub={`AP ${d.ap} | ${L("마진", "Margin")} ${d.margin > 0 ? "+" : ""}${d.margin}`} total={cardioRanking.length} />
           ))}
         </Section>
       )}
 
       {tacticalVictim.length > 0 && (
-        <Section title="전술적 희생양" emoji="🛡️" desc="FW 출전 시 마진 상위권이나, DF/GK 투입으로 전체 마진 손해">
+        <Section title={L("전술적 희생양", "Tactical Scapegoat")} emoji="🛡️" desc={L("FW 출전 시 마진 상위권이나, DF/GK 투입으로 전체 마진 손해", "Top margin as FW but overall margin dragged down by DF/GK deployment")}>
           {tacticalVictim.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`+${d.diff.toFixed(1)}`} sub={`FW ${d.fwMarginPerQ.toFixed(1)}/Q vs 전체 ${d.totalMarginPerQ.toFixed(1)}/Q`} total={tacticalVictim.length} />
+            <RankItem key={d.id} i={i} name={nm(d.id)} id={d.id} value={`+${d.diff.toFixed(1)}`} sub={`FW ${d.fwMarginPerQ.toFixed(1)}/Q vs ${L("전체", "All")} ${d.totalMarginPerQ.toFixed(1)}/Q`} total={tacticalVictim.length} />
           ))}
         </Section>
       )}
 
       {/* Early Bird vs Slow Starter */}
       <div className="mb-6">
-        <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">⏱️ 얼리버드 vs 슬로우 스타터</h3>
-        <p className="mb-2 text-[10px] text-muted-foreground">1~3쿼터 vs 6~8쿼터 공격포인트 집중도</p>
+        <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">⏱️ {L("얼리버드 vs 슬로우 스타터", "Early Bird vs Slow Starter")}</h3>
+        <p className="mb-2 text-[10px] text-muted-foreground">{L("1~3쿼터 vs 6~8쿼터 공격포인트 집중도", "Attack point concentration in 1–3Q vs 6–8Q")}</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="bg-primary/10 px-3 py-1.5 text-[10px] font-bold text-primary text-center">🌅 얼리버드 (1~3Q)</div>
+            <div className="bg-primary/10 px-3 py-1.5 text-[10px] font-bold text-primary text-center">🌅 {L("얼리버드", "Early Bird")} (1~3Q)</div>
             {earlyLateRanking.earlyBirds.map((d, i) => (
               <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.count}AP`} total={earlyLateRanking.earlyBirds.length} />
             ))}
           </div>
           <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="bg-destructive/10 px-3 py-1.5 text-[10px] font-bold text-destructive text-center">🌙 슬로우스타터 (6~8Q)</div>
+            <div className="bg-destructive/10 px-3 py-1.5 text-[10px] font-bold text-destructive text-center">🌙 {L("슬로우스타터", "Slow Starter")} (6~8Q)</div>
             {earlyLateRanking.slowStarters.map((d, i) => (
               <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.count}AP`} total={earlyLateRanking.slowStarters.length} />
             ))}
@@ -204,17 +210,17 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       </div>
 
       {jinxRanking.length > 0 && (
-        <Section title="패배 요정 (The Jinx)" emoji="🤡" desc="AP를 기록한 경기의 팀 승률이 유독 낮은 선수 (최소 AP 10경기)">
+        <Section title={L("패배 요정 (The Jinx)", "The Jinx")} emoji="🤡" desc={L("AP를 기록한 경기의 팀 승률이 유독 낮은 선수 (최소 AP 10경기)", "Player whose team win rate is unusually low when they score AP (min 10 AP matches)")}>
           {jinxRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.total} 경기 승리`} total={jinxRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.total} ${L("경기 승리", "wins")}`} total={jinxRanking.length} />
           ))}
         </Section>
       )}
 
       {highlightRanking.length > 0 && (
-        <Section title="낭만 원툴 (Highlight Reel)" emoji="✨" desc="중거리/발리/칩슛/헤딩 등 고난도 골 비율 최고 (최소 5골, 2+ 고난도)">
+        <Section title={L("낭만 원툴 (Highlight Reel)", "Highlight Reel")} emoji="✨" desc={L("중거리/발리/칩슛/헤딩 등 고난도 골 비율 최고 (최소 5골, 2+ 고난도)", "Highest rate of difficult goals: long-range, volley, chip, header (min. 5 goals, 2+ difficult)")}>
           {highlightRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.rate}%`} sub={`고난도 ${d.hard}/${d.total} 골`} total={highlightRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.rate}%`} sub={`${L("고난도", "Difficult")} ${d.hard}/${d.total} ${L("골", "G")}`} total={highlightRanking.length} />
           ))}
         </Section>
       )}

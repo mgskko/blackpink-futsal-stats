@@ -6,6 +6,8 @@ import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/use
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import type { Team, Result } from "@/hooks/useFutsalData";
+import { useTranslation } from "react-i18next";
+import { getPlayerName } from "@/hooks/useFutsalData";
 
 interface Props {
   players: Player[];
@@ -18,6 +20,10 @@ interface Props {
 }
 
 export default function POTMCard({ players, matches, teams, results, rosters, goalEvents, allQuarters }: Props) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const potm = useMemo(() => {
@@ -85,30 +91,30 @@ export default function POTMCard({ players, matches, teams, results, rosters, go
         
         <div className="relative z-10">
           <div className="text-center mb-1">
-            <span className="text-[10px] font-bold tracking-widest text-yellow-400/70">{potm.year}년 {potm.month}월</span>
+            <span className="text-[10px] font-bold tracking-widest text-yellow-400/70">{isEn ? `${potm.year}.${String(potm.month).padStart(2, "0")}` : `${potm.year}년 ${potm.month}월`}</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 rounded-xl border-2 border-yellow-500/50 bg-secondary overflow-hidden shadow-lg shadow-yellow-500/10 flex-shrink-0">
               {potm.player.profile_image_url ? (
-                <img src={potm.player.profile_image_url} alt={potm.player.name} className="h-full w-full object-cover" />
+                <img src={potm.player.profile_image_url} alt={getPlayerName(players, potm.player.id, lang)} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center"><User size={32} className="text-yellow-500/50" /></div>
               )}
             </div>
             <div className="flex-1">
-              <div className="font-display text-2xl text-yellow-400 tracking-wide">{potm.player.name}</div>
+              <div className="font-display text-2xl text-yellow-400 tracking-wide">{getPlayerName(players, potm.player.id, lang)}</div>
               <div className="grid grid-cols-4 gap-2 mt-2">
                 <div className="text-center">
                   <div className="font-display text-lg text-yellow-300">{potm.goals}</div>
-                  <div className="text-[8px] text-yellow-500/60">골</div>
+                  <div className="text-[8px] text-yellow-500/60">{L("골", "G")}</div>
                 </div>
                 <div className="text-center">
                   <div className="font-display text-lg text-yellow-300">{potm.assists}</div>
-                  <div className="text-[8px] text-yellow-500/60">도움</div>
+                  <div className="text-[8px] text-yellow-500/60">{L("도움", "A")}</div>
                 </div>
                 <div className="text-center">
                   <div className="font-display text-lg text-yellow-300">{potm.appearances}</div>
-                  <div className="text-[8px] text-yellow-500/60">출전</div>
+                  <div className="text-[8px] text-yellow-500/60">{L("출전", "GP")}</div>
                 </div>
                 <div className="text-center">
                   <div className="font-display text-lg text-yellow-300">{potm.momCount}</div>
@@ -120,7 +126,7 @@ export default function POTMCard({ players, matches, teams, results, rosters, go
         </div>
       </div>
       <button onClick={handleDownload} className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5 py-2 text-xs font-bold text-yellow-400 transition-colors hover:bg-yellow-500/10">
-        <Download size={14} /> 카드 이미지 저장
+        <Download size={14} /> {L("카드 이미지 저장", "Save Card Image")}
       </button>
     </motion.div>
   );

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface MatchQuarter {
   id: number;
@@ -16,6 +17,9 @@ interface Props {
 }
 
 export default function QuarterScoreboard({ quarters, ourTeamName, opponentTeamName }: Props) {
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
   if (quarters.length === 0) return null;
   const sorted = [...quarters].sort((a, b) => a.quarter - b.quarter);
   const totalFor = sorted.reduce((s, q) => s + (q.score_for || 0), 0);
@@ -34,17 +38,17 @@ export default function QuarterScoreboard({ quarters, ourTeamName, opponentTeamN
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 1 }} className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <h2 className="font-display text-sm tracking-wider text-primary">QUARTER SCORE</h2>
-        <span className="text-[10px] text-muted-foreground">세부 쿼터 단위 전적</span>
+        <span className="text-[10px] text-muted-foreground">{L("세부 쿼터 단위 전적", "Per-Quarter Record")}</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-t border-b border-border text-muted-foreground">
-              <th className="px-3 py-2 text-left font-medium min-w-[60px]">팀</th>
+              <th className="px-3 py-2 text-left font-medium min-w-[60px]">{L("팀", "Team")}</th>
               {sorted.map((q, idx) => (
                 <th key={q.quarter} className={`px-1.5 py-2 text-center font-medium min-w-[28px] ${quarterResults[idx] === "W" ? "text-blue-400" : quarterResults[idx] === "L" ? "text-red-400" : ""}`}>{q.quarter}Q</th>
               ))}
-              <th className="px-3 py-2 text-center font-bold border-l border-border min-w-[36px]">합</th>
+              <th className="px-3 py-2 text-center font-bold border-l border-border min-w-[36px]">{L("합", "Sum")}</th>
             </tr>
           </thead>
           <tbody>
@@ -71,12 +75,12 @@ export default function QuarterScoreboard({ quarters, ourTeamName, opponentTeamN
       </div>
       {/* Quarter results summary */}
       <div className="border-t border-border px-4 py-2.5 flex items-center justify-between bg-secondary/20">
-        <span className="text-[10px] text-muted-foreground">쿼터별 전적</span>
+        <span className="text-[10px] text-muted-foreground">{L("쿼터별 전적", "Quarter Record")}</span>
         <div className="flex items-center gap-2 text-xs font-bold">
-          <span className="text-blue-400">{winCount}승</span>
-          <span className="text-muted-foreground">{drawCount}무</span>
-          <span className="text-red-400">{lossCount}패</span>
-          <span className="text-[10px] text-muted-foreground font-normal ml-1">({sorted.length}쿼터)</span>
+          <span className="text-blue-400">{winCount}{L("승", "W")}</span>
+          <span className="text-muted-foreground">{drawCount}{L("무", "D")}</span>
+          <span className="text-red-400">{lossCount}{L("패", "L")}</span>
+          <span className="text-[10px] text-muted-foreground font-normal ml-1">({sorted.length}{L("쿼터", "Q")})</span>
         </div>
       </div>
     </motion.div>
