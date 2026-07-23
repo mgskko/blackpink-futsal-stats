@@ -1,4 +1,5 @@
 import type { Match } from "@/hooks/useFutsalData";
+import { useTranslation } from "react-i18next";
 
 export type FilterMode = "all" | "year" | "custom";
 
@@ -10,14 +11,16 @@ interface PlayerFilterTabsProps {
 }
 
 const PlayerFilterTabs = ({ filterMode, selectedYear, years, onFilterChange }: PlayerFilterTabsProps) => {
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
   return (
     <div className="mx-4 mt-4 space-y-2">
       {/* Primary filter tabs */}
       <div className="flex rounded-lg border border-border bg-card overflow-hidden">
         {([
-          ["all", "종합"] as const,
-          ["year", "연도별"] as const,
-          ["custom", "자체전"] as const,
+          ["all", isEn ? "All-time" : "종합"] as const,
+          ["year", isEn ? "By Year" : "연도별"] as const,
+          ["custom", isEn ? "Intrasquad" : "자체전"] as const,
         ]).map(([key, label]) => (
           <button
             key={key}

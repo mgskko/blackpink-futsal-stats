@@ -26,6 +26,7 @@ import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
+import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine } from "@/lib/i18nBadges";
 
 // Concacaf country label → EN translation
 const CONCACAF_COUNTRY_EN: Record<string, string> = {
@@ -540,7 +541,7 @@ const PlayerDetailPage = () => {
                 badge.emoji === "🚨" ? "border-destructive/40 bg-destructive/10 text-destructive"
                 : badge.emoji === "🛡️" ? "border-green-500/40 bg-green-500/10 text-green-400"
                 : "border-primary/40 bg-primary/10 text-primary"
-              }`}><span>{badge.emoji}</span><span>{badge.label}</span></span>
+              }`}><span>{badge.emoji}</span><span>{translateBadgeLabel(badge.label, isEn)}</span></span>
             ))}
           </div>
         )}
@@ -652,12 +653,12 @@ const PlayerDetailPage = () => {
 
           {/* Scouting Report - Position Based */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/40 bg-background p-5 shadow-lg shadow-primary/5">
-            <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">{trendIcon} 수석코치 AI 스카우팅 리포트</h3>
+            <h3 className="mb-3 font-display text-lg tracking-wide text-primary text-glow flex items-center gap-2">{trendIcon} {L("수석코치 AI 스카우팅 리포트", "Head Coach AI Scouting Report")}</h3>
             <div className="flex items-start gap-4 rounded-lg bg-secondary/30 border border-primary/20 p-4">
               <span className="text-4xl drop-shadow-lg">{scoutingReport.emoji}</span>
               <div className="flex-1 min-w-0">
-                <div className="text-base font-bold text-primary text-glow mb-1.5">{scoutingReport.label}</div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{scoutingReport.comment}</p>
+                <div className="text-base font-bold text-primary text-glow mb-1.5">{translateScoutingLabel(scoutingReport.label, isEn)}</div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{translateScoutingComment(scoutingReport.comment, isEn)}</p>
               </div>
             </div>
             {/* Position-based 3-line report */}
@@ -701,9 +702,9 @@ const PlayerDetailPage = () => {
                   
                   return (
                     <>
-                      {posLine && <p>{posLine}</p>}
-                      {styleLine && <p>{styleLine}</p>}
-                      {synergyLine && <p>{synergyLine}</p>}
+                      {posLine && <p>{translateScoutingLine(posLine, isEn)}</p>}
+                      {styleLine && <p>{translateScoutingLine(styleLine, isEn)}</p>}
+                      {synergyLine && <p>{translateScoutingLine(synergyLine, isEn)}</p>}
                     </>
                   );
                 })()}
@@ -713,11 +714,11 @@ const PlayerDetailPage = () => {
 
           {/* W/D/L */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-            <h3 className="mb-3 font-display text-lg text-primary">전체 전적 요약</h3>
+            <h3 className="mb-3 font-display text-lg text-primary">{L("전체 전적 요약", "Overall Record")}</h3>
             <div className="flex justify-around">
-              <div className="text-center"><div className="font-display text-2xl text-primary text-glow">{stats.wins}</div><div className="text-xs text-muted-foreground">승</div></div>
-              <div className="text-center"><div className="font-display text-2xl text-foreground">{stats.draws}</div><div className="text-xs text-muted-foreground">무</div></div>
-              <div className="text-center"><div className="font-display text-2xl text-muted-foreground">{stats.losses}</div><div className="text-xs text-muted-foreground">패</div></div>
+              <div className="text-center"><div className="font-display text-2xl text-primary text-glow">{stats.wins}</div><div className="text-xs text-muted-foreground">{L("승","W")}</div></div>
+              <div className="text-center"><div className="font-display text-2xl text-foreground">{stats.draws}</div><div className="text-xs text-muted-foreground">{L("무","D")}</div></div>
+              <div className="text-center"><div className="font-display text-2xl text-muted-foreground">{stats.losses}</div><div className="text-xs text-muted-foreground">{L("패","L")}</div></div>
             </div>
           </motion.div>
 
@@ -725,12 +726,12 @@ const PlayerDetailPage = () => {
           {myFairy && filterMode !== "custom" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
               <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
-                {myFairy.diff >= 15 ? "🧚" : myFairy.diff <= -15 ? "👻" : "📊"} 승리 요정 지수
+                {myFairy.diff >= 15 ? "🧚" : myFairy.diff <= -15 ? "👻" : "📊"} {L("승리 요정 지수", "Win Fairy Index")}
               </h3>
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
-                  <div>출석 시 팀 승률: <span className="text-primary font-bold">{myFairy.presentWinRate}%</span> ({myFairy.presentMatches}경기)</div>
-                  <div>결장 시 팀 승률: <span className="text-foreground">{myFairy.absentWinRate}%</span> ({myFairy.absentMatches}경기)</div>
+                  <div>{L("출석 시 팀 승률", "Team Win% When Present")}: <span className="text-primary font-bold">{myFairy.presentWinRate}%</span> ({myFairy.presentMatches}{L("경기"," GP")})</div>
+                  <div>{L("결장 시 팀 승률", "Team Win% When Absent")}: <span className="text-foreground">{myFairy.absentWinRate}%</span> ({myFairy.absentMatches}{L("경기"," GP")})</div>
                 </div>
                 <div className={`font-display text-2xl ${myFairy.diff > 0 ? "text-primary text-glow" : "text-muted-foreground"}`}>
                   {myFairy.diff > 0 ? "+" : ""}{myFairy.diff}%
@@ -748,7 +749,7 @@ const PlayerDetailPage = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
               <button onClick={() => setShowWrapped(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 py-4 text-sm font-bold text-primary transition-all hover:bg-primary/10 hover:border-primary/60">
-                <Gift size={18} /> {selectedYear} 시즌 결산 카드 만들기
+                <Gift size={18} /> {isEn ? `Create ${selectedYear} Season Wrapped Card` : `${selectedYear} 시즌 결산 카드 만들기`}
               </button>
             </motion.div>
           )}
@@ -758,7 +759,7 @@ const PlayerDetailPage = () => {
       {/* ===== MATCHES TAB ===== */}
       {activeTab === "matches" && (
         <div className="mx-4 mt-4 space-y-2">
-          {playerMatchList.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">출전 기록이 없습니다</p>}
+          {playerMatchList.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">{L("출전 기록이 없습니다", "No match records")}</p>}
           {playerMatchList.map(({ match: m, matchResult: mr, opponentName, goals, assists, playerResult, playerScoreFor, playerScoreAgainst }) => {
             const resultStr = playerResult;
             const bgColor = resultStr === "승" ? "border-blue-500/30 bg-blue-500/5" : resultStr === "패" ? "border-red-500/30 bg-red-500/5" : resultStr === "무" ? "border-muted bg-muted/5" : "border-border bg-card";
@@ -771,9 +772,9 @@ const PlayerDetailPage = () => {
                     <div className="flex items-center gap-2">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         resultStr === "승" ? "bg-blue-500/20 text-blue-400" : resultStr === "패" ? "bg-red-500/20 text-red-400" : "bg-muted text-muted-foreground"
-                      }`}>{resultStr || "예정"}</span>
+                      }`}>{resultStr ? (isEn ? (resultStr === "승" ? "W" : resultStr === "패" ? "L" : "D") : resultStr) : L("예정","TBD")}</span>
                       <span className="text-sm font-medium text-foreground">vs {opponentName}</span>
-                      {m.is_custom && <span className="text-[10px] text-primary">자체전</span>}
+                      {m.is_custom && <span className="text-[10px] text-primary">{L("자체전","Intrasquad")}</span>}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{m.date}</span>
@@ -823,14 +824,14 @@ const PlayerDetailPage = () => {
           <div className="mt-4 grid grid-cols-2 gap-3">
             {killerQuarter && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-primary/30 bg-card p-3 text-center">
-                <div className="text-xs font-bold text-primary mb-1">⚡ 킬러 쿼터</div>
+                <div className="text-xs font-bold text-primary mb-1">⚡ {L("킬러 쿼터","Killer Quarter")}</div>
                 <div className="font-display text-3xl text-primary text-glow">{killerQuarter.quarter}Q</div>
-                <div className="text-[10px] text-muted-foreground">{killerQuarter.ap} AP 기록</div>
+                <div className="text-[10px] text-muted-foreground">{killerQuarter.ap} AP</div>
               </motion.div>
             )}
             {positionDist.total > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-3">
-                <div className="text-xs font-bold text-primary mb-2">📍 포지션 분포</div>
+                <div className="text-xs font-bold text-primary mb-2">📍 {L("포지션 분포","Position Distribution")}</div>
               <div className="space-y-1">
                   {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).sort((a, b) => positionDist[b] - positionDist[a]).map(pos => (
                     <div key={pos} className="flex items-center justify-between text-[11px]">
@@ -851,25 +852,25 @@ const PlayerDetailPage = () => {
           {/* Defense Contribution */}
           {defenseCont.quartersWithPlayer >= 5 && defenseCont.quartersWithoutPlayer >= 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">🛡️ 수비 기여도</h3>
+              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">🛡️ {L("수비 기여도","Defensive Contribution")}</h3>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-[10px] text-muted-foreground">투입 시 실점</div>
+                  <div className="text-[10px] text-muted-foreground">{L("투입 시 실점","GA (On)")}</div>
                   <div className="font-display text-lg text-foreground">{defenseCont.withPlayer.toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-muted-foreground">미투입 시 실점</div>
+                  <div className="text-[10px] text-muted-foreground">{L("미투입 시 실점","GA (Off)")}</div>
                   <div className="font-display text-lg text-foreground">{defenseCont.withoutPlayer.toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-muted-foreground">차이</div>
+                  <div className="text-[10px] text-muted-foreground">{L("차이","Diff")}</div>
                   <div className={`font-display text-lg ${defenseCont.diff < 0 ? "text-green-400" : defenseCont.diff > 0 ? "text-red-400" : "text-foreground"}`}>
                     {defenseCont.diff > 0 ? "+" : ""}{defenseCont.diff.toFixed(2)}
                   </div>
                 </div>
               </div>
               {ownGoalInducer > 0 && (
-                <div className="mt-2 text-[10px] text-muted-foreground text-center">💥 자책골 유발 기여: {ownGoalInducer}회 (상대 자책골 시 필드 위)</div>
+                <div className="mt-2 text-[10px] text-muted-foreground text-center">💥 {L("자책골 유발 기여","Own-goal Induced")}: {ownGoalInducer}{L("회"," times")}</div>
               )}
             </motion.div>
           )}
@@ -877,11 +878,11 @@ const PlayerDetailPage = () => {
           {/* Scoring Arsenal & Playmaking Style - Donut Charts */}
           {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-3 font-display text-lg text-primary">🎯 시그니처 무기</h3>
+              <h3 className="mb-3 font-display text-lg text-primary">🎯 {L("시그니처 무기","Signature Weapons")}</h3>
               <div className="grid grid-cols-2 gap-4">
                 {goalTypeStats.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">⚽ 득점 루트 TOP 5</h4>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">⚽ {L("득점 루트 TOP 5","Top 5 Scoring Routes")}</h4>
                     <div className="space-y-1.5">
                       {goalTypeStats.slice(0, 5).map(([name, value], i) => {
                         const total = goalTypeStats.reduce((s, [, v]) => s + v, 0);
@@ -900,7 +901,7 @@ const PlayerDetailPage = () => {
                 )}
                 {assistTypeStats.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">🅰️ 어시스트 취향 TOP 5</h4>
+                    <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">🅰️ {L("어시스트 취향 TOP 5","Top 5 Assist Styles")}</h4>
                     <div className="space-y-1.5">
                       {assistTypeStats.slice(0, 5).map(([name, value], i) => {
                         const total = assistTypeStats.reduce((s, [, v]) => s + v, 0);
@@ -924,7 +925,7 @@ const PlayerDetailPage = () => {
           {/* Solo vs Team Goals */}
           {soloTeamData.length > 0 && soloVsTeam.total >= 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-2 font-display text-sm text-primary">🎯 골 의존도 (Solo vs Team)</h3>
+              <h3 className="mb-2 font-display text-sm text-primary">🎯 {L("골 의존도","Goal Dependency")} (Solo vs Team)</h3>
               <ResponsiveContainer width="100%" height={50}>
                 <BarChart data={[{ solo: soloVsTeam.solo, team: soloVsTeam.team }]} layout="vertical">
                   <XAxis type="number" hide />
@@ -935,8 +936,8 @@ const PlayerDetailPage = () => {
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                <span>솔로 {soloVsTeam.solo}골 ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.solo / soloVsTeam.total * 100) : 0}%)</span>
-                <span>팀 {soloVsTeam.team}골 ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.team / soloVsTeam.total * 100) : 0}%)</span>
+                <span>{L("솔로","Solo")} {soloVsTeam.solo}{L("골","G")} ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.solo / soloVsTeam.total * 100) : 0}%)</span>
+                <span>{L("팀","Team")} {soloVsTeam.team}{L("골","G")} ({soloVsTeam.total > 0 ? Math.round(soloVsTeam.team / soloVsTeam.total * 100) : 0}%)</span>
               </div>
             </motion.div>
           )}
@@ -953,20 +954,20 @@ const PlayerDetailPage = () => {
                       <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
                       <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId)}</span>
                     </div>
-                    <span className="text-sm text-primary">{count}회 합작</span>
+                    <span className="text-sm text-primary">{count}{L("회 합작"," combos")}</span>
                   </div>
                 ))}
               </div>
             </motion.div>
           )}
 
-          <PartnerList title="🅰️ 내가 어시스트 해준 선수" data={assistGiven} subLabel="도움" />
-          <PartnerList title="⚽ 나에게 어시스트 해준 선수" data={assistReceived} subLabel="도움" />
+          <PartnerList title={L("🅰️ 내가 어시스트 해준 선수","🅰️ Players I Assisted")} data={assistGiven} subLabel={L("도움","assists")} />
+          <PartnerList title={L("⚽ 나에게 어시스트 해준 선수","⚽ Players Who Assisted Me")} data={assistReceived} subLabel={L("도움","assists")} />
 
           {/* Position Win Rate Comparison */}
           {positionDist.total >= 5 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-3 font-display text-sm text-primary flex items-center gap-2">📊 포지션별 팀 승률</h3>
+              <h3 className="mb-3 font-display text-sm text-primary flex items-center gap-2">📊 {L("포지션별 팀 승률","Team Win% by Position")}</h3>
               <div className="space-y-2">
                 {(["FW", "DF", "GK", "MF"] as const).map(pos => {
                   const posQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === pos);
@@ -999,10 +1000,10 @@ const PlayerDetailPage = () => {
           {/* Attacking Contribution */}
           {courtStats && courtStats.quartersPlayed >= 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">⚔️ 공격 기여도</h3>
+              <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">⚔️ {L("공격 기여도","Attacking Contribution")}</h3>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>
-                  <div className="text-[10px] text-muted-foreground">팀 득점 관여율</div>
+                  <div className="text-[10px] text-muted-foreground">{L("팀 득점 관여율","% of Team Goals")}</div>
                   <div className="font-display text-lg text-primary">{(() => {
                     const playerQIds = new Set<string>();
                     filtered.quarters.forEach(q => {
@@ -1016,7 +1017,7 @@ const PlayerDetailPage = () => {
                   })()}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-muted-foreground">FW 출전 시 마진</div>
+                  <div className="text-[10px] text-muted-foreground">{L("FW 출전 시 마진","Margin as FW")}</div>
                   <div className={`font-display text-lg ${(() => {
                     const fwQ = filtered.quarters.filter(q => q.lineup && getPlayerPosition(q.lineup, playerId) === "FW");
                     const avg = fwQ.length > 0 ? fwQ.reduce((s, q) => s + (q.score_for || 0) - (q.score_against || 0), 0) / fwQ.length : 0;
@@ -1041,9 +1042,9 @@ const PlayerDetailPage = () => {
       <Dialog open={!!openConcacaf} onOpenChange={(o) => !o && setOpenConcacaf(null)}>
         <DialogContent className="border-emerald-500/40 bg-card/80 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="text-emerald-400">🏆 북중미모드 — {openConcacaf?.country}</DialogTitle>
+            <DialogTitle className="text-emerald-400">🏆 {L("북중미모드","Concacaf Mode")} — {openConcacaf ? trCountry(openConcacaf.country) : ""}</DialogTitle>
             <DialogDescription className="text-foreground/90 leading-relaxed pt-2">
-              {openConcacaf?.text}
+              {openConcacaf ? trConcacafText(openConcacaf.country, openConcacaf.text) : ""}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

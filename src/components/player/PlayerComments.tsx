@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface PlayerCommentsProps {
   playerId: number;
@@ -14,6 +15,8 @@ const PlayerComments = ({ playerId }: PlayerCommentsProps) => {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
 
   const { data: comments = [] } = useQuery({
     queryKey: ["player_comments", playerId],
@@ -68,7 +71,7 @@ const PlayerComments = ({ playerId }: PlayerCommentsProps) => {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            placeholder="응원 메시지를 남겨보세요..."
+            placeholder={isEn ? "Leave a message of support..." : "응원 메시지를 남겨보세요..."}
             className="flex-1 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
           />
           <button
@@ -83,7 +86,7 @@ const PlayerComments = ({ playerId }: PlayerCommentsProps) => {
 
       <div className="space-y-2 max-h-[300px] overflow-y-auto">
         {comments.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">아직 방명록이 비어있어요 ✍️</p>
+          <p className="text-xs text-muted-foreground text-center py-4">{isEn ? "The guestbook is empty ✍️" : "아직 방명록이 비어있어요 ✍️"}</p>
         )}
         {comments.map((c: any) => (
           <div key={c.id} className="rounded-lg bg-secondary/30 border border-border/50 p-3">
