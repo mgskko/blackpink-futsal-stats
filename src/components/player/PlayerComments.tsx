@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface PlayerCommentsProps {
   playerId: number;
@@ -14,6 +15,8 @@ const PlayerComments = ({ playerId }: PlayerCommentsProps) => {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
 
   const { data: comments = [] } = useQuery({
     queryKey: ["player_comments", playerId],
