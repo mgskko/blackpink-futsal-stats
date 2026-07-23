@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TrendingUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface MatchPredictionProps {
   matchId: number;
@@ -17,6 +18,9 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Prediction | null>(null);
   const [saving, setSaving] = useState(false);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const { data: predictions } = useQuery({
     queryKey: ["match_predictions", matchId],
@@ -55,7 +59,7 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
   const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
 
   const handleVote = async (pred: Prediction) => {
-    if (!user) { toast.error("로그인이 필요합니다"); return; }
+    if (!user) { toast.error(L("로그인이 필요합니다", "Please sign in")); return; }
     setSaving(true);
     try {
       const existing = predictions?.find(p => p.voter_id === user.id);
@@ -66,15 +70,15 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
       }
       setSelected(pred);
       queryClient.invalidateQueries({ queryKey: ["match_predictions", matchId] });
-      toast.success("예측이 등록되었습니다!");
-    } catch { toast.error("오류가 발생했습니다"); }
+      toast.success(L("예측이 등록되었습니다!", "Prediction submitted!"));
+    } catch { toast.error(L("오류가 발생했습니다", "Something went wrong")); }
     setSaving(false);
   };
 
   const options: { key: Prediction; label: string; emoji: string; color: string; barColor: string }[] = [
-    { key: "win", label: "승리", emoji: "🏆", color: "text-blue-400", barColor: "bg-blue-500" },
-    { key: "draw", label: "무승부", emoji: "🤝", color: "text-muted-foreground", barColor: "bg-muted-foreground" },
-    { key: "loss", label: "패배", emoji: "💀", color: "text-red-400", barColor: "bg-red-500" },
+    { key: "win", label: L("승리", "Win"), emoji: "🏆", color: "text-blue-400", barColor: "bg-blue-500" },
+    { key: "draw", label: L("무승부", "Draw"), emoji: "🤝", color: "text-muted-foreground", barColor: "bg-muted-foreground" },
+    { key: "loss", label: L("패배", "Loss"), emoji: "💀", color: "text-red-400", barColor: "bg-red-500" },
   ];
 
   const counts = { win: winCount, draw: drawCount, loss: lossCount };
@@ -82,12 +86,12 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-5">
       <h3 className="mb-4 flex items-center gap-2 font-display text-lg tracking-wider text-primary">
-        <TrendingUp size={18} /> 승부 예측 토토
+        <TrendingUp size={18} /> {L("승부 예측 토토", "Match Prediction Toto")}
       </h3>
 
       {total > 0 && (
         <div className="mb-4 text-xs text-muted-foreground text-center">
-          총 <span className="text-primary font-bold">{total}</span>명 참여
+          {isEn ? <><span className="text-primary font-bold">{total}</span> participant{total === 1 ? "" : "s"}</> : <>총 <span className="text-primary font-bold">{total}</span>명 참여</>}
         </div>
       )}
 
@@ -111,11 +115,11 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{opt.emoji}</span>
                   <span className={`text-sm font-bold ${isSelected ? "text-primary" : opt.color}`}>{opt.label}</span>
-                  {isSelected && <span className="text-[10px] text-primary">✓ 내 예측</span>}
+                  {isSelected && <span className="text-[10px] text-primary">✓ {L("내 예측", "Your pick")}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`font-display text-xl ${opt.color}`}>{percent}%</span>
-                  <span className="text-[10px] text-muted-foreground">({count}명)</span>
+                  <span className="text-[10px] text-muted-foreground">({count}{L("명", "")})</span>
                 </div>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
