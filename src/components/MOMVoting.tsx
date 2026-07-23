@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Star, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface MOMVotingProps {
   matchId: number;
@@ -18,6 +19,10 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
   const queryClient = useQueryClient();
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const rosterPlayerIds = [...new Set(rosters.filter(r => r.match_id === matchId).map(r => r.player_id))];
   const rosterPlayers = players.filter(p => rosterPlayerIds.includes(p.id));
@@ -50,9 +55,9 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
         await supabase.from("mom_votes").insert({ match_id: matchId, voted_player_id: selectedPlayer, voter_id: user.id });
       }
       queryClient.invalidateQueries({ queryKey: ["mom_votes", matchId] });
-      toast({ title: "MOM 투표 완료! ⭐" });
+      toast({ title: L("MOM 투표 완료! ⭐", "MOM vote submitted! ⭐") });
     } catch (err: any) {
-      toast({ title: "오류", description: err.message, variant: "destructive" });
+      toast({ title: L("오류", "Error"), description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -63,7 +68,7 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-primary/30 bg-card p-4 box-glow">
       <h3 className="mb-3 flex items-center gap-2 font-display text-lg text-primary">
-        <Star size={18} /> MOM 투표 <span className="text-xs text-muted-foreground font-normal ml-auto">{totalVotes}표</span>
+        <Star size={18} /> {L("MOM 투표", "MOM Vote")} <span className="text-xs text-muted-foreground font-normal ml-auto">{totalVotes}{L("표", " votes")}</span>
       </h3>
 
       {/* Current results */}
@@ -73,13 +78,13 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
             <div key={pid} className="flex items-center justify-between rounded-md bg-secondary/50 px-3 py-1.5">
               <div className="flex items-center gap-2">
                 <span className={`text-sm ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>{i === 0 ? "👑" : `${i + 1}`}</span>
-                <span className="text-xs font-medium text-foreground">{getPlayerName(players, pid)}</span>
+                <span className="text-xs font-medium text-foreground">{getPlayerName(players, pid, lang)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-16 rounded-full bg-secondary overflow-hidden">
                   <div className="h-full gradient-pink rounded-full" style={{ width: `${totalVotes > 0 ? (count / totalVotes) * 100 : 0}%` }} />
                 </div>
-                <span className="text-[10px] text-muted-foreground">{count}표</span>
+                <span className="text-[10px] text-muted-foreground">{count}{L("표", "")}</span>
               </div>
             </div>
           ))}
@@ -98,7 +103,7 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
                 : "border-border bg-secondary text-muted-foreground hover:border-primary/40"
             }`}
           >
-            {p.name}
+            {getPlayerName(players, p.id, lang)}
           </button>
         ))}
       </div>
@@ -109,7 +114,7 @@ const MOMVoting = ({ matchId }: MOMVotingProps) => {
         className="w-full gradient-pink text-primary-foreground font-bold text-xs"
         size="sm"
       >
-        <Trophy size={14} /> {myVote ? "투표 변경" : "MOM 투표하기"}
+        <Trophy size={14} /> {myVote ? L("투표 변경", "Change Vote") : L("MOM 투표하기", "Cast MOM Vote")}
       </Button>
     </motion.div>
   );
