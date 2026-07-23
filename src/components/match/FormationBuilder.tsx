@@ -4,6 +4,7 @@ import { Download, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import type { Player, Roster, Team } from "@/hooks/useFutsalData";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   matchId: number;
@@ -32,6 +33,10 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const ourRoster = roster.filter(r => matchTeams.some(t => t.is_ours && t.id === r.team_id));
   const unplaced = ourRoster.filter(r => !placed.find(p => p.playerId === r.player_id));
@@ -82,7 +87,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
           onClick={() => setIsOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-card py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
         >
-          <Users size={16} /> 포메이션 빌더
+          <Users size={16} /> {L("포메이션 빌더", "Formation Builder")}
         </button>
       </motion.div>
     );
@@ -100,7 +105,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
             <Download size={14} />
           </Button>
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setIsOpen(false)}>
-            닫기
+            {L("닫기", "Close")}
           </Button>
         </div>
       </div>
@@ -152,10 +157,10 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
             onMouseDown={(e) => { e.stopPropagation(); setDraggingId(p.playerId); }}
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary shadow-lg shadow-primary/40 text-[10px] font-bold text-primary-foreground">
-              {getPlayerName(players, p.playerId).slice(0, 1)}
+              {getPlayerName(players, p.playerId, lang).slice(0, 1)}
             </div>
             <span className="mt-0.5 rounded bg-black/60 px-1 py-px text-[8px] font-bold text-white whitespace-nowrap">
-              {getPlayerName(players, p.playerId)}
+              {getPlayerName(players, p.playerId, lang)}
             </span>
           </div>
         ))}
@@ -165,7 +170,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
       {unplaced.length > 0 && (
         <div className="border-t border-border px-4 py-3">
           <div className="mb-2 text-[10px] font-bold text-muted-foreground">
-            {draggingId !== null ? "⬆️ 필드를 터치하여 배치" : "선수를 탭하여 배치 시작"}
+            {draggingId !== null ? L("⬆️ 필드를 터치하여 배치", "⬆️ Tap the field to place") : L("선수를 탭하여 배치 시작", "Tap a player to start placing")}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {unplaced.map(r => (
@@ -178,7 +183,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
                 }`}
                 onClick={() => setDraggingId(draggingId === r.player_id ? null : r.player_id)}
               >
-                {getPlayerName(players, r.player_id)}
+                {getPlayerName(players, r.player_id, lang)}
               </button>
             ))}
           </div>
@@ -186,7 +191,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
       )}
 
       <div className="px-4 pb-3 text-[9px] text-muted-foreground">
-        💡 선수 탭 → 필드 터치로 배치 | 더블탭으로 제거 | 드래그로 이동
+        💡 {L("선수 탭 → 필드 터치로 배치 | 더블탭으로 제거 | 드래그로 이동", "Tap player → tap field to place | Double-tap to remove | Drag to move")}
       </div>
     </motion.div>
   );
