@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAllFutsalData, getPlayerName, getMatchGoalEvents, getMatchRoster } from "@/hooks/useFutsalData";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "react-i18next";
 
 const REACTION_EMOJIS = ["👍", "🔥", "😭", "😂", "💪"];
 
@@ -20,6 +21,10 @@ const MatchComments = ({ matchId }: MatchCommentsProps) => {
   const { players, rosters, goalEvents } = useAllFutsalData();
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
+  const { i18n } = useTranslation();
+  const lang = i18n.language ?? "ko";
+  const isEn = lang.startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ["match_comments", matchId],
@@ -70,17 +75,24 @@ const MatchComments = ({ matchId }: MatchCommentsProps) => {
       }
     });
     goalCounts.forEach((count, pid) => {
-      if (count >= 3) highlights.push(`🚨 ${getPlayerName(players, pid)} 선수가 해트트릭(${count}골)을 달성했습니다!`);
+      if (count >= 3) {
+        const name = getPlayerName(players, pid, lang);
+        highlights.push(
+          isEn
+            ? `🚨 ${name} scored a hat-trick (${count} goals)!`
+            : `🚨 ${name} 선수가 해트트릭(${count}골)을 달성했습니다!`
+        );
+      }
     });
 
     return highlights;
-  }, [goalEvents, rosters, players, matchId]);
+  }, [goalEvents, rosters, players, matchId, isEn, lang]);
 
   const getDisplayName = (userId: string) => {
     const p = allProfiles.find((pr: any) => pr.id === userId);
-    if (!p) return "익명";
+    if (!p) return L("익명", "Anonymous");
     const title = p.equipped_title ? `[${p.equipped_title}] ` : "";
-    const name = p.nickname || p.display_name || "익명";
+    const name = p.nickname || p.display_name || L("익명", "Anonymous");
     return `${title}${name}`;
   };
 
@@ -150,7 +162,7 @@ const MatchComments = ({ matchId }: MatchCommentsProps) => {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-primary">{c.is_system ? "🤖 SYSTEM" : getDisplayName(c.user_id)}</span>
                     <span className="text-[10px] text-muted-foreground">
-                      {new Date(c.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(c.created_at).toLocaleString(isEn ? "en-US" : "ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: isEn })}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-foreground">{c.content}</p>
@@ -191,7 +203,7 @@ const MatchComments = ({ matchId }: MatchCommentsProps) => {
           <Textarea
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
-            placeholder="경기에 대해 한마디..."
+            placeholder={L("경기에 대해 한마디...", "Say something about the match...")}
             className="min-h-[40px] resize-none text-sm"
             rows={1}
           />
@@ -200,7 +212,7 @@ const MatchComments = ({ matchId }: MatchCommentsProps) => {
           </Button>
         </div>
       ) : (
-        <p className="mt-3 text-center text-xs text-muted-foreground">댓글을 작성하려면 로그인하세요</p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">{L("댓글을 작성하려면 로그인하세요", "Sign in to leave a comment")}</p>
       )}
     </motion.div>
   );
