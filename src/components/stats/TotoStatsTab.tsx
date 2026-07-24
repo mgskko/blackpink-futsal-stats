@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, Ticket, Crown, TrendingDown, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,12 +33,16 @@ function getQuarter(dateStr: string): number {
   return Math.ceil(month / 3);
 }
 
-function getQuarterLabel(year: string, q: number): string {
-  return `${year} ${q}분기`;
+function getQuarterLabel(year: string, q: number, isEn: boolean): string {
+  return isEn ? `${year} Q${q}` : `${year} ${q}분기`;
 }
 
 const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const anon = L("익명", "Anonymous");
 
   const { data: predictions } = useQuery({
     queryKey: ["all_match_predictions"],
@@ -57,9 +62,9 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
 
   const profileMap = useMemo(() => {
     const map = new Map<string, string>();
-    profiles?.forEach(p => map.set(p.id, p.display_name || "익명"));
+    profiles?.forEach(p => map.set(p.id, p.display_name || anon));
     return map;
-  }, [profiles]);
+  }, [profiles, anon]);
 
   // Build quarterly rankings
   const quarterlyRankings = useMemo(() => {
@@ -113,7 +118,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
       const users = [...userMap.entries()]
         .map(([userId, s]) => ({
           userId,
-          name: profileMap.get(userId) || "익명",
+          name: profileMap.get(userId) || anon,
           correct: s.correct,
           total: s.total,
           rate: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0,
@@ -122,7 +127,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
         }))
         .sort((a, b) => b.rate - a.rate || b.correct - a.correct);
 
-      rankings.push({ quarterKey: qKey, label: getQuarterLabel(year, parseInt(qStr)), users });
+      rankings.push({ quarterKey: qKey, label: getQuarterLabel(year, parseInt(qStr), isEn), users });
     });
 
     return rankings;
@@ -167,7 +172,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
 
     if (underdogCounts.size === 0) return null;
     const sorted = [...underdogCounts.entries()].sort((a, b) => b[1] - a[1]);
-    return { userId: sorted[0][0], name: profileMap.get(sorted[0][0]) || "익명", count: sorted[0][1] };
+    return { userId: sorted[0][0], name: profileMap.get(sorted[0][0]) || anon, count: sorted[0][1] };
   }, [predictions, matches, teams, results, profileMap]);
 
   // Pele's Curse: lowest accuracy
@@ -186,7 +191,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
 
     const candidates = [...allUsers.entries()]
       .filter(([, s]) => s.total >= 3) // at least 3 predictions
-      .map(([userId, s]) => ({ userId, name: profileMap.get(userId) || "익명", rate: Math.round((s.correct / s.total) * 100), total: s.total }))
+      .map(([userId, s]) => ({ userId, name: profileMap.get(userId) || anon, rate: Math.round((s.correct / s.total) * 100), total: s.total }))
       .sort((a, b) => a.rate - b.rate);
 
     return candidates.length > 0 ? candidates[0] : null;
@@ -198,7 +203,9 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
       <Alert className="mb-6 border-yellow-500/40 bg-yellow-500/5">
         <AlertTriangle className="h-4 w-4 text-yellow-500" />
         <AlertDescription className="text-xs text-yellow-200/80">
-          <span className="font-bold text-yellow-400">어뷰징 방지 규정:</span> 분기 내 모든 예측을 '패배'로만 투표한 경우, 적중률이 높아도 <span className="font-bold text-yellow-400">참가비 면제권 보상에서 제외</span>됩니다. 공정한 예측 문화를 만들어 주세요! 🙏
+          <span className="font-bold text-yellow-400">{L("어뷰징 방지 규정:", "Anti-abuse rule:")}</span>{" "}
+          {L("분기 내 모든 예측을 '패배'로만 투표한 경우, 적중률이 높아도", "If every prediction in a quarter is a 'Loss' vote, even a high accuracy is")}{" "}
+          <span className="font-bold text-yellow-400">{L("참가비 면제권 보상에서 제외", "excluded from the free-entry reward")}</span>{L("됩니다. 공정한 예측 문화를 만들어 주세요! 🙏", ". Please predict fairly! 🙏")}
         </AlertDescription>
       </Alert>
 
@@ -206,11 +213,11 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
       {quarterlyRankings.map((qr) => (
         <div key={qr.quarterKey} className="mb-6">
           <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">
-            <Crown size={18} /> {qr.label} 적중률 랭킹
+            <Crown size={18} /> {qr.label} {L("적중률 랭킹", "Accuracy Ranking")}
           </h3>
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             {qr.users.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-muted-foreground">아직 데이터가 없습니다</div>
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground">{L("아직 데이터가 없습니다", "No data yet")}</div>
             ) : (
               qr.users.map((u, i) => {
                 const isFirst = i === 0 && u.eligible && u.total >= 2;
@@ -224,12 +231,12 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
                       <span className="text-sm font-medium text-foreground">{u.name}</span>
                       {isFirst && (
                         <span className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary sparkle-anim">
-                          <Ticket size={10} /> 면제권
+                          <Ticket size={10} /> {L("면제권", "Free Entry")}
                         </span>
                       )}
                       {!u.eligible && u.allLoss && (
                         <span className="rounded-full bg-destructive/10 border border-destructive/30 px-2 py-0.5 text-[10px] text-destructive font-bold">
-                          제외
+                          {L("제외", "Excluded")}
                         </span>
                       )}
                     </div>
@@ -247,15 +254,15 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
 
       {quarterlyRankings.length === 0 && (
         <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-          <p className="text-sm">아직 승부 예측 데이터가 없습니다.</p>
-          <p className="text-xs mt-1">예정된 경기에서 예측을 남겨보세요! 🎯</p>
+          <p className="text-sm">{L("아직 승부 예측 데이터가 없습니다.", "No prediction data yet.")}</p>
+          <p className="text-xs mt-1">{L("예정된 경기에서 예측을 남겨보세요! 🎯", "Cast a prediction on an upcoming match! 🎯")}</p>
         </div>
       )}
 
       {/* Fun titles section */}
       <div className="mt-8 space-y-4">
         <h3 className="font-display text-xl tracking-wider text-primary flex items-center gap-2">
-          <Sparkles size={18} /> 토토 칭호
+          <Sparkles size={18} /> {L("토토 칭호", "Toto Titles")}
         </h3>
 
         {/* Underdog Master */}
@@ -263,17 +270,17 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">🦸</span>
             <div>
-              <div className="text-sm font-bold text-primary">역배의 신 (Underdog Master)</div>
-              <p className="text-[10px] text-muted-foreground">다수가 패배를 예상한 경기에서 승/무를 맞춘 횟수 1위</p>
+              <div className="text-sm font-bold text-primary">{L("역배의 신", "Underdog Master")} (Underdog Master)</div>
+              <p className="text-[10px] text-muted-foreground">{L("다수가 패배를 예상한 경기에서 승/무를 맞춘 횟수 1위", "#1 correct W/D calls in matches the majority predicted a loss")}</p>
             </div>
           </div>
           {underdogMaster ? (
             <div className="rounded-lg bg-secondary/50 px-4 py-3 flex items-center justify-between">
               <span className="text-sm font-bold text-foreground">{underdogMaster.name}</span>
-              <span className="font-display text-lg text-primary text-glow">{underdogMaster.count}회</span>
+              <span className="font-display text-lg text-primary text-glow">{underdogMaster.count}{L("회", "x")}</span>
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground text-center py-2">아직 해당자 없음</div>
+            <div className="text-xs text-muted-foreground text-center py-2">{L("아직 해당자 없음", "No qualifier yet")}</div>
           )}
         </div>
 
@@ -283,18 +290,18 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
             <span className="text-2xl">⚽</span>
             <div>
               <div className="text-sm font-bold text-destructive flex items-center gap-1">
-                <TrendingDown size={14} /> 인간 펠레 (Pelé's Curse)
+                <TrendingDown size={14} /> {L("인간 펠레", "Pelé's Curse")} (Pelé's Curse)
               </div>
-              <p className="text-[10px] text-muted-foreground">예측 적중률이 가장 낮은 유저 (3회 이상 예측)</p>
+              <p className="text-[10px] text-muted-foreground">{L("예측 적중률이 가장 낮은 유저 (3회 이상 예측)", "Lowest prediction accuracy (min. 3 predictions)")}</p>
             </div>
           </div>
           {peleCurse ? (
             <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 flex items-center justify-between">
               <span className="text-sm font-bold text-foreground">{peleCurse.name}</span>
-              <span className="font-display text-lg text-destructive">{peleCurse.rate}% <span className="text-[10px] text-muted-foreground">({peleCurse.total}전)</span></span>
+              <span className="font-display text-lg text-destructive">{peleCurse.rate}% <span className="text-[10px] text-muted-foreground">({peleCurse.total}{L("전"," GP")})</span></span>
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground text-center py-2">아직 해당자 없음</div>
+            <div className="text-xs text-muted-foreground text-center py-2">{L("아직 해당자 없음", "No qualifier yet")}</div>
           )}
         </div>
 
@@ -303,8 +310,8 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔮</span>
             <div>
-              <div className="text-sm font-bold text-muted-foreground">퍼펙트 스코어 선지자 (Exact Score Oracle)</div>
-              <p className="text-[10px] text-muted-foreground">정확한 스코어까지 맞추는 이벤트 — Coming Soon!</p>
+              <div className="text-sm font-bold text-muted-foreground">{L("퍼펙트 스코어 선지자", "Exact Score Oracle")} (Exact Score Oracle)</div>
+              <p className="text-[10px] text-muted-foreground">{L("정확한 스코어까지 맞추는 이벤트 — Coming Soon!", "Predict the exact score — Coming Soon!")}</p>
             </div>
           </div>
         </div>

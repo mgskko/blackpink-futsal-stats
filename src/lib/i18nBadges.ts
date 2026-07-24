@@ -154,3 +154,63 @@ export const TIER_EN_LABEL: Record<string, string> = {
 export function translateTierLabel(label: string, isEn: boolean): string {
   return isEn ? (TIER_EN_LABEL[label] ?? label) : label;
 }
+
+// ─── Player Traits (from useCourtStats.computePlayerTraits) ───
+// Map KO trait name → EN name
+const TRAIT_NAME_EN: Record<string, string> = {
+  "제라드의 강림": "Gerrard Reborn",
+  "인자기의 환생": "Inzaghi Reborn",
+  "즐라탄 빙의": "Zlatan Mode",
+  "폭주기관차 베일": "Runaway Bale",
+  "라인 브레이커 토레스": "Line-breaker Torres",
+  "덕배의 택배기사": "Killer-pass Courier",
+  "펩이 사랑한 컷백": "Pep's Cut-back",
+  "마에스트로 외질": "Maestro Özil",
+  "비디치의 통곡의 벽": "Vidić's Wailing Wall",
+  "가투소의 미친개": "Gattuso's Mad Dog",
+  "빅게임 해결사 드록바": "Big-game Drogba",
+  "라모스 극장골": "Ramos Late-drama",
+  "위기의 남자": "Crisis Man",
+  "부폰의 거미손": "Buffon's Spider Hands",
+  "루카쿠의 양민학살": "Lukaku Bully-mode",
+  "패스 버튼 고장난 로벤": "Broken-pass Robben",
+  "세트피스 장인": "Set-piece Specialist",
+};
+
+// Description translator — handles both static strings and dynamic templates
+export function translateTraitName(name: string, isEn: boolean): string {
+  if (!isEn) return name;
+  return TRAIT_NAME_EN[name] ?? name;
+}
+
+export function translateTraitDescription(desc: string, isEn: boolean): string {
+  if (!isEn) return desc;
+  // Dynamic patterns first
+  let m = desc.match(/^중거리골 팀 내 1~2위 \((\d+)골\)$/);
+  if (m) return `Long-range goals: team top-2 (${m[1]}G)`;
+  m = desc.match(/^선제골 팀 내 1~2위 \((\d+)회\)$/);
+  if (m) return `First-blood goals: team top-2 (${m[1]}x)`;
+  m = desc.match(/^GK 무실점 쿼터 팀 내 1~2위 \((\d+)회\)$/);
+  if (m) return `GK clean-sheet quarters: team top-2 (${m[1]}x)`;
+  m = desc.match(/^주워먹기\/혼전골 비율 팀 내 1~2위 \((\d+)\/(\d+)\)$/);
+  if (m) return `Tap-in ratio: team top-2 (${m[1]}/${m[2]})`;
+  m = desc.match(/^세트피스 골\+어시 팀 내 1~2위 \((\d+)회\)$/);
+  if (m) return `Set-piece G+A: team top-2 (${m[1]}x)`;
+
+  const staticMap: Record<string, string> = {
+    "주워먹기/혼전골 팀 내 1~2위": "Tap-in / scramble goals: team top-2",
+    "고난도 골 팀 내 1~2위": "Trick goals: team top-2",
+    "치달/역습 득점+어시 팀 내 1~2위": "Counter-attack G+A: team top-2",
+    "침투/킬패스 연계 팀 내 1~2위": "Off-ball runs / kill-pass finishes: team top-2",
+    "킬패스 어시스트 팀 내 1~2위": "Kill-pass assists: team top-2",
+    "컷백패스 어시스트 팀 내 1~2위": "Cut-back assists: team top-2",
+    "어시스트 비율 팀 내 1~2위": "Assist ratio: team top-2",
+    "DF 출전 시 최소 실점 팀 내 1~2위": "Fewest conceded as DF: team top-2",
+    "압박/차단 기반 득점+어시 팀 내 1~2위": "Press / intercept G+A: team top-2",
+    "7-8Q 득점 팀 내 1~2위": "Late-quarter (7-8Q) goals: team top-2",
+    "클러치 득점 팀 내 1~2위": "Clutch goals when tied/behind: team top-2",
+    "3점차+ 리드 시 기록 비율 팀 내 1위": "Stat-padder ratio (+3 lead): team #1",
+    "어시스트 비율 최저 팀 내 1~2위": "Lowest assist ratio: team bottom-2",
+  };
+  return staticMap[desc] ?? desc;
+}

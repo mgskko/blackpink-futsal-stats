@@ -1,5 +1,7 @@
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerPosition } from "@/hooks/useCourtStats";
+import { useTranslation } from "react-i18next";
+import { translateTierLabel } from "@/lib/i18nBadges";
 
 export type TierLevel = "worldclass" | "nationalAce" | "semipro" | "k5" | "amateur1" | "amateur3" | "morning" | "casual";
 
@@ -102,10 +104,12 @@ interface PlayerTierBadgeProps {
 }
 
 const PlayerTierBadge = ({ tier, size = "sm" }: PlayerTierBadgeProps) => {
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${tier.bgClass} ${tier.borderClass} ${tier.colorClass}`}>
       <span>{tier.emoji}</span>
-      <span>{tier.label}</span>
+      <span>{translateTierLabel(tier.label, isEn)}</span>
       {size === "md" && <span className="opacity-60">({tier.score}pt)</span>}
     </span>
   );

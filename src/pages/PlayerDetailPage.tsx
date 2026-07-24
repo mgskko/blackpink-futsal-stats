@@ -26,7 +26,7 @@ import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
-import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine } from "@/lib/i18nBadges";
+import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
 
 // Concacaf country label → EN translation
 const CONCACAF_COUNTRY_EN: Record<string, string> = {
@@ -321,7 +321,7 @@ const PlayerDetailPage = () => {
         const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
         if (playerRoster) {
           const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
-          opponentName = oppTeam?.name || (m.is_custom ? "자체전" : "???");
+          opponentName = oppTeam?.name || (m.is_custom ? (isEn ? "Intrasquad" : "자체전") : "???");
           const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
           playerResult = playerTeamResult?.result;
           playerScoreFor = playerTeamResult?.score_for;
@@ -333,7 +333,7 @@ const PlayerDetailPage = () => {
           playerScoreFor = mr?.ourResult.score_for;
           playerScoreAgainst = mr?.ourResult.score_against;
         } else {
-          opponentName = "자체전";
+          opponentName = isEn ? "Intrasquad" : "자체전";
         }
         return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult, playerScoreFor, playerScoreAgainst };
       });
@@ -443,7 +443,7 @@ const PlayerDetailPage = () => {
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
                 <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId)}</span>
               </div>
-              <span className="text-sm text-primary">{count}회 {subLabel}</span>
+              <span className="text-sm text-primary">{isEn ? `${count} ${subLabel}` : `${count}회 ${subLabel}`}</span>
             </div>
           ))}
         </div>
@@ -632,7 +632,7 @@ const PlayerDetailPage = () => {
           {/* FC Online Traits */}
           {playerTraits.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/30 bg-card p-4">
-              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎮 선수 고유 특성</h3>
+              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎮 {L("선수 고유 특성", "Player Traits")}</h3>
               <div className="flex flex-wrap gap-2">
                 {playerTraits.map((t, i) => (
                   <div key={i} className={`group relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all hover:scale-105 ${
@@ -641,9 +641,9 @@ const PlayerDetailPage = () => {
                     : "border-green-500/40 bg-green-500/10 text-green-400"
                   }`}>
                     <span>{t.emoji}</span>
-                    <span>{t.name}</span>
+                    <span>{translateTraitName(t.name, isEn)}</span>
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 rounded-lg border border-border bg-background p-2 text-[10px] text-muted-foreground shadow-xl z-50">
-                      {t.description}
+                      {translateTraitDescription(t.description, isEn)}
                     </div>
                   </div>
                 ))}
@@ -813,7 +813,7 @@ const PlayerDetailPage = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-display text-2xl text-primary text-glow">{bestAP.ap}AP</div>
-                    <div className="text-xs text-muted-foreground">{bestAP.goals}골 {bestAP.assists}어시</div>
+                    <div className="text-xs text-muted-foreground">{bestAP.goals}{L("골","G")} {bestAP.assists}{L("어시","A")}</div>
                   </div>
                 </div>
               </div>
