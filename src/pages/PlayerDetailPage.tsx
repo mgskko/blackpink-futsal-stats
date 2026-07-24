@@ -632,7 +632,7 @@ const PlayerDetailPage = () => {
           {/* FC Online Traits */}
           {playerTraits.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/30 bg-card p-4">
-              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎮 선수 고유 특성</h3>
+              <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">🎮 {L("선수 고유 특성", "Player Traits")}</h3>
               <div className="flex flex-wrap gap-2">
                 {playerTraits.map((t, i) => (
                   <div key={i} className={`group relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all hover:scale-105 ${
@@ -641,9 +641,9 @@ const PlayerDetailPage = () => {
                     : "border-green-500/40 bg-green-500/10 text-green-400"
                   }`}>
                     <span>{t.emoji}</span>
-                    <span>{t.name}</span>
+                    <span>{translateTraitName(t.name, isEn)}</span>
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 rounded-lg border border-border bg-background p-2 text-[10px] text-muted-foreground shadow-xl z-50">
-                      {t.description}
+                      {translateTraitDescription(t.description, isEn)}
                     </div>
                   </div>
                 ))}
