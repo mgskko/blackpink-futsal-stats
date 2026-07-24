@@ -321,7 +321,7 @@ const PlayerDetailPage = () => {
         const playerRoster = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
         if (playerRoster) {
           const oppTeam = mTeams.find(t => t.id !== playerRoster.team_id);
-          opponentName = oppTeam?.name || (m.is_custom ? "자체전" : "???");
+          opponentName = oppTeam?.name || (m.is_custom ? (isEn ? "Intrasquad" : "자체전") : "???");
           const playerTeamResult = results.find(r => r.team_id === playerRoster.team_id && r.match_id === m.id);
           playerResult = playerTeamResult?.result;
           playerScoreFor = playerTeamResult?.score_for;
@@ -333,7 +333,7 @@ const PlayerDetailPage = () => {
           playerScoreFor = mr?.ourResult.score_for;
           playerScoreAgainst = mr?.ourResult.score_against;
         } else {
-          opponentName = "자체전";
+          opponentName = isEn ? "Intrasquad" : "자체전";
         }
         return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult, playerScoreFor, playerScoreAgainst };
       });
@@ -813,7 +813,7 @@ const PlayerDetailPage = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-display text-2xl text-primary text-glow">{bestAP.ap}AP</div>
-                    <div className="text-xs text-muted-foreground">{bestAP.goals}골 {bestAP.assists}어시</div>
+                    <div className="text-xs text-muted-foreground">{bestAP.goals}{L("골","G")} {bestAP.assists}{L("어시","A")}</div>
                   </div>
                 </div>
               </div>
