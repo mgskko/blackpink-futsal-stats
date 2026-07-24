@@ -535,36 +535,36 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       )}
 
       {strikerDFRanking.length > 0 && (
-        <RankingCard title="수트라이커 — 라모스 빙의" emoji="⚔️" desc="수비하라고 뒤에 뒀더니 기어코 올라가서 골을 박아 넣습니다. 버니즈 최고의 수트라이커입니다.">
+        <RankingCard title={L("수트라이커 — 라모스 빙의", "Defender-Striker — Ramos Mode")} emoji="⚔️" desc={L("수비하라고 뒤에 뒀더니 기어코 올라가서 골을 박아 넣습니다. 버니즈 최고의 수트라이커입니다.", "Told to defend but keeps charging up-pitch to score. Bunnies' finest defender-striker.")}>
           {strikerDFRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.goals}골`} sub={`DF ${d.quarters}쿼터 출전`} total={strikerDFRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.goals}${L("골","G")}`} sub={`DF ${Q(d.quarters)}`} total={strikerDFRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {/* FW Section */}
-      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">⚔️ 공격수 (FW)</div>
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">⚔️ {L("공격수", "Forwards")} (FW)</div>
 
       {false9Ranking.length > 0 && (
-        <RankingCard title="가짜 9번 (False 9)" emoji="🎭" desc="FW 출전 시 어시스트 > 골인 이타적 공격수">
+        <RankingCard title={L("가짜 9번 (False 9)", "False 9")} emoji="🎭" desc={L("FW 출전 시 어시스트 > 골인 이타적 공격수", "Selfless FW who assists more than scores")}>
           {false9Ranking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.assists}A/${d.goals}G`} sub={`FW ${d.quarters}쿼터`} total={false9Ranking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.assists}A/${d.goals}G`} sub={`FW ${Q(d.quarters)}`} total={false9Ranking.length} />
           ))}
         </RankingCard>
       )}
 
       {highUsageRanking.length > 0 && (
-        <RankingCard title="독박 공격수" emoji="💪" desc="FW 출전 시 팀 골 중 본인 직접 득점 비율">
+        <RankingCard title={L("독박 공격수", "Solo Striker")} emoji="💪" desc={L("FW 출전 시 팀 골 중 본인 직접 득점 비율", "Share of team goals scored by them as FW")}>
           {highUsageRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.usage}%`} sub={`${d.ownGoals}/${d.teamGoals} 팀골`} total={highUsageRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.usage}%`} sub={`${d.ownGoals}/${d.teamGoals} ${L("팀골","team G")}`} total={highUsageRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {campingRanking.length > 0 && (
-        <RankingCard title="전방 캠핑족 — 수비 알러지" emoji="⛺" desc="상대 골대 앞에 텐트를 치고 돌아오지 않습니다! 골은 넣지만 수비 가담을 절대 하지 않아 수비수들을 과로사하게 만드는 이기적인 공격수입니다.">
+        <RankingCard title={L("전방 캠핑족 — 수비 알러지", "Camping Forward — Defense Allergy")} emoji="⛺" desc={L("상대 골대 앞에 텐트를 치고 돌아오지 않습니다! 골은 넣지만 수비 가담을 절대 하지 않아 수비수들을 과로사하게 만드는 이기적인 공격수입니다.", "Pitches a tent by the opposition goal and never comes back. Scores goals but never tracks back — a selfish striker who burns out the defenders.")}>
           {campingRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(1)} sub={`AP ${d.ap} | FW ${d.quarters}Q | 쿼터당 실점`} total={campingRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(1)} sub={`AP ${d.ap} | FW ${d.quarters}Q | ${L("쿼터당 실점","Conceded/Q")}`} total={campingRanking.length} />
           ))}
         </RankingCard>
       )}
@@ -578,45 +578,45 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       )}
 
       {freeRiderRanking.length > 0 && (
-        <RankingCard title="무임승차 VIP — 승리 토템" emoji="🚌" desc="필드 위에서 숨만 쉬어도 팀이 이깁니다! 존재 자체가 승리를 부르는 완벽한 승리 토템이자 무임승차 VIP입니다.">
+        <RankingCard title={L("무임승차 VIP — 승리 토템", "Free-rider VIP — Win Totem")} emoji="🚌" desc={L("필드 위에서 숨만 쉬어도 팀이 이깁니다! 존재 자체가 승리를 부르는 완벽한 승리 토템이자 무임승차 VIP입니다.", "Just standing on the pitch wins games — the perfect free-rider VIP whose mere presence summons victory.")}>
           {freeRiderRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.quarters}Q 승 | AP 0`} total={freeRiderRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.quarters}Q ${L("승","W")} | AP 0`} total={freeRiderRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {/* Bench & Physical */}
-      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🏃 벤치 & 체력</div>
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🏃 {L("벤치 & 체력", "Bench & Stamina")}</div>
 
       {gameChangerRanking.length > 0 && (
-        <RankingCard title="게임 체인저" emoji="🔥" desc="벤치→투입 후 쿼터 마진 평균 상승폭">
+        <RankingCard title={L("게임 체인저", "Game Changer")} emoji="🔥" desc={L("벤치→투입 후 쿼터 마진 평균 상승폭", "Average margin swing after coming on from the bench")}>
           {gameChangerRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.avgSwing > 0 ? "+" : ""}${d.avgSwing.toFixed(1)}`} sub={`${d.count}회 투입 | 최고 +${d.bestSwing}`} total={gameChangerRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.avgSwing > 0 ? "+" : ""}${d.avgSwing.toFixed(1)}`} sub={`${Times(d.count)} ${L("투입","subs")} | ${L("최고","best")} +${d.bestSwing}`} total={gameChangerRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {ironManRanking.length > 0 && (
-        <RankingCard title="혹사 지수 (Iron Man)" emoji="🦾" desc="벤치 휴식 없이 연속 출전 최다 기록">
+        <RankingCard title={L("혹사 지수 (Iron Man)", "Iron Man Index")} emoji="🦾" desc={L("벤치 휴식 없이 연속 출전 최다 기록", "Longest streak of consecutive quarters without bench rest")}>
           {ironManRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.streak}연속`} total={ironManRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={isEn ? `${d.streak} in a row` : `${d.streak}연속`} total={ironManRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {/* Special */}
-      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🧊 특수 지표</div>
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🧊 {L("특수 지표", "Special Metrics")}</div>
 
       {iceAgeRanking.length > 0 && (
-        <RankingCard title="빙하기 메이커 — 수면제 축구" emoji="🧊" desc="이 선수가 서는 순간 구장의 온도가 떨어집니다. 보는 사람을 숨 막히게 만드는 수면제 축구의 창시자입니다.">
+        <RankingCard title={L("빙하기 메이커 — 수면제 축구", "Ice-Age Maker — Sleeping-pill Football")} emoji="🧊" desc={L("이 선수가 서는 순간 구장의 온도가 떨어집니다. 보는 사람을 숨 막히게 만드는 수면제 축구의 창시자입니다.", "The moment they step on, the temperature drops. Founder of the sleeping-pill football that suffocates spectators.")}>
           {iceAgeRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.avgScore.toFixed(2)} sub={`${d.quarters}Q 출전 | 쿼터당 양팀 합산`} total={iceAgeRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.avgScore.toFixed(2)} sub={`${d.quarters}Q | ${L("쿼터당 양팀 합산","Both-team goals/Q")}`} total={iceAgeRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {/* Hexagon Player */}
-      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🔷 멀티 플레이어</div>
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🔷 {L("멀티 플레이어", "Multi-Position Players")}</div>
       {(() => {
         const hexPlayers = new Map<number, { fw: number; df: number; gk: number; margin: number; quarters: number }>();
         allQuarters.forEach(q => {
@@ -642,7 +642,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
           .slice(0, 5);
         if (hexRanking.length === 0) return null;
         return (
-          <RankingCard title="헥사곤 플레이어" emoji="🔷" desc="FW/DF/GK 모든 포지션 소화 + 누적 마진 최고">
+          <RankingCard title={L("헥사곤 플레이어", "Hexagon Player")} emoji="🔷" desc={L("FW/DF/GK 모든 포지션 소화 + 누적 마진 최고", "Covers FW/DF/GK + highest total margin")}>
             {hexRanking.map((d, i) => (
               <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.margin > 0 ? "+" : ""}${d.margin}`} sub={`FW${d.fw} DF${d.df} GK${d.gk} (${d.quarters}Q)`} total={hexRanking.length} />
             ))}
