@@ -572,7 +572,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       {defensiveFWRanking.length > 0 && (
         <RankingCard title={L("수비형 공격수 — 전방의 미친개", "Defensive Forward — Mad Dog Up Top")} emoji="🛡️" desc={L("골은 안 넣고 상대 수비수들 발목만 물어뜯습니다. 득점보다 전방 압박과 수비에 진심인 수비형 공격수입니다.", "Never scores but hounds every defender in sight. A pressing-first FW who lives for defensive work.")}>
           {defensiveFWRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(2)} sub={`AP ${d.ap} | FW ${d.quarters}Q | 쿼터당 실점`} total={defensiveFWRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.concededPerQ.toFixed(2)} sub={`AP ${d.ap} | FW ${d.quarters}Q | ${L("쿼터당 실점","Conceded/Q")}`} total={defensiveFWRanking.length} />
           ))}
         </RankingCard>
       )}
