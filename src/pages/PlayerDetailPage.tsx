@@ -443,7 +443,7 @@ const PlayerDetailPage = () => {
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
                 <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId)}</span>
               </div>
-              <span className="text-sm text-primary">{count}회 {subLabel}</span>
+              <span className="text-sm text-primary">{isEn ? `${count} ${subLabel}` : `${count}회 ${subLabel}`}</span>
             </div>
           ))}
         </div>
