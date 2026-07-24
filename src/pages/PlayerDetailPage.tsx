@@ -26,7 +26,7 @@ import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
-import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine } from "@/lib/i18nBadges";
+import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
 
 // Concacaf country label → EN translation
 const CONCACAF_COUNTRY_EN: Record<string, string> = {
