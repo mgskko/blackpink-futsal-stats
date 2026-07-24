@@ -467,53 +467,53 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {/* GK Section */}
-      <div className="mb-2 mt-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">🧤 골키퍼 (GK)</div>
+      <div className="mb-2 mt-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">🧤 {L("골키퍼", "Goalkeepers")} (GK)</div>
 
       {cleanSheetRanking.length > 0 && (
-        <RankingCard title="클린시트 방어율" emoji="🧤" desc="GK 출전 쿼터 중 무실점 비율">
+        <RankingCard title={L("클린시트 방어율", "Clean-sheet Rate")} emoji="🧤" desc={L("GK 출전 쿼터 중 무실점 비율", "Share of GK quarters with 0 conceded")}>
           {cleanSheetRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.rate}%`} sub={`${d.cleanSheet}/${d.total} 쿼터`} total={cleanSheetRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.rate}%`} sub={`${d.cleanSheet}/${d.total} ${L("쿼터","Q")}`} total={cleanSheetRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {openDoorRanking.length > 0 && (
-        <RankingCard title="최악의 자동문" emoji="🚪" desc="GK 출전 시 쿼터당 평균 실점 최다">
+        <RankingCard title={L("최악의 자동문", "The Sliding Door")} emoji="🚪" desc={L("GK 출전 시 쿼터당 평균 실점 최다", "Most conceded per quarter as GK")}>
           {openDoorRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.avgConceded.toFixed(2)} sub={`${d.total} 쿼터`} total={openDoorRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={d.avgConceded.toFixed(2)} sub={Q(d.total)} total={openDoorRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {boyBreadwinnerRanking.length > 0 && (
-        <RankingCard title="소년가장 키퍼 — 최후의 보루" emoji="🧤" desc="앞에서 똥을 싸도 묵묵히 치워냅니다. 빈공 상황 속에서 팀을 멱살 잡고 캐리한 최고의 거미손입니다.">
+        <RankingCard title={L("소년가장 키퍼 — 최후의 보루", "Breadwinner Keeper — Last Line")} emoji="🧤" desc={L("앞에서 똥을 싸도 묵묵히 치워냅니다. 빈공 상황 속에서 팀을 멱살 잡고 캐리한 최고의 거미손입니다.", "Cleans up every mess in front. The spider-hands who single-handedly carries the team when the attack sleeps.")}>
           {boyBreadwinnerRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.saves}회`} sub={`GK ${d.quarters}쿼터 출전`} total={boyBreadwinnerRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={Times(d.saves)} sub={`GK ${Q(d.quarters)}`} total={boyBreadwinnerRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {/* DF Section */}
-      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🛡️ 수비수 (DF)</div>
+      <div className="mb-2 mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">🛡️ {L("수비수", "Defenders")} (DF)</div>
 
       {dfAssistRanking.length > 0 && (
-        <RankingCard title="빌드업 마스터" emoji="🎯" desc="DF 포지션 출전 쿼터에 기록한 어시스트 TOP 5">
+        <RankingCard title={L("빌드업 마스터", "Build-up Master")} emoji="🎯" desc={L("DF 포지션 출전 쿼터에 기록한 어시스트 TOP 5", "Top 5 assist counts recorded while playing DF")}>
           {dfAssistRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.count}회`} total={dfAssistRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={Times(d.count)} total={dfAssistRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {dfWinRateRanking.length > 0 && (
-        <RankingCard title="수비수 승률" emoji="🛡️" desc="DF 출전 시 쿼터 승률 (최소 5쿼터)">
+        <RankingCard title={L("수비수 승률", "Defender Win Rate")} emoji="🛡️" desc={L("DF 출전 시 쿼터 승률 (최소 5쿼터)", "Quarter win rate as DF (min. 5 quarters)")}>
           {dfWinRateRanking.map((d, i) => (
-            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.total} 쿼터`} total={dfWinRateRanking.length} />
+            <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.winRate}%`} sub={`${d.wins}/${d.total} ${L("쿼터","Q")}`} total={dfWinRateRanking.length} />
           ))}
         </RankingCard>
       )}
 
       {cbPartnership.length > 0 && (
-        <RankingCard title="영혼의 센터백 듀오" emoji="🤝" desc="동시 DF 출전 시 최소 실점 조합 (최소 5쿼터)">
+        <RankingCard title={L("영혼의 센터백 듀오", "Soul-mate CB Duo")} emoji="🤝" desc={L("동시 DF 출전 시 최소 실점 조합 (최소 5쿼터)", "Lowest conceded when both play DF together (min. 5 quarters)")}>
           {cbPartnership.map((d, i) => (
             <div key={d.names.join("-")} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < cbPartnership.length - 1 ? "border-b border-border" : ""}`}>
               <div className="flex items-center gap-2">
