@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import type { Player, Match, GoalEvent, MatchQuarter, Roster } from "@/hooks/useFutsalData";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import { getPlayerPosition } from "@/hooks/useCourtStats";
@@ -37,6 +38,11 @@ function getBenchPlayers(lineup: any): number[] {
 
 const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters }: Props) => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const Q = (n: number) => (isEn ? `${n}Q` : `${n}쿼터`);
+  const Times = (n: number) => (isEn ? `${n}x` : `${n}회`);
 
   // Compute all-time match count per player (for global 10-match filter)
   const playerMatchCount = useMemo(() => {
