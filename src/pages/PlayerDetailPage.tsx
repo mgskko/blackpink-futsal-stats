@@ -246,7 +246,9 @@ const PlayerDetailPage = () => {
   const [openConcacaf, setOpenConcacaf] = useState<ConcacafBadge | null>(null);
   const displayName = useDisplayName();
   const { i18n } = useTranslation();
-  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
+  const isEn = lang.startsWith("en");
+  const pn = (id: number) => getPlayerName(players, id, lang);
   const L = (ko: string, en: string) => (isEn ? en : ko);
   const trCountry = (c: string) => (isEn ? (CONCACAF_COUNTRY_EN[c] ?? c) : c);
   const trConcacafText = (c: string, text: string) => {
