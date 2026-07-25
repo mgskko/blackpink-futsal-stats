@@ -298,8 +298,18 @@ export function generateMatchComment(
   teams: Team[],
   results: Result[],
   goalEvents: GoalEvent[],
-  quarters: MatchQuarter[]
+  quarters: MatchQuarter[],
+  lang: string = "ko"
 ): string[] {
+  const isEn = (lang || "ko").startsWith("en");
+  const pn = (id: number) => getPlayerName(players, id, lang);
+  const teamName = (name: string | undefined, fallback: string) => {
+    const n = name || fallback;
+    if (!isEn) return n;
+    if (n === "버니즈") return "Bunnies FC";
+    if (n === "상대팀") return "Opponent";
+    return n;
+  };
   const comments: string[] = [];
   const matchGoals = goalEvents.filter(g => g.match_id === matchId);
   const matchQuarters = quarters.filter(q => q.match_id === matchId).sort((a, b) => a.quarter - b.quarter);
@@ -314,8 +324,8 @@ export function generateMatchComment(
   const scoreFor = ourResult?.score_for ?? 0;
   const scoreAgainst = ourResult?.score_against ?? 0;
   const diff = scoreFor - scoreAgainst;
-  const oppName = oppTeam?.name || "상대팀";
-  const ourName = ourTeam?.name || "버니즈";
+  const oppName = teamName(oppTeam?.name, "상대팀");
+  const ourName = teamName(ourTeam?.name, "버니즈");
 
   // Own goal check
   const ownGoals = matchGoals.filter(g => g.is_own_goal && ourTeamIds.has(g.team_id));
@@ -337,34 +347,54 @@ export function generateMatchComment(
   // Fake News headline
   if (ourResult) {
     if (diff >= 5) {
-      comments.push(`📰 [속보] ${ourName}, ${oppName}을 ${scoreFor}-${scoreAgainst}로 영혼까지 털어버리다! ${topScorer ? `(${getPlayerName(players, topScorer[0])} ${topScorer[1]}골 하드캐리)` : ""}`);
+      comments.push(isEn
+        ? `📰 [BREAKING] ${ourName} demolish ${oppName} ${scoreFor}-${scoreAgainst}! ${topScorer ? `(${pn(topScorer[0])} hard-carried with ${topScorer[1]}G)` : ""}`
+        : `📰 [속보] ${ourName}, ${oppName}을 ${scoreFor}-${scoreAgainst}로 영혼까지 털어버리다! ${topScorer ? `(${pn(topScorer[0])} ${topScorer[1]}골 하드캐리)` : ""}`);
     } else if (diff >= 3) {
-      comments.push(`📰 [속보] ${ourName}, ${oppName} 상대 ${scoreFor}-${scoreAgainst} 완승! ${topScorer ? `${getPlayerName(players, topScorer[0])} 선수의 활약이 빛났다.` : ""}`);
+      comments.push(isEn
+        ? `📰 [BREAKING] ${ourName} beat ${oppName} ${scoreFor}-${scoreAgainst} in style! ${topScorer ? `${pn(topScorer[0])} was the standout.` : ""}`
+        : `📰 [속보] ${ourName}, ${oppName} 상대 ${scoreFor}-${scoreAgainst} 완승! ${topScorer ? `${pn(topScorer[0])} 선수의 활약이 빛났다.` : ""}`);
     } else if (diff === 1 || diff === 2) {
-      comments.push(`📰 [긴급] ${ourName}, 치열한 접전 끝에 ${scoreFor}-${scoreAgainst} 짜릿한 승리! 끝까지 포기하지 않았다.`);
+      comments.push(isEn
+        ? `📰 [URGENT] ${ourName} edge a thriller ${scoreFor}-${scoreAgainst} — never gave up till the whistle.`
+        : `📰 [긴급] ${ourName}, 치열한 접전 끝에 ${scoreFor}-${scoreAgainst} 짜릿한 승리! 끝까지 포기하지 않았다.`);
     } else if (diff === 0) {
-      comments.push(`📰 [단독] ${scoreFor}-${scoreAgainst}, 양 팀 모두 한 치의 양보 없는 격전... 승자 없는 무승부.`);
+      comments.push(isEn
+        ? `📰 [EXCLUSIVE] ${scoreFor}-${scoreAgainst} deadlock — no winners, no losers, just a battle royale.`
+        : `📰 [단독] ${scoreFor}-${scoreAgainst}, 양 팀 모두 한 치의 양보 없는 격전... 승자 없는 무승부.`);
     } else if (diff >= -2) {
       if (ownGoals.length > 0) {
         const ogPlayer = ownGoals[0].goal_player_id;
-        comments.push(`📰 [단독] 충격의 패배... ${ogPlayer ? `${getPlayerName(players, ogPlayer)} 선수의 치명적 자책골로 분위기 박살!` : "자책골이 승부를 갈랐다."} (${scoreFor}-${scoreAgainst})`);
+        comments.push(isEn
+          ? `📰 [EXCLUSIVE] Shock defeat... ${ogPlayer ? `${pn(ogPlayer)}'s brutal own goal killed the vibe!` : "an own goal decided it."} (${scoreFor}-${scoreAgainst})`
+          : `📰 [단독] 충격의 패배... ${ogPlayer ? `${pn(ogPlayer)} 선수의 치명적 자책골로 분위기 박살!` : "자책골이 승부를 갈랐다."} (${scoreFor}-${scoreAgainst})`);
       } else {
-        comments.push(`📰 [속보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 아쉬운 역전패. 재정비가 필요한 시점.`);
+        comments.push(isEn
+          ? `📰 [BREAKING] ${ourName} slip to a painful ${scoreFor}-${scoreAgainst} loss vs ${oppName}. Time to regroup.`
+          : `📰 [속보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 아쉬운 역전패. 재정비가 필요한 시점.`);
       }
     } else {
-      comments.push(`📰 [비보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 충격의 대패! 긴급 전술 회의 소집됐다.`);
+      comments.push(isEn
+        ? `📰 [SHOCK] ${ourName} thumped ${scoreFor}-${scoreAgainst} by ${oppName}! Emergency tactical meeting called.`
+        : `📰 [비보] ${ourName}, ${oppName}에 ${scoreFor}-${scoreAgainst} 충격의 대패! 긴급 전술 회의 소집됐다.`);
     }
   }
 
   // Sub-headlines
   if (topScorer && topScorer[1] >= 3) {
-    comments.push(`⚡ ${getPlayerName(players, topScorer[0])} 선수 ${topScorer[1]}골 원맨쇼! 상대 수비진은 속수무책이었다.`);
+    comments.push(isEn
+      ? `⚡ ${pn(topScorer[0])}'s ${topScorer[1]}-goal one-man show! The defence had no answer.`
+      : `⚡ ${pn(topScorer[0])} 선수 ${topScorer[1]}골 원맨쇼! 상대 수비진은 속수무책이었다.`);
   } else if (topScorer && topScorer[1] >= 2) {
-    comments.push(`⚽ ${getPlayerName(players, topScorer[0])} 선수 멀티골(${topScorer[1]}골)! 결정적 순간마다 등장한 에이스.`);
+    comments.push(isEn
+      ? `⚽ ${pn(topScorer[0])} bags a brace (${topScorer[1]}G)! Ace of the decisive moments.`
+      : `⚽ ${pn(topScorer[0])} 선수 멀티골(${topScorer[1]}골)! 결정적 순간마다 등장한 에이스.`);
   }
 
   if (topAssister && topAssister[1] >= 2) {
-    comments.push(`🎯 ${getPlayerName(players, topAssister[0])} 선수 ${topAssister[1]}어시스트! 팀의 공격을 설계한 컨트롤 타워.`);
+    comments.push(isEn
+      ? `🎯 ${pn(topAssister[0])} racks up ${topAssister[1]} assists — the control tower behind the attack.`
+      : `🎯 ${pn(topAssister[0])} 선수 ${topAssister[1]}어시스트! 팀의 공격을 설계한 컨트롤 타워.`);
   }
 
   // DF/GK analysis
@@ -388,7 +418,9 @@ export function generateMatchComment(
       .filter(([, v]) => v.total >= 2 && v.clean / v.total >= 0.7)
       .sort((a, b) => b[1].clean - a[1].clean)[0];
     if (bestDF) {
-      comments.push(`🛡️ ${getPlayerName(players, bestDF[0])} 선수가 수비진을 이끌며 ${bestDF[1].clean}쿼터 무실점의 철벽을 완성했다.`);
+      comments.push(isEn
+        ? `🛡️ ${pn(bestDF[0])} marshalled the back-line with ${bestDF[1].clean} clean-sheet quarter${bestDF[1].clean > 1 ? "s" : ""}.`
+        : `🛡️ ${pn(bestDF[0])} 선수가 수비진을 이끌며 ${bestDF[1].clean}쿼터 무실점의 철벽을 완성했다.`);
     }
   }
 
@@ -402,10 +434,11 @@ export function useMatchAnalysis(
   teams: Team[],
   results: Result[],
   goalEvents: GoalEvent[],
-  quarters: MatchQuarter[]
+  quarters: MatchQuarter[],
+  lang: string = "ko"
 ) {
   const dataMOM = useMemo(() => computeDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
   const dualDataMOM = useMemo(() => computeDualDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
-  const aiComments = useMemo(() => generateMatchComment(matchId, players, teams, results, goalEvents, quarters), [matchId, players, teams, results, goalEvents, quarters]);
+  const aiComments = useMemo(() => generateMatchComment(matchId, players, teams, results, goalEvents, quarters, lang), [matchId, players, teams, results, goalEvents, quarters, lang]);
   return { dataMOM, dualDataMOM, aiComments };
 }
