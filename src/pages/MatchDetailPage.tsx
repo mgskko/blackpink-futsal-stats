@@ -108,7 +108,7 @@ const MatchDetailPage = () => {
     return computeMatchCourtMargins(sorted, matchGoals, players);
   }, [matchQuarters, goalEvents, matchId, players]);
 
-  const { dataMOM, dualDataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? []);
+  const { dataMOM, dualDataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? [], lang);
 
   // Compute total score from quarters
   const quarterTotalScore = useMemo(() => {

@@ -39,7 +39,9 @@ function getBenchPlayers(lineup: any): number[] {
 const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters }: Props) => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
-  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
+  const isEn = lang.startsWith("en");
+  const pn = (id: number) => getPlayerName(players, id, lang);
   const L = (ko: string, en: string) => (isEn ? en : ko);
   const Q = (n: number) => (isEn ? `${n}Q` : `${n}쿼터`);
   const Times = (n: number) => (isEn ? `${n}x` : `${n}회`);
