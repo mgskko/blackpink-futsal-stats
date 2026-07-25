@@ -443,7 +443,7 @@ const PlayerDetailPage = () => {
               className="flex cursor-pointer items-center justify-between rounded-md bg-secondary/50 px-3 py-2 transition-colors hover:bg-secondary">
               <div className="flex items-center gap-2">
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
-                <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId)}</span>
+                <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId, lang)}</span>
               </div>
               <span className="text-sm text-primary">{isEn ? `${count} ${subLabel}` : `${count}회 ${subLabel}`}</span>
             </div>
@@ -699,7 +699,7 @@ const PlayerDetailPage = () => {
                   let synergyLine = "";
                   if (topDuos.length > 0) {
                     const [topPartnerId, topCount] = topDuos[0];
-                    synergyLine = `🤝 베스트 시너지: ${getPlayerName(players, topPartnerId)} (${topCount}회 합작)`;
+                    synergyLine = `🤝 베스트 시너지: ${getPlayerName(players, topPartnerId, lang)} (${topCount}회 합작)`;
                   }
                   
                   return (
@@ -811,7 +811,7 @@ const PlayerDetailPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xs text-muted-foreground">{bestAP.date}</div>
-                    {bestAPResult && <div className="mt-1 text-sm text-foreground">vs {bestAPResult.opponentTeam.name} <span className={`ml-2 text-xs font-bold ${bestAPResult.ourResult.result === "승" ? "text-primary" : "text-muted-foreground"}`}>{bestAPResult.ourResult.result}</span></div>}
+                    {bestAPResult && <div className="mt-1 text-sm text-foreground">vs {bestAPResult.opponentTeam.name} <span className={`ml-2 text-xs font-bold ${bestAPResult.ourResult.result === "승" ? "text-primary" : "text-muted-foreground"}`}>{isEn ? (bestAPResult.ourResult.result === "승" ? "W" : bestAPResult.ourResult.result === "패" ? "L" : bestAPResult.ourResult.result === "무" ? "D" : bestAPResult.ourResult.result) : bestAPResult.ourResult.result}</span></div>}
                   </div>
                   <div className="text-right">
                     <div className="font-display text-2xl text-primary text-glow">{bestAP.ap}AP</div>
@@ -954,7 +954,7 @@ const PlayerDetailPage = () => {
                     className="flex cursor-pointer items-center justify-between rounded-md bg-secondary/50 px-3 py-2 transition-colors hover:bg-secondary">
                     <div className="flex items-center gap-2">
                       <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
-                      <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId)}</span>
+                      <span className="text-sm font-medium text-foreground">{getPlayerName(players, partnerId, lang)}</span>
                     </div>
                     <span className="text-sm text-primary">{count}{L("회 합작"," combos")}</span>
                   </div>

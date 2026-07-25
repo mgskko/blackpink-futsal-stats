@@ -12,6 +12,8 @@ import PageHeader from "@/components/PageHeader";
 import NicknameEditor from "@/components/my/NicknameEditor";
 import burneesLogo from "@/assets/burnees-logo.png";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { useDisplayName } from "@/lib/displayName";
 
 const MyPage = () => {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
@@ -19,6 +21,10 @@ const MyPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [linking, setLinking] = useState(false);
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const displayName = useDisplayName();
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -54,7 +60,7 @@ const MyPage = () => {
         />
         <div className="text-center">
           <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BUNNIES FC</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Google 계정으로 로그인하세요</p>
+          <p className="mt-2 text-sm text-muted-foreground">{L("Google 계정으로 로그인하세요", "Sign in with your Google account")}</p>
         </div>
         <Button
           onClick={async () => {
@@ -64,7 +70,7 @@ const MyPage = () => {
           }}
           className="w-full max-w-xs gradient-pink text-primary-foreground font-bold text-base py-6"
         >
-          Google로 로그인
+          {L("Google로 로그인", "Sign in with Google")}
         </Button>
       </div>
     );
@@ -87,9 +93,9 @@ const MyPage = () => {
 
     return (
       <div className="pb-20">
-        <PageHeader title="선수 연동" subtitle="본인의 프로필을 선택해주세요" />
+        <PageHeader title={L("선수 연동", "Link Player")} subtitle={L("본인의 프로필을 선택해주세요", "Select your player profile")} />
         <div className="px-4 space-y-2">
-          <p className="text-xs text-muted-foreground mb-3">현재 활동 선수</p>
+          <p className="text-xs text-muted-foreground mb-3">{L("현재 활동 선수", "Active players")}</p>
           {activePlayers.map(p => (
             <button
               key={p.id}
@@ -97,11 +103,11 @@ const MyPage = () => {
               disabled={linking}
               className="w-full rounded-lg border border-border bg-card p-3 text-left hover:border-primary transition-colors"
             >
-              <span className="font-medium text-foreground">{p.name}</span>
+              <span className="font-medium text-foreground">{displayName(p)}</span>
               <span className="ml-2 text-xs text-primary">ACTIVE</span>
             </button>
           ))}
-          <p className="text-xs text-muted-foreground mt-4 mb-3">비활동 선수</p>
+          <p className="text-xs text-muted-foreground mt-4 mb-3">{L("비활동 선수", "Inactive players")}</p>
           {inactivePlayers.map(p => (
             <button
               key={p.id}
@@ -109,7 +115,7 @@ const MyPage = () => {
               disabled={linking}
               className="w-full rounded-lg border border-border bg-card p-3 text-left hover:border-primary transition-colors"
             >
-              <span className="text-muted-foreground">{p.name}</span>
+              <span className="text-muted-foreground">{displayName(p)}</span>
             </button>
           ))}
         </div>
@@ -132,7 +138,7 @@ const MyPage = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="MY PAGE" subtitle={`${linkedPlayer.name}님, 환영합니다`} />
+      <PageHeader title="MY PAGE" subtitle={isEn ? `Welcome, ${displayName(linkedPlayer)}` : `${linkedPlayer.name}님, 환영합니다`} />
 
       <div className="px-4 space-y-4">
         {/* Profile Card */}
@@ -146,8 +152,8 @@ const MyPage = () => {
               <User size={28} className="text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">{linkedPlayer.name}</h2>
-              <p className="text-xs text-muted-foreground">가입일: {linkedPlayer.join_date}</p>
+              <h2 className="text-xl font-bold text-foreground">{displayName(linkedPlayer)}</h2>
+              <p className="text-xs text-muted-foreground">{L("가입일", "Joined")}: {linkedPlayer.join_date}</p>
               {linkedPlayer.is_active && (
                 <span className="text-xs text-primary font-medium">ACTIVE</span>
               )}
@@ -158,10 +164,10 @@ const MyPage = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "골", value: stats.goals, icon: Target, color: "text-primary" },
-            { label: "어시스트", value: stats.assists, icon: Zap, color: "text-accent" },
-            { label: "출전", value: stats.appearances, icon: Trophy, color: "text-foreground" },
-            { label: "승률", value: `${stats.winRate}%`, icon: Trophy, color: "text-primary" },
+            { label: L("골", "Goals"), value: stats.goals, icon: Target, color: "text-primary" },
+            { label: L("어시스트", "Assists"), value: stats.assists, icon: Zap, color: "text-accent" },
+            { label: L("출전", "Appearances"), value: stats.appearances, icon: Trophy, color: "text-foreground" },
+            { label: L("승률", "Win Rate"), value: `${stats.winRate}%`, icon: Trophy, color: "text-primary" },
           ].map((s, i) => (
             <motion.div
               key={s.label}
@@ -181,15 +187,15 @@ const MyPage = () => {
         <div className="flex gap-3 text-center">
           <div className="flex-1 rounded-lg bg-card border border-border p-3">
             <div className="text-lg font-bold text-primary">{stats.wins}</div>
-            <div className="text-xs text-muted-foreground">승</div>
+            <div className="text-xs text-muted-foreground">{L("승", "W")}</div>
           </div>
           <div className="flex-1 rounded-lg bg-card border border-border p-3">
             <div className="text-lg font-bold text-muted-foreground">{stats.draws}</div>
-            <div className="text-xs text-muted-foreground">무</div>
+            <div className="text-xs text-muted-foreground">{L("무", "D")}</div>
           </div>
           <div className="flex-1 rounded-lg bg-card border border-border p-3">
             <div className="text-lg font-bold text-destructive">{stats.losses}</div>
-            <div className="text-xs text-muted-foreground">패</div>
+            <div className="text-xs text-muted-foreground">{L("패", "L")}</div>
           </div>
         </div>
 
@@ -202,8 +208,8 @@ const MyPage = () => {
             className="rounded-xl border border-primary/30 bg-card p-4 cursor-pointer hover:border-primary transition-colors"
           >
             <p className="text-xs text-primary font-bold mb-2">🏆 BEST MATCH</p>
-            <p className="text-sm text-foreground">{bestMatch.date} {bestMatchResult ? `(${bestMatchResult.result})` : ""}</p>
-            <p className="text-lg font-bold text-primary">{bestMatch.goals}골 {bestMatch.assists}어시 ({bestMatch.ap} AP)</p>
+            <p className="text-sm text-foreground">{bestMatch.date} {bestMatchResult ? `(${isEn ? (bestMatchResult.result === "승" ? "W" : bestMatchResult.result === "패" ? "L" : bestMatchResult.result === "무" ? "D" : bestMatchResult.result) : bestMatchResult.result})` : ""}</p>
+            <p className="text-lg font-bold text-primary">{isEn ? `${bestMatch.goals}G ${bestMatch.assists}A (${bestMatch.ap} AP)` : `${bestMatch.goals}골 ${bestMatch.assists}어시 (${bestMatch.ap} AP)`}</p>
           </motion.div>
         )}
 
@@ -224,7 +230,7 @@ const MyPage = () => {
           variant="outline"
           className="w-full border-primary/30 text-primary"
         >
-          <LinkIcon size={16} /> 전체 프로필 보기
+          <LinkIcon size={16} /> {L("전체 프로필 보기", "View Full Profile")}
         </Button>
 
         {/* Sign Out */}
@@ -233,7 +239,7 @@ const MyPage = () => {
           variant="ghost"
           className="w-full text-muted-foreground"
         >
-          <LogOut size={16} /> 로그아웃
+          <LogOut size={16} /> {L("로그아웃", "Sign Out")}
         </Button>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const ADJECTIVES = [
   "탐욕스러운", "수비 안 하는", "패스만 하는", "슈팅 머신", "독보적인",
@@ -36,6 +37,9 @@ interface NicknameEditorProps {
 
 const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: NicknameEditorProps) => {
   const { user } = useAuth();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const L = (ko: string, en: string) => (isEn ? en : ko);
   const [nickname, setNickname] = useState(currentNickname || "");
   const [saving, setSaving] = useState(false);
   const [selectedTitle, setSelectedTitle] = useState(currentTitle || "");
@@ -55,9 +59,9 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
       })
       .eq("id", user.id);
     if (error) {
-      toast({ title: "저장 실패", description: error.message, variant: "destructive" });
+      toast({ title: L("저장 실패", "Save failed"), description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "저장 완료!", description: "닉네임과 칭호가 업데이트되었습니다." });
+      toast({ title: L("저장 완료!", "Saved!"), description: L("닉네임과 칭호가 업데이트되었습니다.", "Nickname and title updated.") });
       onUpdate();
     }
     setSaving(false);
@@ -70,21 +74,21 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
       className="rounded-xl border border-border bg-card p-4 space-y-4"
     >
       <h3 className="font-display text-lg text-primary flex items-center gap-2">
-        <Sparkles size={18} /> 닉네임 & 칭호
+        <Sparkles size={18} /> {L("닉네임 & 칭호", "Nickname & Title")}
       </h3>
 
       {/* Nickname */}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">닉네임</label>
+        <label className="text-xs text-muted-foreground mb-1 block">{L("닉네임", "Nickname")}</label>
         <div className="flex gap-2">
           <Input
             value={nickname}
             onChange={e => setNickname(e.target.value)}
-            placeholder="닉네임을 입력하세요"
+            placeholder={L("닉네임을 입력하세요", "Enter a nickname")}
             maxLength={20}
             className="flex-1"
           />
-          <Button onClick={handleRandomize} variant="outline" size="icon" title="랜덤 생성">
+          <Button onClick={handleRandomize} variant="outline" size="icon" title={L("랜덤 생성", "Randomize")}>
             <Dice5 size={16} />
           </Button>
         </div>
@@ -92,7 +96,7 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
 
       {/* Title equip */}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">대표 칭호</label>
+        <label className="text-xs text-muted-foreground mb-1 block">{L("대표 칭호", "Equipped Title")}</label>
         {titleOptions.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             <button
@@ -101,7 +105,7 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
                 !selectedTitle ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:border-primary/30"
               }`}
             >
-              없음
+              {L("없음", "None")}
             </button>
             {titleOptions.map(t => (
               <button
@@ -116,12 +120,12 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">획득한 뱃지가 없습니다. 경기에 참여하여 칭호를 획득하세요!</p>
+          <p className="text-xs text-muted-foreground">{L("획득한 뱃지가 없습니다. 경기에 참여하여 칭호를 획득하세요!", "No badges yet. Play matches to earn titles!")}</p>
         )}
       </div>
 
       <Button onClick={handleSave} disabled={saving} className="w-full gradient-pink text-primary-foreground font-bold">
-        <Save size={16} /> 저장
+        <Save size={16} /> {L("저장", "Save")}
       </Button>
     </motion.div>
   );
