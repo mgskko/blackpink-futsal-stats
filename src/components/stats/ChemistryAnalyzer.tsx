@@ -6,6 +6,7 @@ import { X, AlertTriangle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { getPlayerName } from "@/hooks/useFutsalData";
+import { translateChemistryBadge } from "@/lib/i18nBadges";
 
 interface Props {
   players: Player[];
@@ -123,7 +124,7 @@ export default function ChemistryAnalyzer({ players, allQuarters, goalEvents }: 
             <div className={`rounded-xl border p-4 text-center ${result.badge.tone === "good" ? "border-primary/50 bg-primary/10" : result.badge.tone === "bad" ? "border-destructive/50 bg-destructive/10" : "border-border bg-secondary/30"}`}>
               <div className="text-3xl mb-1">{result.badge.emoji}</div>
               <div className={`font-display text-lg tracking-wider ${result.badge.tone === "good" ? "text-primary text-glow" : result.badge.tone === "bad" ? "text-destructive" : "text-foreground"}`}>
-                {result.badge.title}
+                {translateChemistryBadge(result.badge.title, isEn)}
               </div>
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {L("동시출전", "Together")} {result.togetherQuarters}Q / {result.togetherMatches}{L("경기", " GP")}

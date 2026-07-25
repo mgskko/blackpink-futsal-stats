@@ -39,7 +39,9 @@ function getBenchPlayers(lineup: any): number[] {
 const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters }: Props) => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
-  const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
+  const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
+  const isEn = lang.startsWith("en");
+  const pn = (id: number) => getPlayerName(players, id, lang);
   const L = (ko: string, en: string) => (isEn ? en : ko);
   const Q = (n: number) => (isEn ? `${n}Q` : `${n}쿼터`);
   const Times = (n: number) => (isEn ? `${n}x` : `${n}회`);
@@ -96,7 +98,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
   const cleanSheetRanking = useMemo(() =>
     [...gkStats.entries()]
       .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), rate: Math.round((d.cleanSheet / d.total) * 100), cleanSheet: d.cleanSheet, total: d.total }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), rate: Math.round((d.cleanSheet / d.total) * 100), cleanSheet: d.cleanSheet, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 10),
   [gkStats, players, playerMatchCount]);
@@ -104,7 +106,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
   const openDoorRanking = useMemo(() =>
     [...gkStats.entries()]
       .filter(([pid, d]) => d.total >= 3 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgConceded: d.conceded / d.total, total: d.total }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgConceded: d.conceded / d.total, total: d.total }))
       .sort((a, b) => b.avgConceded - a.avgConceded)
       .slice(0, 5),
   [gkStats, players, playerMatchCount]);
@@ -121,7 +123,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...dfAssistMap.entries()]
       .filter(([pid]) => validIds.has(pid))
-      .map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid), count }))
+      .map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid, lang), count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
   }, [goalEvents, allQuarters, players]);
@@ -141,7 +143,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...dfMap.entries()]
       .filter(([pid, d]) => d.total >= 5 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.total) * 100), wins: d.wins, total: d.total }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), winRate: Math.round((d.wins / d.total) * 100), wins: d.wins, total: d.total }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
   }, [allQuarters, players, playerMatchCount]);
@@ -174,7 +176,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...fwMap.entries()]
       .filter(([pid, d]) => d.quarters >= 5 && d.assists > d.goals && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, assists: d.assists, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), goals: d.goals, assists: d.assists, quarters: d.quarters }))
       .sort((a, b) => (b.assists - b.goals) - (a.assists - a.goals))
       .slice(0, 5);
   }, [allQuarters, goalEvents, players, playerMatchCount]);
@@ -203,7 +205,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...fwGoalMap.entries()]
       .filter(([pid, d]) => d.quarters >= 5 && d.teamGoals >= 3 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), usage: Math.round((d.ownGoals / d.teamGoals) * 100), ownGoals: d.ownGoals, teamGoals: d.teamGoals }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), usage: Math.round((d.ownGoals / d.teamGoals) * 100), ownGoals: d.ownGoals, teamGoals: d.teamGoals }))
       .sort((a, b) => b.usage - a.usage)
       .slice(0, 5);
   }, [allQuarters, goalEvents, players, playerMatchCount]);
@@ -234,7 +236,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     }
     return [...changerMap.entries()]
       .filter(([, d]) => d.count >= 2)
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgSwing: d.totalSwings / d.count, bestSwing: d.bestSwing, count: d.count }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgSwing: d.totalSwings / d.count, bestSwing: d.bestSwing, count: d.count }))
       .sort((a, b) => b.avgSwing - a.avgSwing)
       .slice(0, 5);
   }, [allQuarters, players]);
@@ -259,7 +261,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...playerStreaks.entries()]
       .filter(([, streak]) => streak >= 2)
-      .map(([pid, streak]) => ({ id: pid, name: getPlayerName(players, pid), streak }))
+      .map(([pid, streak]) => ({ id: pid, name: getPlayerName(players, pid, lang), streak }))
       .sort((a, b) => b.streak - a.streak)
       .slice(0, 5);
   }, [allQuarters, players]);
@@ -293,7 +295,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...fwData.entries()]
       .filter(([pid, d]) => d.quarters >= 5 && d.ap >= 3 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => b.concededPerQ - a.concededPerQ)
       .slice(0, 5);
   }, [allQuarters, goalEvents, players, playerMatchCount]);
@@ -325,7 +327,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...fwData.entries()]
       .filter(([pid, d]) => d.quarters >= 5 && d.ap <= 2 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.concededPerQ - b.concededPerQ)
       .slice(0, 5);
   }, [allQuarters, goalEvents, players, playerMatchCount]);
@@ -353,7 +355,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...dfGoals.entries()]
       .filter(([pid, d]) => d.goals >= 1 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), goals: d.goals, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), goals: d.goals, quarters: d.quarters }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
   }, [allQuarters, goalEvents, players]);
@@ -386,7 +388,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...fwData.entries()]
       .filter(([pid, d]) => d.quarters >= 5 && d.ap === 0 && (d.wins / d.quarters) >= 0.8 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
   }, [allQuarters, goalEvents, players, playerMatchCount]);
@@ -416,7 +418,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...gkData.entries()]
       .filter(([pid, d]) => d.saves >= 1 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), saves: d.saves, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), saves: d.saves, quarters: d.quarters }))
       .sort((a, b) => b.saves - a.saves)
       .slice(0, 5);
   }, [allQuarters, players, playerMatchCount]);
@@ -438,7 +440,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
     });
     return [...data.entries()]
       .filter(([pid, d]) => d.quarters >= 10 && has10Matches(pid))
-      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
+      .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.avgScore - b.avgScore)
       .slice(0, 5);
   }, [allQuarters, players, playerMatchCount]);
@@ -637,7 +639,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
         });
         const hexRanking = [...hexPlayers.entries()]
           .filter(([pid, d]) => d.fw >= 2 && d.df >= 2 && d.gk >= 1 && d.quarters >= 10 && has10Matches(pid))
-          .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid), margin: d.margin, quarters: d.quarters, fw: d.fw, df: d.df, gk: d.gk }))
+          .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), margin: d.margin, quarters: d.quarters, fw: d.fw, df: d.df, gk: d.gk }))
           .sort((a, b) => b.margin - a.margin)
           .slice(0, 5);
         if (hexRanking.length === 0) return null;

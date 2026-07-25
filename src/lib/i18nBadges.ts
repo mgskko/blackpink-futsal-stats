@@ -214,3 +214,17 @@ export function translateTraitDescription(desc: string, isEn: boolean): string {
   };
   return staticMap[desc] ?? desc;
 }
+
+// ─── Chemistry Analyzer badge titles (from useChemistryStats) ───
+const CHEM_BADGE_EN: Record<string, string> = {
+  "평범한 동료": "Ordinary Teammates",
+  "파멸의 듀오": "Duo of Doom",
+  "환상의 짝꿍": "Dream Partners",
+  "철벽 듀오": "Iron-Wall Duo",
+  "유리 대포": "Glass Cannon",
+  "믿음직한 콤비": "Reliable Combo",
+  "삐그덕 콤비": "Creaky Combo",
+};
+export function translateChemistryBadge(title: string, isEn: boolean): string {
+  return isEn ? (CHEM_BADGE_EN[title] ?? title) : title;
+}
