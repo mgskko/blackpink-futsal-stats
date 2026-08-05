@@ -20,6 +20,7 @@ const AdminMatchCreate = () => {
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
   const [venueId, setVenueId] = useState("");
+  const [subVenue, setSubVenue] = useState("");
   const [newVenueName, setNewVenueName] = useState("");
   const [addingVenue, setAddingVenue] = useState(false);
   const [matchType, setMatchType] = useState("6:6 풋살");
@@ -72,6 +73,7 @@ const AdminMatchCreate = () => {
         .insert({
           date,
           venue_id: venueId ? Number(venueId) : null,
+          sub_venue: subVenue || null,
           match_type: matchType,
           is_custom: isCustom,
           is_internal: isCustom,
@@ -216,12 +218,25 @@ const AdminMatchCreate = () => {
 
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">장소</label>
-        <Select value={venueId} onValueChange={setVenueId}>
+        <Select value={venueId} onValueChange={(v) => { setVenueId(v); setSubVenue(""); }}>
           <SelectTrigger className="bg-card border-border"><SelectValue placeholder="장소 선택" /></SelectTrigger>
           <SelectContent>
             {venues.map(v => <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        {venues.find(v => String(v.id) === venueId)?.name?.includes("용산 더베이스") && (
+          <div className="mt-2">
+            <label className="text-xs text-muted-foreground mb-1 block">세부 구장</label>
+            <Select value={subVenue} onValueChange={setSubVenue}>
+              <SelectTrigger className="bg-card border-border"><SelectValue placeholder="1~7구장 선택" /></SelectTrigger>
+              <SelectContent>
+                {["1구장","2구장","3구장","4구장","5구장","6구장","7구장"].map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2">
           <Input
             value={newVenueName}
