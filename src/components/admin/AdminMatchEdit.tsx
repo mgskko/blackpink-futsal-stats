@@ -124,6 +124,9 @@ const AdminMatchEdit = () => {
       setScoreAgainst(or2?.score_against || 0);
     }
     setEditYoutubeLink(m?.youtube_link || "");
+    setEditVenueId(m?.venue_id ? String(m.venue_id) : "");
+    setEditSubVenue((m as any)?.sub_venue || "");
+    setEditingVenue(false);
   };
 
   const handleSaveScore = async () => {
@@ -338,6 +341,52 @@ const AdminMatchEdit = () => {
 
       {matchId && (
         <>
+          {/* Venue Edit */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-primary">구장</h3>
+              {!editingVenue ? (
+                <Button size="sm" variant="outline" onClick={() => setEditingVenue(true)} className="h-7 text-xs border-primary/30 text-primary"><Edit size={12} /> 수정</Button>
+              ) : (
+                <Button size="sm" onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await supabase.from("matches").update({
+                      venue_id: editVenueId ? Number(editVenueId) : null,
+                      sub_venue: editSubVenue || null,
+                    } as any).eq("id", matchId!);
+                    invalidateAll();
+                    toast({ title: "구장이 수정되었습니다 ✅" });
+                    setEditingVenue(false);
+                  } catch (err: any) { toast({ title: "오류", description: err.message, variant: "destructive" }); }
+                  finally { setSaving(false); }
+                }} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground"><Save size={12} /> 저장</Button>
+              )}
+            </div>
+            {editingVenue ? (
+              <div className="space-y-2">
+                <Select value={editVenueId} onValueChange={(v) => { setEditVenueId(v); setEditSubVenue(""); }}>
+                  <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="구장 선택" /></SelectTrigger>
+                  <SelectContent>
+                    {venues.map(v => <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {venues.find(v => String(v.id) === editVenueId)?.name?.includes("용산 더베이스") && (
+                  <Select value={editSubVenue} onValueChange={setEditSubVenue}>
+                    <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="1~7구장 선택" /></SelectTrigger>
+                    <SelectContent>
+                      {["1구장","2구장","3구장","4구장","5구장","6구장","7구장"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {venues.find(v => String(v.id) === editVenueId)?.name ?? "미정"}{editSubVenue ? ` ${editSubVenue}` : ""}
+              </p>
+            )}
+          </div>
+
           {/* YouTube Link Edit */}
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
