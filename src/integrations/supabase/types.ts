@@ -275,6 +275,7 @@ export type Database = {
           is_custom: boolean
           is_internal: boolean
           match_type: string
+          sub_venue: string | null
           venue_id: number | null
           youtube_link: string | null
         }
@@ -285,6 +286,7 @@ export type Database = {
           is_custom?: boolean
           is_internal?: boolean
           match_type?: string
+          sub_venue?: string | null
           venue_id?: number | null
           youtube_link?: string | null
         }
@@ -295,6 +297,7 @@ export type Database = {
           is_custom?: boolean
           is_internal?: boolean
           match_type?: string
+          sub_venue?: string | null
           venue_id?: number | null
           youtube_link?: string | null
         }
