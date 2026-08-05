@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Player { id: number; name: string; name_en?: string | null; is_active: boolean; join_date: string; back_number: number | null; profile_image_url: string | null; }
 export interface Venue { id: number; name: string; }
-export interface Match { id: number; date: string; venue_id: number; match_type: string; is_custom: boolean; has_detail_log: boolean; youtube_link: string | null; }
+export interface Match { id: number; date: string; venue_id: number; match_type: string; is_custom: boolean; has_detail_log: boolean; youtube_link: string | null; sub_venue?: string | null; }
 export interface Team { id: number; match_id: number; name: string; is_ours: boolean; original_age_desc: string | null; age_category: string | null; }
 export interface Result { id: number; team_id: number; match_id: number; result: string; score_for: number | null; score_against: number | null; }
 export interface Roster { id: number; match_id: number; team_id: number; player_id: number; goals: number; assists: number; }

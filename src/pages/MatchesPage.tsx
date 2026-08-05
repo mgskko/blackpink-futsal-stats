@@ -113,7 +113,7 @@ const MatchesPage = () => {
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     <span>{match.date}</span>
                     <span className="opacity-40">•</span>
-                    <span className="truncate">{venue?.name}</span>
+                    <span className="truncate">{venue?.name}{match.sub_venue ? ` ${match.sub_venue}` : ""}</span>
                     {match.is_custom && (
                       <>
                         <span className="opacity-40">•</span>
