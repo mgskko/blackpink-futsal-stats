@@ -49,6 +49,11 @@ const AdminMatchEdit = () => {
   const [editYoutubeLink, setEditYoutubeLink] = useState("");
   const [editingYoutube, setEditingYoutube] = useState(false);
 
+  // Venue editing
+  const [editVenueId, setEditVenueId] = useState("");
+  const [editSubVenue, setEditSubVenue] = useState("");
+  const [editingVenue, setEditingVenue] = useState(false);
+
   // Add goal record (replaces guest-only)
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [addQuarter, setAddQuarter] = useState(1);
