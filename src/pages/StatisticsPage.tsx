@@ -190,7 +190,7 @@ const StatisticsPage = () => {
     filteredMatches.forEach(m => {
       if (!baseVenueIds.has(m.venue_id)) return;
       const sub = (m as any).sub_venue as string | null;
-      const key = sub || (isEnglish ? "Unspecified" : "미지정");
+      const key = sub || (isEn ? "Unspecified" : "미지정");
       const mt = filteredTeams.filter(t => t.match_id === m.id);
       const ours = mt.find(t => t.is_ours);
       if (!ours) return;
