@@ -183,6 +183,31 @@ const StatisticsPage = () => {
 
   const opponentRecords = getOpponentRecords(filteredMatches, filteredTeams, filteredResults);
   const venueRecords = getVenueRecords(filteredMatches, filteredTeams, filteredResults, venues);
+  // 용산 더베이스 세부 구장(1~7구장)별 전적
+  const baseVenueIds = new Set(venues.filter(v => v.name.includes("용산 더베이스")).map(v => v.id));
+  const subVenueRecords = (() => {
+    const map = new Map<string, { name: string; wins: number; draws: number; losses: number; matches: number; winRate: number }>();
+    filteredMatches.forEach(m => {
+      if (!baseVenueIds.has(m.venue_id)) return;
+      const sub = (m as any).sub_venue as string | null;
+      const key = sub || (isEnglish ? "Unspecified" : "미지정");
+      const mt = filteredTeams.filter(t => t.match_id === m.id);
+      const ours = mt.find(t => t.is_ours);
+      if (!ours) return;
+      const res = filteredResults.find(r => r.match_id === m.id && r.team_id === ours.id);
+      if (!res) return;
+      const rec = map.get(key) || { name: key, wins: 0, draws: 0, losses: 0, matches: 0, winRate: 0 };
+      if (res.result === "승") rec.wins++;
+      else if (res.result === "패") rec.losses++;
+      else if (res.result === "무") rec.draws++;
+      else return;
+      rec.matches++;
+      map.set(key, rec);
+    });
+    return [...map.values()]
+      .map(r => ({ ...r, winRate: r.matches ? Math.round((r.wins / r.matches) * 100) : 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  })();
   const ageRecords = getAgeCategoryRecords(filteredMatches, filteredTeams, filteredResults);
   const winFairy = getWinFairyData(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
   const lastQSpecialists = getLastQuarterSpecialists(memberPlayers, filteredMatches, filteredGoalEvents);
@@ -421,6 +446,13 @@ const StatisticsPage = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <RecordTable title={L("상대팀별 전적", "Record by Opponent")} icon={<Shield size={18} />} data={opponentRecords} />
             <RecordTable title={L("구장별 전적", "Record by Venue")} icon={<MapPin size={18} />} data={venueRecords} />
+            {subVenueRecords.length > 0 && (
+              <RecordTable
+                title={L("용산 더베이스 세부 구장별 전적", "Yongsan The Base — Record by Pitch")}
+                icon={<MapPin size={18} />}
+                data={subVenueRecords}
+              />
+            )}
             <div className="mb-6">
               <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Target size={18} /> {L("연령대별 승률", "Win Rate by Age Group")}</h3>
               <div className="space-y-2">
