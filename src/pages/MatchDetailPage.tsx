@@ -286,7 +286,7 @@ const MatchDetailPage = () => {
           </div>
         </div>
         <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted-foreground">
-          <span>{venue?.name}</span>
+          <span>{venue?.name}{match.sub_venue ? ` ${match.sub_venue}` : ""}</span>
           <span className="text-primary/50">•</span>
           <span>{match.match_type}</span>
           {match.is_custom && (<><span className="text-primary/50">•</span><span className="text-primary">{L("자체전", "Intrasquad")}</span></>)}
