@@ -21,6 +21,7 @@ import FunStatsTab from "@/components/stats/FunStatsTab";
 import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
+import POTMArchive from "@/components/stats/POTMArchive";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
 import QuarterFormSection from "@/components/stats/QuarterFormSection";
@@ -337,6 +338,9 @@ const StatisticsPage = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* POTM Card */}
             <POTMCard players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
+            {/* POTM Archive */}
+            <POTMArchive players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
             {/* 먹튀 칭호 */}
             {(() => {
