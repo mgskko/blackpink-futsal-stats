@@ -1038,6 +1038,8 @@ const PlayerDetailPage = () => {
         </div>
       )}
 
+      <PlayerFinesCard playerId={player.id} />
+
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />
       )}
