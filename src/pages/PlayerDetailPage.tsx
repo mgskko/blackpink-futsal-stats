@@ -24,6 +24,7 @@ import SeasonWrapped from "@/components/player/SeasonWrapped";
 import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
+import PlayerFinesCard from "@/components/player/PlayerFinesCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
@@ -1036,6 +1037,8 @@ const PlayerDetailPage = () => {
           )}
         </div>
       )}
+
+      <PlayerFinesCard playerId={player.id} />
 
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />
