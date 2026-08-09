@@ -417,6 +417,56 @@ export type Database = {
           },
         ]
       }
+      player_fines: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          fine_type: string
+          id: string
+          is_paid: boolean
+          is_waived: boolean
+          match_date: string | null
+          note: string | null
+          player_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          fine_type: string
+          id?: string
+          is_paid?: boolean
+          is_waived?: boolean
+          match_date?: string | null
+          note?: string | null
+          player_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          fine_type?: string
+          id?: string
+          is_paid?: boolean
+          is_waived?: boolean
+          match_date?: string | null
+          note?: string | null
+          player_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_fines_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           back_number: number | null
