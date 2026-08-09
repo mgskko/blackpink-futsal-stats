@@ -22,6 +22,7 @@ import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
 import POTMArchive from "@/components/stats/POTMArchive";
+import FinesBoard from "@/components/stats/FinesBoard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
 import QuarterFormSection from "@/components/stats/QuarterFormSection";
@@ -472,6 +473,7 @@ const StatisticsPage = () => {
                 ))}
               </div>
             </div>
+            <FinesBoard players={memberPlayers} />
           </motion.div>
         )}
 
