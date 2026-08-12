@@ -22,6 +22,7 @@ import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
 import POTMArchive from "@/components/stats/POTMArchive";
+import SeasonRatingBoard from "@/components/stats/SeasonRatingBoard";
 import FinesBoard from "@/components/stats/FinesBoard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
@@ -342,6 +343,18 @@ const StatisticsPage = () => {
 
             {/* POTM Archive */}
             <POTMArchive players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
+            {/* Season Ratings v2 */}
+            <SeasonRatingBoard
+              isEn={isEn}
+              lang={lang}
+              players={memberPlayers}
+              matches={filteredMatches}
+              rosters={filteredRosters}
+              goalEvents={filteredGoalEvents}
+              quarters={filteredQuarters}
+              seasonLabel={selectedFilter === "all" ? L("전체 시즌", "All seasons") : selectedFilter === "custom" ? L("자체전", "Intrasquad") : selectedFilter}
+            />
 
             {/* 먹튀 칭호 */}
             {(() => {
