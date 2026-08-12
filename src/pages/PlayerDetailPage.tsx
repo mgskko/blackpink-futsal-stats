@@ -25,6 +25,8 @@ import AvatarModal from "@/components/player/AvatarModal";
 import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import PlayerFinesCard from "@/components/player/PlayerFinesCard";
+import PlayerHeroStats from "@/components/player/PlayerHeroStats";
+import SeasonStatsTable, { computeRating } from "@/components/player/SeasonStatsTable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
@@ -590,24 +592,18 @@ const PlayerDetailPage = () => {
         );
       })()}
 
-      {/* Summary stats bar */}
-      <div className="mx-4 mt-3 grid grid-cols-4 gap-2">
-        {[
-          { label: L("골", "G"), value: stats.goals },
-          { label: L("도움", "A"), value: stats.assists },
-          { label: "AP", value: stats.attackPoints },
-          { label: L("G/경기", "G/GP"), value: goalsPerGame },
-          { label: L("출전", "GP"), value: stats.appearances },
-          { label: L("승률", "Win%"), value: `${stats.winRate}%` },
-          { label: "+/-", value: courtStats ? (courtStats.margin > 0 ? `+${courtStats.margin}` : `${courtStats.margin}`) : "-" },
-          { label: "PPQ", value: courtStats ? courtStats.ppq.toFixed(2) : "-" },
-        ].map(s => (
-          <div key={s.label} className="rounded-lg border border-border bg-card p-2 text-center">
-            <div className={`font-display text-lg ${s.label === "+/-" ? (courtStats && courtStats.margin > 0 ? "text-green-400" : courtStats && courtStats.margin < 0 ? "text-red-400" : "text-foreground") : "text-primary text-glow"}`}>{s.value}</div>
-            <div className="text-[9px] text-muted-foreground">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* FotMob-style key stats */}
+      <PlayerHeroStats
+        isEn={isEn}
+        rating={computeRating(stats.goals, stats.assists, stats.appearances, stats.winRate)}
+        appearances={stats.appearances}
+        goals={stats.goals}
+        assists={stats.assists}
+        winRate={stats.winRate}
+        margin={courtStats ? courtStats.margin : null}
+        ppq={courtStats ? courtStats.ppq : null}
+        goalsPerGame={goalsPerGame}
+      />
 
       {/* 3-Tab System */}
       <div className="mx-4 mt-4">
@@ -804,6 +800,18 @@ const PlayerDetailPage = () => {
       {/* ===== STATS TAB ===== */}
       {activeTab === "stats" && (
         <div className="mx-4">
+          {/* Season by season records & ranks */}
+          <SeasonStatsTable
+            isEn={isEn}
+            playerId={playerId}
+            players={players}
+            matches={matches}
+            rosters={rosters}
+            goalEvents={goalEvents}
+            results={results}
+            quarters={allQuarters}
+          />
+
           {/* Best Match */}
           {bestAP && bestAP.ap > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-primary/30 bg-card p-4 box-glow">
