@@ -12,6 +12,7 @@ import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import QuarterPitchViewer from "@/components/match/QuarterPitchViewer";
+import HeadToHead from "@/components/match/HeadToHead";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
@@ -86,6 +87,7 @@ const MatchDetailPage = () => {
   const pn = (id: number | null | undefined) => (id ? getPlayerName(players, id, lang) : "???");
   const tn = (name: string | null | undefined) => resolveTeamName(name ?? "", lang);
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
+  const [tab, setTab] = useState<"facts" | "ticker" | "lineup" | "stats" | "h2h">("lineup");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { data: matchQuarters } = useMatchQuarters(matchId);
 
@@ -309,8 +311,31 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
+      {/* Tab bar */}
+      <div className="sticky top-[57px] z-10 mt-3 border-b border-border bg-background/95 backdrop-blur-lg">
+        <div className="flex gap-1 overflow-x-auto px-4 py-2">
+          {([
+            ["facts", L("팩트", "Facts")],
+            ["ticker", L("티커", "Ticker")],
+            ["lineup", L("라인업", "Lineup")],
+            ["stats", L("통계", "Stats")],
+            ["h2h", L("상대 전적", "H2H")],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-bold transition-all ${
+                tab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-primary"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* AI Match Comments */}
-      {aiComments.length > 0 && (
+      {tab === "facts" && aiComments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 space-y-1.5">
           {aiComments.map((c, i) => (
             <div key={i} className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground">
@@ -321,7 +346,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Data MOM - dual for custom matches */}
-      {match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
+      {tab === "facts" && (match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 grid grid-cols-2 gap-3">
           {([["teamA", dualDataMOM.teamA, matchTeams[0]?.name || "A팀", "border-blue-500/30 bg-blue-500/5"], ["teamB", dualDataMOM.teamB, matchTeams[1]?.name || "B팀", "border-orange-500/30 bg-orange-500/5"]] as const).map(([key, mom, teamName, colorClass]) => mom && (
             <div key={key} className={`rounded-xl border ${colorClass} p-4`}>
@@ -380,10 +405,10 @@ const MatchDetailPage = () => {
             </div>
           </div>
         </motion.div>
-      )}
+      ))}
 
       {/* Quarter Scoreboard */}
-      {matchQuarters && matchQuarters.length > 0 && (
+      {tab === "lineup" && matchQuarters && matchQuarters.length > 0 && (
         <div className="mx-4 mt-4">
           <QuarterScoreboard
             quarters={matchQuarters}
@@ -394,7 +419,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Quarter Pitch Viewer (FotMob style) */}
-      {matchQuarters && matchQuarters.length > 0 && (
+      {tab === "lineup" && matchQuarters && matchQuarters.length > 0 && (
         <div className="mx-4 mt-4">
           <QuarterPitchViewer
             quarters={matchQuarters}
@@ -409,7 +434,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* YouTube */}
-      {youtubeId && (
+      {tab === "facts" && youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Youtube size={18} /> MATCH VIDEO</h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border">
@@ -419,7 +444,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Goal Timeline */}
-      {match.has_detail_log && matchGoalEvents.length > 0 && (
+      {tab === "ticker" && match.has_detail_log && matchGoalEvents.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">GOAL TIMELINE</h2>
           <div className="space-y-1">
@@ -467,7 +492,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Match Summary with Court Margin + Clean Sheet Badge */}
-      {playerMatchStats.length > 0 && (
+      {tab === "stats" && playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? L("종합 기록", "MATCH SUMMARY") : "MATCH SUMMARY"}</h2>
           {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">{L("쿼터별 상세 기록이 없는 경기입니다.", "No per-quarter detail log for this match.")}</p>}
@@ -512,14 +537,33 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
+      {tab === "ticker" && !(match.has_detail_log && matchGoalEvents.length > 0) && (
+        <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          {L("이 경기에는 타임라인 기록이 없습니다.", "No timeline events for this match.")}
+        </div>
+      )}
+
+      {tab === "h2h" && (
+        <div className="mx-4 mt-4">
+          <HeadToHead
+            matches={matches}
+            teams={teams}
+            results={results}
+            currentMatchId={matchId}
+            opponentName={mr?.opponentTeam.name ?? opponentTeam?.name ?? ""}
+            lang={lang}
+          />
+        </div>
+      )}
+
       {/* MOM Voting */}
-      <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>
+      {tab === "facts" && <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>}
 
       {/* Worst Voting */}
-      <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>
+      {tab === "facts" && <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>}
 
       {/* Attendance */}
-      {hasAttendanceData && (
+      {tab === "lineup" && hasAttendanceData && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Users size={18} /> ATTENDANCE</h2>
           <div className="space-y-2">
@@ -546,11 +590,14 @@ const MatchDetailPage = () => {
       )}
 
       {/* Formation Builder */}
-      <div className="mx-4 mt-4">
-        <FormationBuilder matchId={matchId} players={players} roster={roster} matchTeams={matchTeams} isAdmin={isAdmin} />
-      </div>
+      {tab === "lineup" && (
+        <div className="mx-4 mt-4">
+          <FormationBuilder matchId={matchId} players={players} roster={roster} matchTeams={matchTeams} isAdmin={isAdmin} />
+        </div>
+      )}
 
       {/* Roster */}
+      {tab === "lineup" && (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">
         <h2 className="mb-3 font-display text-lg tracking-wider text-primary">ROSTER</h2>
         {matchTeams.filter((t) => t.is_ours).map((team) => {
@@ -570,9 +617,10 @@ const MatchDetailPage = () => {
           );
         })}
       </motion.div>
+      )}
 
       {/* Match Comments */}
-      <div className="mx-4 mt-4"><MatchComments matchId={matchId} /></div>
+      {(tab === "facts" || tab === "stats") && <div className="mx-4 mt-4"><MatchComments matchId={matchId} /></div>}
     </div>
   );
 };
