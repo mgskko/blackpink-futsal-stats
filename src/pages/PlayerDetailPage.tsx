@@ -624,13 +624,13 @@ const PlayerDetailPage = () => {
         goalsPerGame={goalsPerGame}
       />
 
-      {/* 3-Tab System */}
+      {/* 4-Tab System */}
       <div className="mx-4 mt-4">
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
-          {(["profile", "matches", "stats"] as const).map(tab => (
+          {(["profile", "matches", "stats", "career"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === tab ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : `📊 ${L("통계", "Stats")}`}
+              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : tab === "stats" ? `📊 ${L("통계", "Stats")}` : `🏅 ${L("경력", "Career")}`}
             </button>
           ))}
         </div>
