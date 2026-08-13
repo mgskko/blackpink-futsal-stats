@@ -59,6 +59,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const L = (ko: string, en: string) => (isEn ? en : ko);
   const pn = (id: number) => getPlayerName(players, id, lang);
   const avatar = (id: number) => players.find(p => p.id === id)?.profile_image_url ?? null;
+  const kit = (id: number) => players.find(p => p.id === id)?.back_number ?? null;
   const roleLabel = (role: string) =>
     isEn ? role : role === "GK" ? "골키퍼" : role === "DF" ? "수비수" : role === "MF" ? "미드필더" : role === "FW" ? "공격수" : role === "Bench" ? "벤치" : role;
 
