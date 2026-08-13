@@ -11,6 +11,7 @@ import FormationBuilder from "@/components/match/FormationBuilder";
 import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
+import QuarterPitchViewer from "@/components/match/QuarterPitchViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
@@ -529,71 +530,17 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
-      {/* Quarter Lineup Summary Table */}
-      {lineupSummary && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">
-          <h2 className="mb-3 font-display text-lg tracking-wider text-primary">QUARTER LINEUP</h2>
-          <div className="overflow-x-auto rounded-lg border border-border bg-card">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border bg-secondary/30">
-                  <th className="px-3 py-2 text-left font-bold text-foreground">{match.is_custom ? L("팀 / 이름", "Team / Name") : L("이름", "Name")}</th>
-                  {lineupSummary.quarters.map(q => (
-                    <th key={q} className="px-2 py-2 text-center font-bold text-primary">{q}Q</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const entries = [...lineupSummary.players.entries()];
-                  if (match.is_custom && lineupSummary.playerTeamMap.size > 0) {
-                    const teamAEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamA");
-                    const teamBEntries = entries.filter(([pid]) => lineupSummary.playerTeamMap.get(pid) === "teamB");
-                    const renderRows = (rows: typeof entries, teamLabel: string, borderColor: string) => (
-                      <>
-                        <tr className="bg-secondary/20">
-                          <td colSpan={lineupSummary.quarters.length + 1} className={`px-3 py-1.5 text-[10px] font-bold border-l-2 ${borderColor}`}>
-                            {teamLabel}
-                          </td>
-                        </tr>
-                        {rows.map(([pid, posMap]) => (
-                          <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
-                            <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                              {pn(pid)}
-                            </td>
-                            {lineupSummary.quarters.map(q => {
-                              const pos = posMap.get(q);
-                              const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
-                              return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
-                            })}
-                          </tr>
-                        ))}
-                      </>
-                    );
-                    return (
-                      <>
-                        {renderRows(teamAEntries, `🅰️ ${tn(matchTeams[0]?.name) || L("A팀", "Team A")}`, "border-blue-500")}
-                        {renderRows(teamBEntries, `🅱️ ${tn(matchTeams[1]?.name) || L("B팀", "Team B")}`, "border-orange-500")}
-                      </>
-                    );
-                  }
-                  return entries.map(([pid, posMap]) => (
-                    <tr key={pid} className="border-b border-border last:border-0 hover:bg-secondary/20">
-                      <td className="px-3 py-2 font-medium text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/player/${pid}`)}>
-                        {pn(pid)}
-                      </td>
-                      {lineupSummary.quarters.map(q => {
-                        const pos = posMap.get(q);
-                        const posColor = pos === "GK" ? "text-yellow-400" : pos === "DF" ? "text-blue-400" : pos === "FW" ? "text-red-400" : pos === "MF" ? "text-green-400" : pos === "Bench" ? "text-muted-foreground" : "";
-                        return <td key={q} className={`px-2 py-2 text-center ${posColor}`}>{pos || "-"}</td>;
-                      })}
-                    </tr>
-                  ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+      {/* Quarter Pitch Viewer (FotMob style) */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterPitchViewer
+            quarters={matchQuarters}
+            players={players}
+            goalEvents={matchGoalEvents}
+            matchTeams={matchTeams.map(t => ({ ...t, name: tn(t.name) }))}
+            courtMargins={courtMargins as any}
+          />
+        </div>
       )}
 
       {/* Formation Builder */}
