@@ -2,13 +2,16 @@ import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
 
-// ─── Season Rating v2 (per-quarter normalized) ───
+// ─── Season Rating v2.1 (per-match normalized, lineup-optional) ───
 // base 6.0
-// + attack per quarter   : (goals*0.4 + assists*0.3) / quarters   * gain
-// + defense per quarter  : (cleanSheets*0.4 + suppression + gkDevotion) / quarters * gain
-// + avg quarter margin * 0.15
+// + attack   : (goals*0.4 + assists*0.3) / appearances * gain
+// + defense  : (cleanSheetRate*0.4 + suppressionRate*0.3 + gkRate*0.3) * gain   (only when lineup data exists)
+// + avg quarter margin * 0.15 (clamped ±1.5)
 // - fines * 0.2
 // clamped to 1.0 ~ 10.0
+// NOTE: older seasons often have no per-quarter lineup logs. Normalizing by the
+// (very small) number of logged quarters used to inflate ratings to the 10.0 cap
+// and zero out seasons with no lineup data at all — both are fixed here.
 export const RATING_V2 = {
   base: 6.0,
   goal: 0.4,
@@ -18,7 +21,7 @@ export const RATING_V2 = {
   gkBonus: 0.3,
   margin: 0.15,
   finePenalty: 0.2,
-  gain: 4, // per-quarter normalization gain so values spread naturally
+  gain: 2, // per-match normalization gain so values spread naturally
   min: 1,
   max: 10,
 };
