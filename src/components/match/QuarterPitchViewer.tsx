@@ -75,6 +75,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     [quarters]
   );
 
+  const pitchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
@@ -147,12 +148,11 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
     const positions = positionsOf(lineup);
     const bench = benchOf(lineup);
-    const pitchRef = useRefSafe(unitKey);
     return (
       <div className="flex-1 min-w-0">
         {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
         <div
-          ref={pitchRef}
+          ref={el => { pitchRefs.current[unitKey] = el; }}
           className="relative w-full overflow-hidden rounded-2xl border border-green-800/50"
           style={{ aspectRatio: "3/4", background: "linear-gradient(180deg,#12401a 0%,#175226 30%,#12401a 50%,#175226 70%,#12401a 100%)" }}
         >
@@ -176,7 +176,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                 dragMomentum={false}
                 dragElastic={0}
                 onDragEnd={(_, info) => {
-                  const rect = pitchRef.current?.getBoundingClientRect();
+                  const rect = pitchRefs.current[unitKey]?.getBoundingClientRect();
                   if (!rect) return;
                   setOverrides(o => ({
                     ...o,
@@ -453,11 +453,4 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
       </Sheet>
     </motion.div>
   );
-}
-
-// Stable refs per pitch unit without breaking hook order
-const pitchRefs: Record<string, { current: HTMLDivElement | null }> = {};
-function useRefSafe(key: string) {
-  if (!pitchRefs[key]) pitchRefs[key] = { current: null };
-  return pitchRefs[key];
 }
