@@ -1114,6 +1114,24 @@ const PlayerDetailPage = () => {
 
       <PlayerFinesCard playerId={player.id} />
 
+      {/* ===== CAREER TAB ===== */}
+      {activeTab === "career" && (
+        <div className="mx-4">
+          <PlayerCareerTab
+            isEn={isEn}
+            playerId={playerId}
+            players={players}
+            matches={matches}
+            rosters={rosters}
+            goalEvents={goalEvents}
+            teams={teams}
+            results={results}
+            quarters={allQuarters}
+            fineCounts={fineCounts}
+          />
+        </div>
+      )}
+
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />
       )}
