@@ -87,6 +87,7 @@ const MatchDetailPage = () => {
   const pn = (id: number | null | undefined) => (id ? getPlayerName(players, id, lang) : "???");
   const tn = (name: string | null | undefined) => resolveTeamName(name ?? "", lang);
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
+  const [tab, setTab] = useState<"facts" | "ticker" | "lineup" | "stats" | "h2h">("lineup");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { data: matchQuarters } = useMatchQuarters(matchId);
 
