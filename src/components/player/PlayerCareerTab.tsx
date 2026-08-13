@@ -34,7 +34,6 @@ export default function PlayerCareerTab({ isEn, playerId, players, matches, rost
       entry.matchIds.add(m.id);
       if (m.date < entry.from) entry.from = m.date;
       if (m.date > entry.to) entry.to = m.date;
-      entry.goals += goalEvents.filter(g => g.match_id === m.id && g.goal_player_id === playerId && !g.is_own_goal).length ? 0 : 0;
       map.set(name, entry);
     });
 
