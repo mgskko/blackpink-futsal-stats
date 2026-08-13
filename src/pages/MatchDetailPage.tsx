@@ -311,8 +311,31 @@ const MatchDetailPage = () => {
         )}
       </motion.div>
 
+      {/* Tab bar */}
+      <div className="sticky top-[57px] z-10 mt-3 border-b border-border bg-background/95 backdrop-blur-lg">
+        <div className="flex gap-1 overflow-x-auto px-4 py-2">
+          {([
+            ["facts", L("팩트", "Facts")],
+            ["ticker", L("티커", "Ticker")],
+            ["lineup", L("라인업", "Lineup")],
+            ["stats", L("통계", "Stats")],
+            ["h2h", L("상대 전적", "H2H")],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-bold transition-all ${
+                tab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-primary"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* AI Match Comments */}
-      {aiComments.length > 0 && (
+      {tab === "facts" && aiComments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 space-y-1.5">
           {aiComments.map((c, i) => (
             <div key={i} className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-foreground">
