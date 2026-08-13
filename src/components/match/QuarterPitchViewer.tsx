@@ -164,14 +164,22 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
         {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
         <div
           ref={el => { pitchRefs.current[unitKey] = el; }}
-          className="relative w-full overflow-hidden rounded-2xl border border-green-800/50"
-          style={{ aspectRatio: "3/4", background: "linear-gradient(180deg,#12401a 0%,#175226 30%,#12401a 50%,#175226 70%,#12401a 100%)" }}
+          className="relative w-full overflow-hidden rounded-2xl border border-green-900/60 shadow-inner"
+          style={{
+            aspectRatio: "3/4",
+            backgroundColor: "#14471f",
+            backgroundImage:
+              "repeating-linear-gradient(180deg, rgba(255,255,255,0.045) 0 6.25%, rgba(0,0,0,0.045) 6.25% 12.5%), repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.10), transparent 60%)",
+          }}
         >
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute left-0 right-0 top-1/2 h-px bg-white/20" />
             <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
+            <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40" />
             <div className="absolute left-1/2 top-0 h-[15%] w-1/2 -translate-x-1/2 rounded-b-lg border-b border-l border-r border-white/15" />
+            <div className="absolute left-1/2 top-0 h-[6%] w-1/4 -translate-x-1/2 rounded-b border-b border-l border-r border-white/15" />
             <div className="absolute bottom-0 left-1/2 h-[15%] w-1/2 -translate-x-1/2 rounded-t-lg border-l border-r border-t border-white/15" />
+            <div className="absolute bottom-0 left-1/2 h-[6%] w-1/4 -translate-x-1/2 rounded-t border-l border-r border-t border-white/15" />
             <div className="absolute inset-1 rounded-xl border border-white/10" />
           </div>
           {positions.map((p, i) => {
@@ -202,16 +210,26 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
               >
                 <button
                   onClick={() => !editing && setSel(p.playerId)}
-                  className="flex flex-col items-center gap-1 transition-transform active:scale-95"
+                  className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
                 >
-                  <div className={`relative h-14 w-14 overflow-hidden rounded-full bg-black/60 ring-2 ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-xl ${editing ? "ring-dashed" : ""}`}>
-                    {img ? (
-                      <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-xs font-bold text-white">{p.role}</span>
+                  <div className="relative">
+                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)] ${editing ? "ring-dashed" : ""}`}>
+                      {img ? (
+                        <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-white">{p.role}</span>
+                      )}
+                    </div>
+                    <span className={`absolute -right-2 -top-1.5 rounded-md px-1.5 py-px text-[10px] font-extrabold shadow ${ratingTone(matchRating(p.playerId))}`}>
+                      {matchRating(p.playerId).toFixed(1)}
+                    </span>
+                    {kit(p.playerId) != null && (
+                      <span className="absolute -left-2 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-md bg-black/75 px-1 text-[10px] font-bold text-white ring-1 ring-white/20">
+                        {kit(p.playerId)}
+                      </span>
                     )}
                   </div>
-                  <span className="max-w-[76px] truncate rounded bg-black/50 px-1.5 py-px text-[10px] font-semibold text-white drop-shadow">
+                  <span className="mt-1 max-w-[84px] truncate rounded bg-black/55 px-1.5 py-px text-[11px] font-semibold text-white drop-shadow">
                     {pn(p.playerId)}
                   </span>
                   {(qs.goals > 0 || qs.assists > 0) && (
