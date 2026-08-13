@@ -25,6 +25,8 @@ const AdminPlayerManage = () => {
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [savingNameEnId, setSavingNameEnId] = useState<number | null>(null);
+  const [editingAges, setEditingAges] = useState<Record<number, string>>({});
+  const [savingAgeId, setSavingAgeId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
