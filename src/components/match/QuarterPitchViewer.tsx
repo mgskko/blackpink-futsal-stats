@@ -124,6 +124,16 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     assists: quarterGoals.filter(g => g.assist_player_id === pid).length,
   });
 
+  // Lightweight FotMob-style match rating (display only)
+  const matchRating = (pid: number) => {
+    const s = playerStats(pid);
+    const per = s.played > 0 ? s.played : 1;
+    const r = 6 + (s.goals * 0.9 + s.assists * 0.6) / Math.sqrt(per) + (s.margin ?? 0) * 0.12;
+    return Math.max(4, Math.min(10, Number.isFinite(r) ? r : 6));
+  };
+  const ratingTone = (r: number) =>
+    r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
+
   const save = async () => {
     if (!dirty || !current) return;
     setSaving(true);
