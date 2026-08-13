@@ -97,7 +97,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
             <Star size={16} className="fill-primary" /> {L("시즌 평점 랭킹", "Season Ratings")}
           </h3>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            {seasonLabel} · {L("쿼터당 기여도로 정규화한 v2 퍼포먼스 점수", "Performance Score v2 — per-quarter normalized")}
+            {seasonLabel} · {L("경기당 기여도로 정규화한 v2 퍼포먼스 점수", "Performance Score v2 — per-match normalized")}
           </p>
         </div>
         <button onClick={() => setShowFormula(v => !v)}
@@ -111,8 +111,8 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
           <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-b border-border bg-secondary/30 px-4 text-[10px] leading-relaxed text-muted-foreground">
             <li className="pt-3">• {L(`기본 평점 ${RATING_V2.base.toFixed(1)}점`, `Base ${RATING_V2.base.toFixed(1)}`)}</li>
-            <li>• {L("쿼터당 공격 기여: (골×0.4 + 도움×0.3) ÷ 출전 쿼터", "Attack per quarter: (G×0.4 + A×0.3) ÷ quarters")}</li>
-            <li>• {L("쿼터당 수비 기여: (무실점×0.4 + 실점 억제 + GK 헌신) ÷ 출전 쿼터", "Defense per quarter: (CS×0.4 + suppression + GK devotion) ÷ quarters")}</li>
+            <li>• {L("경기당 공격 기여: (골×0.4 + 도움×0.3) ÷ 출전 경기", "Attack per match: (G×0.4 + A×0.3) ÷ appearances")}</li>
+            <li>• {L("수비 기여율: 무실점율×0.4 + 실점 억제율×0.3 + GK 비중×0.3", "Defense rates: CS rate×0.4 + suppression×0.3 + GK share×0.3")}</li>
             <li>• {L("쿼터 평균 마진 × 0.15", "Avg quarter margin × 0.15")}</li>
             <li>• {L("벌금 1회당 -0.2", "-0.2 per fine")}</li>
             <li className="pb-3">• {L("1.0 ~ 10.0점으로 정규화 (2경기 이상 출전자)", "Normalized to 1.0 – 10.0 · min 2 appearances")}</li>
