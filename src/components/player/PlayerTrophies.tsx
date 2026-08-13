@@ -22,11 +22,11 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
   const L = (ko: string, en: string) => (isEn ? en : ko);
 
   // ── Player of the Month wins, sourced from the same archive as the Statistics tab ──
-  const potmWins = useMemo(
-    () => computePOTMWinners(players, matches, teams ?? [], results ?? [], rosters, goalEvents, quarters ?? [])
-      .filter(w => w.player.id === playerId),
-    [playerId, players, matches, teams, results, rosters, goalEvents, quarters]
+  const potmWinnersAll = useMemo(
+    () => computePOTMWinners(players, matches, teams ?? [], results ?? [], rosters, goalEvents, quarters ?? []),
+    [players, matches, teams, results, rosters, goalEvents, quarters]
   );
+  const potmWins = useMemo(() => potmWinnersAll.filter(w => w.player.id === playerId), [potmWinnersAll, playerId]);
 
   const { seasonTrophies, mvpRows } = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -103,8 +103,7 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
     });
 
     return { seasonTrophies, mvpRows };
-    // potmWinnersAll captured below
-  }, [playerId, players, matches, rosters, goalEvents, isEn, quarters, teams, results]);
+  }, [playerId, players, matches, rosters, goalEvents, isEn, potmWinnersAll]);
 
   if (seasonTrophies.length === 0 && potmWins.length === 0 && mvpRows.length === 0) return null;
 
