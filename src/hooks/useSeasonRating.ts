@@ -2,13 +2,13 @@ import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
 
-// ─── Season Rating v2 ───
-// base 6.0 + goals*0.4 + assists*0.3
-// + clean-sheet quarters as DF/GK * 0.4
-// + concession-suppression bonus (DF/GK) up to +0.3
-// + GK devotion bonus up to +0.3
+// ─── Season Rating v2 (per-quarter normalized) ───
+// base 6.0
+// + attack per quarter   : (goals*0.4 + assists*0.3) / quarters   * gain
+// + defense per quarter  : (cleanSheets*0.4 + suppression + gkDevotion) / quarters * gain
 // + avg quarter margin * 0.15
 // - fines * 0.2
+// clamped to 1.0 ~ 10.0
 export const RATING_V2 = {
   base: 6.0,
   goal: 0.4,
@@ -18,6 +18,9 @@ export const RATING_V2 = {
   gkBonus: 0.3,
   margin: 0.15,
   finePenalty: 0.2,
+  gain: 4, // per-quarter normalization gain so values spread naturally
+  min: 1,
+  max: 10,
 };
 
 export interface RatingBreakdown {
@@ -83,19 +86,21 @@ export function computeSeasonRatings(
     const avgConceded = defQ > 0 ? conceded / defQ : 0;
     const avgMargin = qCount > 0 ? marginSum / qCount : 0;
     const fines = fineCountByPlayer.get(p.id) ?? 0;
+    const div = qCount > 0 ? qCount : 1;
 
-    const attackScore = goals * RATING_V2.goal + assists * RATING_V2.assist;
-    const csScore = cleanSheets * RATING_V2.cleanSheet;
-    const suppression = defQ > 0 ? Math.max(0, Math.min(1, (1.5 - avgConceded) / 1.5)) * RATING_V2.suppression : 0;
-    const gkScore = qCount > 0 ? (gkQ / qCount) * RATING_V2.gkBonus : 0;
-    const defenseScore = csScore + suppression + gkScore;
+    // per-quarter normalized contributions
+    const attackScore = ((goals * RATING_V2.goal + assists * RATING_V2.assist) / div) * RATING_V2.gain;
+    const suppression = defQ > 0 ? Math.max(0, Math.min(1, (1.5 - avgConceded) / 1.5)) * RATING_V2.suppression * defQ : 0;
+    const gkScore = gkQ * RATING_V2.gkBonus * 0.5;
+    const defenseScore = ((cleanSheets * RATING_V2.cleanSheet + suppression + gkScore) / div) * RATING_V2.gain;
     const marginScore = avgMargin * RATING_V2.margin;
     const penalty = fines * RATING_V2.finePenalty;
 
-    const raw = matchIds.length === 0
-      ? 0
-      : RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
-    const rating = matchIds.length === 0 ? 0 : Math.max(5, Math.min(10, Math.round(raw * 100) / 100));
+    const hasData = matchIds.length > 0 && qCount > 0;
+    const raw = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
+    const rating = hasData
+      ? Math.max(RATING_V2.min, Math.min(RATING_V2.max, Math.round(raw * 100) / 100))
+      : 0;
 
     return {
       playerId: p.id,
