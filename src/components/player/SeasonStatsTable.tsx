@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { computeMatchAP } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent, Result, MatchQuarter, Player } from "@/hooks/useFutsalData";
-import { getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
+import { computeSeasonRatings } from "@/hooks/useSeasonRating";
 
 export function computeRating(goals: number, assists: number, appearances: number, winRate: number) {
   if (appearances === 0) return 6.0;
@@ -14,6 +14,7 @@ export function computeRating(goals: number, assists: number, appearances: numbe
 export interface SeasonRow {
   year: string;
   appearances: number;
+  quarters: number;
   goals: number;
   assists: number;
   cleanSheets: number;
@@ -28,12 +29,6 @@ export interface SeasonRow {
   totalRanked: number;
 }
 
-interface AggRow { goals: number; assists: number; appearances: number; wins: number; draws: number; losses: number; cleanSheets: number }
-
-function emptyAgg(): AggRow {
-  return { goals: 0, assists: 0, appearances: 0, wins: 0, draws: 0, losses: 0, cleanSheets: 0 };
-}
-
 export function buildSeasonRows(
   playerId: number,
   players: Player[],
@@ -42,73 +37,58 @@ export function buildSeasonRows(
   goalEvents: GoalEvent[],
   results: Result[],
   quarters: MatchQuarter[],
+  fineCounts: Map<number, number> = new Map(),
 ): SeasonRow[] {
   const today = new Date().toISOString().slice(0, 10);
   const played = matches.filter(m => m.date <= today);
   const eligible = players.filter(p => !/^용병\d*$/.test(p.name));
-  const eligibleIds = new Set(eligible.map(p => p.id));
 
-  // year -> playerId -> agg
-  const byYear = new Map<string, Map<number, AggRow>>();
-
-  played.forEach(m => {
-    const year = m.date.slice(0, 4);
-    if (!byYear.has(year)) byYear.set(year, new Map());
-    const bucket = byYear.get(year)!;
-    const matchRosters = rosters.filter(r => r.match_id === m.id);
-    const seen = new Set<number>();
-    matchRosters.forEach(r => {
-      if (!eligibleIds.has(r.player_id) || seen.has(r.player_id)) return;
-      seen.add(r.player_id);
-      const agg = bucket.get(r.player_id) ?? emptyAgg();
-      const ap = computeMatchAP(r.player_id, m, rosters, goalEvents);
-      agg.goals += ap.goals;
-      agg.assists += ap.assists;
-      agg.appearances += 1;
-      const res = results.find(x => x.match_id === m.id && x.team_id === r.team_id);
-      if (res?.result === "승") agg.wins++;
-      else if (res?.result === "패") agg.losses++;
-      else if (res?.result === "무") agg.draws++;
-      // clean sheet quarters as GK/DF
-      quarters.filter(q => q.match_id === m.id).forEach(q => {
-        const pos = getPlayerPosition(q.lineup, r.player_id);
-        if (pos !== "GK" && pos !== "DF") return;
-        const team = getPlayerTeamInLineup(q.lineup, r.player_id);
-        const conceded = team === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
-        if (conceded === 0) agg.cleanSheets++;
-      });
-      bucket.set(r.player_id, agg);
-    });
-  });
-
+  const years = [...new Set(played.map(m => m.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
   const rows: SeasonRow[] = [];
-  [...byYear.keys()].sort((a, b) => b.localeCompare(a)).forEach(year => {
-    const bucket = byYear.get(year)!;
-    const mine = bucket.get(playerId);
-    if (!mine) return;
-    const entries = [...bucket.entries()].map(([id, a]) => {
-      const total = a.wins + a.draws + a.losses;
-      const winRate = total > 0 ? Math.round((a.wins / total) * 100) : 0;
-      return { id, ...a, winRate, rating: computeRating(a.goals, a.assists, a.appearances, winRate) };
+
+  years.forEach(year => {
+    const yearMatches = played.filter(m => m.date.slice(0, 4) === year);
+    const yearIds = new Set(yearMatches.map(m => m.id));
+    // shared v2 rating engine — identical to the Statistics tab board
+    const entries = computeSeasonRatings(
+      eligible,
+      yearMatches,
+      rosters.filter(r => yearIds.has(r.match_id)),
+      goalEvents,
+      quarters.filter(q => yearIds.has(q.match_id)),
+      fineCounts,
+    );
+    const me = entries.find(e => e.playerId === playerId);
+    if (!me) return;
+
+    let wins = 0, draws = 0, losses = 0;
+    yearMatches.forEach(m => {
+      const mine = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+      if (!mine) return;
+      const res = results.find(x => x.match_id === m.id && x.team_id === mine.team_id);
+      if (res?.result === "승") wins++;
+      else if (res?.result === "패") losses++;
+      else if (res?.result === "무") draws++;
     });
+    const totalWDL = wins + draws + losses;
+
     const rankOf = (key: "goals" | "assists" | "rating") => {
       const sorted = [...entries].sort((a, b) => (b[key] as number) - (a[key] as number));
-      const idx = sorted.findIndex(e => e.id === playerId);
+      const idx = sorted.findIndex(e => e.playerId === playerId);
       if (idx < 0) return null;
       const val = sorted[idx][key] as number;
       return sorted.findIndex(e => (e[key] as number) === val) + 1;
     };
-    const me = entries.find(e => e.id === playerId)!;
+
     rows.push({
       year,
       appearances: me.appearances,
+      quarters: me.quarters,
       goals: me.goals,
       assists: me.assists,
       cleanSheets: me.cleanSheets,
-      wins: me.wins,
-      draws: me.draws,
-      losses: me.losses,
-      winRate: me.winRate,
+      wins, draws, losses,
+      winRate: totalWDL > 0 ? Math.round((wins / totalWDL) * 100) : 0,
       rating: me.rating,
       goalRank: rankOf("goals"),
       assistRank: rankOf("assists"),
@@ -116,11 +96,13 @@ export function buildSeasonRows(
       totalRanked: entries.length,
     });
   });
+
   return rows;
 }
 
 interface Props {
   isEn: boolean;
+  fineCounts?: Map<number, number>;
   playerId: number;
   players: Player[];
   matches: Match[];
@@ -130,11 +112,11 @@ interface Props {
   quarters: MatchQuarter[];
 }
 
-export default function SeasonStatsTable({ isEn, playerId, players, matches, rosters, goalEvents, results, quarters }: Props) {
+export default function SeasonStatsTable({ isEn, playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts }: Props) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
   const rows = useMemo(
-    () => buildSeasonRows(playerId, players, matches, rosters, goalEvents, results, quarters),
-    [playerId, players, matches, rosters, goalEvents, results, quarters]
+    () => buildSeasonRows(playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts),
+    [playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts]
   );
 
   if (rows.length === 0) return null;
@@ -167,6 +149,7 @@ export default function SeasonStatsTable({ isEn, playerId, players, matches, ros
             <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">{L("시즌", "Season")}</th>
               <th className="px-2 py-2">{L("출전", "MP")}</th>
+              <th className="px-2 py-2">{L("쿼터", "Q")}</th>
               <th className="px-2 py-2">{L("골", "G")}</th>
               <th className="px-2 py-2">{L("도움", "A")}</th>
               <th className="px-2 py-2">{L("무실점", "CS")}</th>
@@ -179,6 +162,7 @@ export default function SeasonStatsTable({ isEn, playerId, players, matches, ros
               <tr key={r.year} className="border-b border-border/60 last:border-0">
                 <td className="px-3 py-2.5 text-left font-display text-base text-foreground">{r.year}</td>
                 <td className="px-2 py-2.5 text-foreground">{r.appearances}</td>
+                <td className="px-2 py-2.5 text-muted-foreground">{r.quarters}</td>
                 <td className="px-2 py-2.5 font-bold text-primary">{r.goals}</td>
                 <td className="px-2 py-2.5 font-bold text-primary">{r.assists}</td>
                 <td className="px-2 py-2.5 text-foreground">{r.cleanSheets}</td>

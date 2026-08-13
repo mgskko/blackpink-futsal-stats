@@ -26,7 +26,9 @@ import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import PlayerFinesCard from "@/components/player/PlayerFinesCard";
 import PlayerHeroStats from "@/components/player/PlayerHeroStats";
-import SeasonStatsTable, { computeRating } from "@/components/player/SeasonStatsTable";
+import SeasonStatsTable from "@/components/player/SeasonStatsTable";
+import { computeSeasonRatings } from "@/hooks/useSeasonRating";
+import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
@@ -288,6 +290,14 @@ const PlayerDetailPage = () => {
 
   const years = useMemo(() => getAvailableYears(matches), [matches]);
 
+  const { data: finesData } = useFines();
+  const fineCounts = useMemo(() => {
+    const m = new Map<number, number>();
+    (finesData ?? []).forEach(f => { if (!f.is_waived) m.set(f.player_id, (m.get(f.player_id) ?? 0) + 1); });
+    return m;
+  }, [finesData]);
+
+
   const filtered = useMemo(() => {
     const fm = filterMatchesByMode(matches, filterMode, selectedYear);
     const fmIds = new Set(fm.map(m => m.id));
@@ -382,6 +392,11 @@ const PlayerDetailPage = () => {
   const ownGoalInducer = useMemo(() => getOwnGoalInducerCount(playerId, filtered.goalEvents, filtered.quarters), [playerId, filtered.goalEvents, filtered.quarters]);
   const soloVsTeam = useMemo(() => getSoloVsTeamGoals(playerId, filtered.goalEvents), [playerId, filtered.goalEvents]);
   const playerTraits = useMemo(() => computePlayerTraits(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, filtered.quarters), [playerId, players, filtered]);
+
+  const seasonRatingV2 = useMemo(() => {
+    const rows = computeSeasonRatings(players, filtered.matches, filtered.rosters, goalEvents, filtered.quarters, fineCounts);
+    return rows.find(r => r.playerId === playerId)?.rating ?? 0;
+  }, [players, filtered, goalEvents, fineCounts, playerId]);
 
   if (isLoading) return <SplashScreen />;
 
@@ -595,7 +610,7 @@ const PlayerDetailPage = () => {
       {/* FotMob-style key stats */}
       <PlayerHeroStats
         isEn={isEn}
-        rating={computeRating(stats.goals, stats.assists, stats.appearances, stats.winRate)}
+        rating={seasonRatingV2}
         appearances={stats.appearances}
         goals={stats.goals}
         assists={stats.assists}
@@ -810,6 +825,7 @@ const PlayerDetailPage = () => {
             goalEvents={goalEvents}
             results={results}
             quarters={allQuarters}
+            fineCounts={fineCounts}
           />
 
           {/* Best Match */}

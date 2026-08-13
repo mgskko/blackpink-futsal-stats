@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Star, ChevronDown, Info } from "lucide-react";
+import { Star, ChevronDown, Info, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { computeSeasonRatings, RATING_V2 } from "@/hooks/useSeasonRating";
 import { useFines } from "@/hooks/useFines";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
@@ -18,6 +18,24 @@ interface Props {
   seasonLabel: string;
 }
 
+type SortKey = "name" | "appearances" | "goals" | "assists" | "cleanSheets" | "rating";
+
+function SortHead({ label, k, align = "center", sortKey, sortDir, onSort }: {
+  label: string; k: SortKey; align?: "left" | "center" | "right";
+  sortKey: SortKey; sortDir: "asc" | "desc"; onSort: (k: SortKey) => void;
+}) {
+  const active = sortKey === k;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button onClick={() => onSort(k)}
+      className={`flex items-center gap-0.5 uppercase transition-colors hover:text-primary ${active ? "text-primary" : ""} ${
+        align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center"
+      }`}>
+      {label}<Icon size={9} className={active ? "opacity-100" : "opacity-40"} />
+    </button>
+  );
+}
+
 const ratingTone = (r: number) =>
   r >= 8 ? "bg-green-500/15 text-green-400 border-green-500/30"
   : r >= 7 ? "bg-primary/15 text-primary border-primary/30"
@@ -31,6 +49,13 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
   const [expanded, setExpanded] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [showFormula, setShowFormula] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("rating");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) setSortDir(d => (d === "desc" ? "asc" : "desc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  };
 
   const fineCounts = useMemo(() => {
     const m = new Map<number, number>();
@@ -38,10 +63,25 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
     return m;
   }, [fines]);
 
-  const rows = useMemo(
+  const baseRows = useMemo(
     () => computeSeasonRatings(players, matches, rosters, goalEvents, quarters, fineCounts).filter(r => r.appearances >= 2),
     [players, matches, rosters, goalEvents, quarters, fineCounts]
   );
+
+  const rows = useMemo(() => {
+    const sorted = [...baseRows];
+    sorted.sort((a, b) => {
+      let cmp: number;
+      if (sortKey === "name") {
+        cmp = getPlayerName(players, a.playerId, lang).localeCompare(getPlayerName(players, b.playerId, lang));
+      } else {
+        cmp = (a[sortKey] as number) - (b[sortKey] as number);
+        if (cmp === 0) cmp = a.rating - b.rating;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [baseRows, sortKey, sortDir, players, lang]);
 
   if (rows.length === 0) return null;
   const visible = showAll ? rows : rows.slice(0, 10);
@@ -55,7 +95,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
             <Star size={16} className="fill-primary" /> {L("시즌 평점 랭킹", "Season Ratings")}
           </h3>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            {seasonLabel} · {L("수비수/키퍼 기여도가 반영된 v2 퍼포먼스 점수", "Performance Score v2 — defender & keeper friendly")}
+            {seasonLabel} · {L("쿼터당 기여도로 정규화한 v2 퍼포먼스 점수", "Performance Score v2 — per-quarter normalized")}
           </p>
         </div>
         <button onClick={() => setShowFormula(v => !v)}
@@ -69,21 +109,23 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
           <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-b border-border bg-secondary/30 px-4 text-[10px] leading-relaxed text-muted-foreground">
             <li className="pt-3">• {L(`기본 평점 ${RATING_V2.base.toFixed(1)}점`, `Base ${RATING_V2.base.toFixed(1)}`)}</li>
-            <li>• {L("득점 +0.4 / 도움 +0.3", "Goal +0.4 / Assist +0.3")}</li>
-            <li>• {L("DF·GK 무실점 쿼터 +0.4, 실점 억제 최대 +0.3, GK 헌신 최대 +0.3", "DF/GK clean-sheet quarter +0.4, concession suppression up to +0.3, GK devotion up to +0.3")}</li>
+            <li>• {L("쿼터당 공격 기여: (골×0.4 + 도움×0.3) ÷ 출전 쿼터", "Attack per quarter: (G×0.4 + A×0.3) ÷ quarters")}</li>
+            <li>• {L("쿼터당 수비 기여: (무실점×0.4 + 실점 억제 + GK 헌신) ÷ 출전 쿼터", "Defense per quarter: (CS×0.4 + suppression + GK devotion) ÷ quarters")}</li>
             <li>• {L("쿼터 평균 마진 × 0.15", "Avg quarter margin × 0.15")}</li>
-            <li className="pb-3">• {L("벌금 1회당 -0.2 (2경기 이상 출전자 대상, 10점 만점)", "-0.2 per fine · min 2 appearances · out of 10")}</li>
+            <li>• {L("벌금 1회당 -0.2", "-0.2 per fine")}</li>
+            <li className="pb-3">• {L("1.0 ~ 10.0점으로 정규화 (2경기 이상 출전자)", "Normalized to 1.0 – 10.0 · min 2 appearances")}</li>
           </motion.ul>
         )}
       </AnimatePresence>
 
-      <div className="hidden grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem_2.5rem_3.2rem] gap-1 border-b border-border px-3 py-2 text-[9px] uppercase tracking-wider text-muted-foreground sm:grid">
-        <span>#</span><span>{L("선수", "Player")}</span>
-        <span className="text-center">{L("경기", "MP")}</span>
-        <span className="text-center">G</span>
-        <span className="text-center">A</span>
-        <span className="text-center">CS</span>
-        <span className="text-right">{L("평점", "Rating")}</span>
+      <div className="grid grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem_2.5rem_3.2rem] gap-1 border-b border-border px-3 py-2 text-[9px] uppercase tracking-wider text-muted-foreground">
+        <span>#</span>
+        <SortHead label={L("선수", "Player")} k="name" align="left" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label={L("경기", "MP")} k="appearances" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label="G" k="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label="A" k="assists" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label="CS" k="cleanSheets" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label={L("평점", "Rating")} k="rating" align="right" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
       </div>
 
       <div>
