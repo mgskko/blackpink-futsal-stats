@@ -27,6 +27,10 @@ import { useDisplayName } from "@/lib/displayName";
 import PlayerFinesCard from "@/components/player/PlayerFinesCard";
 import PlayerHeroStats from "@/components/player/PlayerHeroStats";
 import SeasonStatsTable from "@/components/player/SeasonStatsTable";
+import PlayerPositionCard from "@/components/player/PlayerPositionCard";
+import PlayerTrophies from "@/components/player/PlayerTrophies";
+import PitchHeatmap from "@/components/player/PitchHeatmap";
+import PlayerCareerTab from "@/components/player/PlayerCareerTab";
 import { computeSeasonRatings } from "@/hooks/useSeasonRating";
 import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -246,7 +250,7 @@ const PlayerDetailPage = () => {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [showWrapped, setShowWrapped] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "matches" | "stats">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "matches" | "stats" | "career">("profile");
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [openConcacaf, setOpenConcacaf] = useState<ConcacafBadge | null>(null);
   const displayName = useDisplayName();
@@ -550,7 +554,10 @@ const PlayerDetailPage = () => {
                   {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}{L("연속 출석!", " in a row!")}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-1">{L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(player as any).age ? <span className="mr-2 text-foreground">{isEn ? `${(player as any).age} yrs` : `${(player as any).age}살`}</span> : null}
+                {L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
+              </p>
             </div>
           </div>
         </div>
@@ -620,13 +627,13 @@ const PlayerDetailPage = () => {
         goalsPerGame={goalsPerGame}
       />
 
-      {/* 3-Tab System */}
+      {/* 4-Tab System */}
       <div className="mx-4 mt-4">
         <div className="flex rounded-lg border border-border bg-card overflow-hidden">
-          {(["profile", "matches", "stats"] as const).map(tab => (
+          {(["profile", "matches", "stats", "career"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === tab ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : `📊 ${L("통계", "Stats")}`}
+              {tab === "profile" ? `👤 ${L("프로필", "Profile")}` : tab === "matches" ? `⚽ ${L("경기", "Matches")}` : tab === "stats" ? `📊 ${L("통계", "Stats")}` : `🏅 ${L("경력", "Career")}`}
             </button>
           ))}
         </div>
@@ -643,6 +650,12 @@ const PlayerDetailPage = () => {
       {/* ===== PROFILE TAB ===== */}
       {activeTab === "profile" && (
         <div className="mx-4">
+          {/* Position: main / other + mini pitch */}
+          <PlayerPositionCard dist={positionDist} isEn={isEn} />
+
+          {/* Trophies & awards */}
+          <PlayerTrophies playerId={playerId} players={players} matches={matches} rosters={rosters} goalEvents={goalEvents} momVotes={momVotes} isEn={isEn} />
+
           {/* FC Online Traits */}
           {playerTraits.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/30 bg-card p-4">
@@ -815,6 +828,46 @@ const PlayerDetailPage = () => {
       {/* ===== STATS TAB ===== */}
       {activeTab === "stats" && (
         <div className="mx-4">
+          {/* Season selector */}
+          <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+            <span className="text-xs font-bold text-muted-foreground">{L("시즌 선택", "Season")}</span>
+            <select
+              value={filterMode === "year" ? selectedYear : filterMode}
+              onChange={e => {
+                const v = e.target.value;
+                if (v === "all" || v === "custom") handleFilterChange(v as FilterMode);
+                else handleFilterChange("year", v);
+              }}
+              className="rounded-lg border border-border bg-secondary px-2.5 py-1.5 text-xs font-bold text-foreground"
+            >
+              <option value="all">{L("전체 시즌", "All seasons")}</option>
+              {years.map(y => (
+                <option key={y} value={y}>{isEn ? `Bunnies FC ${y}` : `버니즈FC ${y}`}</option>
+              ))}
+              <option value="custom">{L("자체전", "Intrasquad")}</option>
+            </select>
+          </div>
+
+          {/* Key stat grid (3x2) */}
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-border bg-card p-3 text-center">
+            {[
+              { v: stats.goals, l: L("득점", "Goals") },
+              { v: stats.assists, l: L("어시스트", "Assists") },
+              { v: seasonRatingV2 ? seasonRatingV2.toFixed(2) : "-", l: L("평점", "Rating"), highlight: true },
+              { v: stats.appearances, l: L("경기", "Matches") },
+              { v: positionDist.total, l: L("선발 쿼터", "Starting quarters") },
+              { v: positionDist.total * 10, l: L("출전 시간(분)", "Minutes played") },
+            ].map((c, i) => (
+              <div key={i} className="rounded-lg bg-secondary/40 p-3">
+                <div className={`font-display text-xl ${c.highlight ? "text-primary text-glow" : "text-foreground"}`}>{c.v}</div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{c.l}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pitch heatmap */}
+          <PitchHeatmap dist={positionDist} isEn={isEn} />
+
           {/* Season by season records & ranks */}
           <SeasonStatsTable
             isEn={isEn}
@@ -1063,6 +1116,24 @@ const PlayerDetailPage = () => {
       )}
 
       <PlayerFinesCard playerId={player.id} />
+
+      {/* ===== CAREER TAB ===== */}
+      {activeTab === "career" && (
+        <div className="mx-4">
+          <PlayerCareerTab
+            isEn={isEn}
+            playerId={playerId}
+            players={players}
+            matches={matches}
+            rosters={rosters}
+            goalEvents={goalEvents}
+            teams={teams}
+            results={results}
+            quarters={allQuarters}
+            fineCounts={fineCounts}
+          />
+        </div>
+      )}
 
       {showWrapped && filterMode === "year" && selectedYear && (
         <SeasonWrapped player={player} year={selectedYear} stats={stats} scoutingReport={scoutingReport} tierLabel={tier.label} tierEmoji={tier.emoji} onClose={() => setShowWrapped(false)} />

@@ -25,6 +25,8 @@ const AdminPlayerManage = () => {
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [savingNameEnId, setSavingNameEnId] = useState<number | null>(null);
+  const [editingAges, setEditingAges] = useState<Record<number, string>>({});
+  const [savingAgeId, setSavingAgeId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
@@ -123,6 +125,24 @@ const AdminPlayerManage = () => {
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
+  const saveAge = async (playerId: number) => {
+    const val = editingAges[playerId];
+    if (val === undefined) return;
+    setSavingAgeId(playerId);
+    const parsed = val.trim() === "" ? null : parseInt(val, 10);
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1 || parsed > 100)) {
+      setSavingAgeId(null);
+      toast.error("나이는 1~100 사이 숫자여야 합니다");
+      return;
+    }
+    const { error } = await supabase.from("players").update({ age: parsed } as any).eq("id", playerId);
+    setSavingAgeId(null);
+    if (error) { toast.error("나이 저장 실패"); return; }
+    toast.success("나이 저장 완료");
+    setEditingAges(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
   const handleImageUpload = async (playerId: number, file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("이미지 파일만 업로드 가능합니다"); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하 파일만 가능합니다"); return; }
@@ -178,6 +198,8 @@ const AdminPlayerManage = () => {
     const hasChanged = editingNumbers[player.id] !== undefined;
     const currentNameEn = editingNamesEn[player.id] ?? ((player as any).name_en ?? "");
     const hasNameEnChanged = editingNamesEn[player.id] !== undefined;
+    const currentAge = editingAges[player.id] ?? ((player as any).age?.toString() ?? "");
+    const hasAgeChanged = editingAges[player.id] !== undefined;
 
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
@@ -272,6 +294,28 @@ const AdminPlayerManage = () => {
               className="h-8 w-8 p-0 text-primary hover:text-primary"
               onClick={() => saveNameEn(player.id)}
               disabled={savingNameEnId === player.id}
+            >
+              <Save size={14} />
+            </Button>
+          )}
+        </div>
+        {/* Age editor */}
+        <div className="flex items-center gap-2 pl-15">
+          <span className="text-[10px] font-bold text-muted-foreground w-10">나이</span>
+          <Input
+            type="number"
+            value={currentAge}
+            onChange={(e) => setEditingAges(prev => ({ ...prev, [player.id]: e.target.value }))}
+            placeholder="나이 (예: 34)"
+            className="h-8 flex-1 text-sm bg-secondary border-border"
+          />
+          {hasAgeChanged && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-primary hover:text-primary"
+              onClick={() => saveAge(player.id)}
+              disabled={savingAgeId === player.id}
             >
               <Save size={14} />
             </Button>
