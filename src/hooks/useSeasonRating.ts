@@ -43,13 +43,18 @@ export interface RatingBreakdown {
 }
 
 export function computeSeasonRatings(
-  players: Player[],
-  matches: Match[],
-  rosters: Roster[],
-  goalEvents: GoalEvent[],
-  quarters: MatchQuarter[],
+  playersInput: Player[] = [],
+  matchesInput: Match[] = [],
+  rostersInput: Roster[] = [],
+  goalEventsInput: GoalEvent[] = [],
+  quartersInput: MatchQuarter[] = [],
   fineCountByPlayer: Map<number, number> = new Map(),
 ): RatingBreakdown[] {
+  const players = Array.isArray(playersInput) ? playersInput.filter(Boolean) : [];
+  const matches = Array.isArray(matchesInput) ? matchesInput.filter(m => m?.date) : [];
+  const rosters = Array.isArray(rostersInput) ? rostersInput.filter(Boolean) : [];
+  const goalEvents = Array.isArray(goalEventsInput) ? goalEventsInput.filter(Boolean) : [];
+  const quarters = Array.isArray(quartersInput) ? quartersInput.filter(Boolean) : [];
   const today = new Date().toISOString().slice(0, 10);
   const played = matches.filter(m => m.date <= today);
   const playedIds = new Set(played.map(m => m.id));
@@ -97,7 +102,8 @@ export function computeSeasonRatings(
     const penalty = fines * RATING_V2.finePenalty;
 
     const hasData = matchIds.length > 0 && qCount > 0;
-    const raw = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
+    const rawUnsafe = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
+    const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_V2.base;
     const rating = hasData
       ? Math.max(RATING_V2.min, Math.min(RATING_V2.max, Math.round(raw * 100) / 100))
       : 0;
