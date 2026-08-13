@@ -22,6 +22,7 @@ import GarbageTimeTab from "@/components/stats/GarbageTimeTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import POTMCard from "@/components/stats/POTMCard";
 import POTMArchive from "@/components/stats/POTMArchive";
+import BallonDorArchive from "@/components/stats/BallonDorArchive";
 import SeasonRatingBoard from "@/components/stats/SeasonRatingBoard";
 import FinesBoard from "@/components/stats/FinesBoard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
@@ -343,6 +344,9 @@ const StatisticsPage = () => {
 
             {/* POTM Archive */}
             <POTMArchive players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
+
+            {/* Ballon d'Or archive (season MVP rankings, all seasons) */}
+            <BallonDorArchive players={memberPlayers} matches={matches} teams={teams} results={results} rosters={rosters} goalEvents={goalEvents} allQuarters={allQuarters} isEn={isEn} lang={lang} />
 
             {/* Season Ratings v2 */}
             <SeasonRatingBoard
