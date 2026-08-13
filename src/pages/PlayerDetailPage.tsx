@@ -26,7 +26,9 @@ import PlayerComments from "@/components/player/PlayerComments";
 import { useDisplayName } from "@/lib/displayName";
 import PlayerFinesCard from "@/components/player/PlayerFinesCard";
 import PlayerHeroStats from "@/components/player/PlayerHeroStats";
-import SeasonStatsTable, { computeRating } from "@/components/player/SeasonStatsTable";
+import SeasonStatsTable from "@/components/player/SeasonStatsTable";
+import { computeSeasonRatings } from "@/hooks/useSeasonRating";
+import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
@@ -595,7 +597,7 @@ const PlayerDetailPage = () => {
       {/* FotMob-style key stats */}
       <PlayerHeroStats
         isEn={isEn}
-        rating={computeRating(stats.goals, stats.assists, stats.appearances, stats.winRate)}
+        rating={seasonRatingV2}
         appearances={stats.appearances}
         goals={stats.goals}
         assists={stats.assists}
@@ -810,6 +812,7 @@ const PlayerDetailPage = () => {
             goalEvents={goalEvents}
             results={results}
             quarters={allQuarters}
+            fineCounts={fineCounts}
           />
 
           {/* Best Match */}
