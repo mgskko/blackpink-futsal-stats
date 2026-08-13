@@ -537,14 +537,33 @@ const MatchDetailPage = () => {
         </motion.div>
       )}
 
+      {tab === "ticker" && !(match.has_detail_log && matchGoalEvents.length > 0) && (
+        <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          {L("이 경기에는 타임라인 기록이 없습니다.", "No timeline events for this match.")}
+        </div>
+      )}
+
+      {tab === "h2h" && (
+        <div className="mx-4 mt-4">
+          <HeadToHead
+            matches={matches}
+            teams={teams}
+            results={results}
+            currentMatchId={matchId}
+            opponentName={mr?.opponentTeam.name ?? opponentTeam?.name ?? ""}
+            lang={lang}
+          />
+        </div>
+      )}
+
       {/* MOM Voting */}
-      <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>
+      {tab === "facts" && <div className="mx-4 mt-4"><MOMVoting matchId={matchId} /></div>}
 
       {/* Worst Voting */}
-      <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>
+      {tab === "facts" && <div className="mx-4 mt-4"><WorstVoting matchId={matchId} /></div>}
 
       {/* Attendance */}
-      {hasAttendanceData && (
+      {tab === "lineup" && hasAttendanceData && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Users size={18} /> ATTENDANCE</h2>
           <div className="space-y-2">
@@ -571,11 +590,14 @@ const MatchDetailPage = () => {
       )}
 
       {/* Formation Builder */}
-      <div className="mx-4 mt-4">
-        <FormationBuilder matchId={matchId} players={players} roster={roster} matchTeams={matchTeams} isAdmin={isAdmin} />
-      </div>
+      {tab === "lineup" && (
+        <div className="mx-4 mt-4">
+          <FormationBuilder matchId={matchId} players={players} roster={roster} matchTeams={matchTeams} isAdmin={isAdmin} />
+        </div>
+      )}
 
       {/* Roster */}
+      {tab === "lineup" && (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mx-4 mt-4">
         <h2 className="mb-3 font-display text-lg tracking-wider text-primary">ROSTER</h2>
         {matchTeams.filter((t) => t.is_ours).map((team) => {
@@ -595,9 +617,10 @@ const MatchDetailPage = () => {
           );
         })}
       </motion.div>
+      )}
 
       {/* Match Comments */}
-      <div className="mx-4 mt-4"><MatchComments matchId={matchId} /></div>
+      {(tab === "facts" || tab === "stats") && <div className="mx-4 mt-4"><MatchComments matchId={matchId} /></div>}
     </div>
   );
 };
