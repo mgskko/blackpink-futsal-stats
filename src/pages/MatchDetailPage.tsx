@@ -393,6 +393,21 @@ const MatchDetailPage = () => {
         </div>
       )}
 
+      {/* Quarter Pitch Viewer (FotMob style) */}
+      {matchQuarters && matchQuarters.length > 0 && (
+        <div className="mx-4 mt-4">
+          <QuarterPitchViewer
+            quarters={matchQuarters}
+            players={players}
+            goalEvents={matchGoalEvents}
+            matchTeams={matchTeams.map(t => ({ ...t, name: tn(t.name) }))}
+            courtMargins={courtMargins as any}
+            isAdmin={isAdmin}
+            matchId={matchId}
+          />
+        </div>
+      )}
+
       {/* YouTube */}
       {youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
@@ -528,19 +543,6 @@ const MatchDetailPage = () => {
             )}
           </div>
         </motion.div>
-      )}
-
-      {/* Quarter Pitch Viewer (FotMob style) */}
-      {matchQuarters && matchQuarters.length > 0 && (
-        <div className="mx-4 mt-4">
-          <QuarterPitchViewer
-            quarters={matchQuarters}
-            players={players}
-            goalEvents={matchGoalEvents}
-            matchTeams={matchTeams.map(t => ({ ...t, name: tn(t.name) }))}
-            courtMargins={courtMargins as any}
-          />
-        </div>
       )}
 
       {/* Formation Builder */}
