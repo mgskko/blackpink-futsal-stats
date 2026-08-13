@@ -18,7 +18,7 @@ interface Props {
   seasonLabel: string;
 }
 
-type SortKey = "name" | "appearances" | "goals" | "assists" | "cleanSheets" | "rating";
+type SortKey = "name" | "appearances" | "goals" | "assists" | "ap" | "cleanSheets" | "rating";
 
 function SortHead({ label, k, align = "center", sortKey, sortDir, onSort }: {
   label: string; k: SortKey; align?: "left" | "center" | "right";
@@ -77,7 +77,8 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
         cmp = String(getPlayerName(players ?? [], a.playerId, lang) ?? "")
           .localeCompare(String(getPlayerName(players ?? [], b.playerId, lang) ?? ""));
       } else {
-        cmp = ((a[sortKey] as number) ?? 0) - ((b[sortKey] as number) ?? 0);
+        const val = (r: typeof a) => (sortKey === "ap" ? r.goals + r.assists : ((r[sortKey as keyof typeof r] as number) ?? 0));
+        cmp = val(a) - val(b);
         if (cmp === 0) cmp = a.rating - b.rating;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -120,12 +121,13 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem_2.5rem_3.2rem] gap-1 border-b border-border px-3 py-2 text-[9px] uppercase tracking-wider text-muted-foreground">
+      <div className="grid grid-cols-[2rem_1fr_2.4rem_2.2rem_2.2rem_2.6rem_2.2rem_3.2rem] gap-1 border-b border-border px-3 py-2 text-[9px] uppercase tracking-wider text-muted-foreground">
         <span>#</span>
         <SortHead label={L("선수", "Player")} k="name" align="left" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <SortHead label={L("경기", "MP")} k="appearances" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <SortHead label="G" k="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <SortHead label="A" k="assists" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <SortHead label={L("공포", "G+A")} k="ap" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <SortHead label="CS" k="cleanSheets" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <SortHead label={L("평점", "Rating")} k="rating" align="right" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
       </div>
@@ -136,7 +138,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
           return (
             <div key={r.playerId} className="border-b border-border/60 last:border-0">
               <button onClick={() => setExpanded(open ? null : r.playerId)}
-                className="grid w-full grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem_2.5rem_3.2rem] items-center gap-1 px-3 py-2.5 text-left transition-colors hover:bg-secondary/40">
+                className="grid w-full grid-cols-[2rem_1fr_2.4rem_2.2rem_2.2rem_2.6rem_2.2rem_3.2rem] items-center gap-1 px-3 py-2.5 text-left transition-colors hover:bg-secondary/40">
                 <span className={`font-display text-sm ${i === 0 ? "text-yellow-400" : i < 3 ? "text-primary" : "text-muted-foreground"}`}>{i + 1}</span>
                 <span className="flex items-center gap-1 truncate text-xs font-bold text-foreground">
                   {getPlayerName(players, r.playerId, lang)}
@@ -145,6 +147,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
                 <span className="text-center text-[11px] text-muted-foreground">{r.appearances}</span>
                 <span className="text-center text-[11px] text-foreground">{r.goals}</span>
                 <span className="text-center text-[11px] text-foreground">{r.assists}</span>
+                <span className="text-center text-[11px] font-bold text-primary">{r.goals + r.assists}</span>
                 <span className="text-center text-[11px] text-foreground">{r.cleanSheets}</span>
                 <span className={`ml-auto rounded-md border px-1.5 py-0.5 text-right font-display text-xs ${ratingTone(r.rating)}`}>
                   {r.rating.toFixed(2)}

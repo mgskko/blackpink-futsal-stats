@@ -51,7 +51,7 @@ export default function BallonDorArchive({ players, matches, teams, results, ros
           <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">{active.year} {L("발롱도르 위너", "Ballon d'Or Winner")}</div>
           <div className="font-display text-xl text-foreground">{getPlayerName(players, winner.playerId, lang)}</div>
           <div className="text-[11px] text-muted-foreground">
-            {winner.goals}{L("골", "G")} · {winner.assists}{L("도움", "A")} · {winner.apps}{L("경기", "MP")} · POTM {winner.potm}
+            {winner.goals}{L("골", "G")} · {winner.assists}{L("도움", "A")} · {winner.apps}{L("경기", "MP")} · POTM {winner.potm} · CS {winner.cleanSheets}
           </div>
         </div>
         <div className="text-right">
@@ -66,14 +66,14 @@ export default function BallonDorArchive({ players, matches, teams, results, ros
             className="flex w-full items-center gap-3 border-b border-border/60 px-4 py-2 text-left last:border-0 hover:bg-secondary/30">
             <span className="w-6 text-center text-xs font-bold text-muted-foreground">{medal(e.rank)}</span>
             <span className="flex-1 text-sm text-foreground">{getPlayerName(players, e.playerId, lang)}</span>
-            <span className="text-[10px] text-muted-foreground">{e.goals}G · {e.assists}A · {e.apps}MP</span>
+            <span className="text-[10px] text-muted-foreground">{e.goals}G · {e.assists}A · {e.apps}MP · {e.cleanSheets}CS</span>
             <span className="w-10 text-right text-sm font-bold text-foreground">{e.score}</span>
           </button>
         ))}
       </div>
 
       <div className="px-4 py-2 text-[10px] text-muted-foreground">
-        {L("산정식: 골×3 + 도움×2 + 출전×1 + POTM×5", "Formula: Goals×3 + Assists×2 + Apps×1 + POTM×5")}
+        {L("산정식: 골×3 + 도움×2 + 출전×1 + POTM×5 + 무실점(DF/GK)×2", "Formula: Goals×3 + Assists×2 + Apps×1 + POTM×5 + Clean sheets (DF/GK)×2")}
       </div>
     </motion.div>
   );
