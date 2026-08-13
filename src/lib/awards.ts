@@ -1,6 +1,7 @@
 import type { Player, Match, Roster, GoalEvent, Team, Result, MatchQuarter } from "@/hooks/useFutsalData";
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computePOTMWinners } from "@/lib/potm";
+import { getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
 
 export type TitleKind = "goals" | "assists" | "apps";
 export type TitleScope = "career" | "year" | "custom";
@@ -76,6 +77,7 @@ export interface BallonDorEntry {
   assists: number;
   apps: number;
   potm: number;
+  cleanSheets: number;
   score: number;
   rank: number;
 }
@@ -84,7 +86,22 @@ export interface BallonDorSeason {
   entries: BallonDorEntry[];
 }
 
-/** Ballon d'Or (Season MVP) ranking per year. goals*3 + assists*2 + apps + POTM*5 */
+/** Clean sheets earned as DF/GK per player within the given quarters. */
+function tallyCleanSheets(quarters: MatchQuarter[], matchIds: Set<number>, players: Player[]) {
+  const cs = new Map<number, number>();
+  (quarters ?? []).filter(q => q && matchIds.has(q.match_id)).forEach(q => {
+    players.forEach(p => {
+      const pos = getPlayerPosition(q.lineup, p.id);
+      if (pos !== "GK" && pos !== "DF") return;
+      const team = getPlayerTeamInLineup(q.lineup, p.id);
+      const conceded = team === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
+      if (conceded === 0) cs.set(p.id, (cs.get(p.id) ?? 0) + 1);
+    });
+  });
+  return cs;
+}
+
+/** Ballon d'Or (Season MVP) per year. goals*3 + assists*2 + apps + POTM*5 + DF/GK clean sheets*2 */
 export function computeBallonDor(
   players: Player[] = [],
   matches: Match[] = [],
@@ -103,12 +120,17 @@ export function computeBallonDor(
   return years.map(year => {
     const ym = played.filter(m => Number(m.date.slice(0, 4)) === year);
     const { goals, assists, apps } = tally(ym, rosters, goalEvents, elig);
+    const cleanSheets = tallyCleanSheets(quarters, new Set(ym.map(m => m.id)), elig);
     const potmBy = new Map<number, number>();
     potmAll.forEach(w => { if (w.year === year) potmBy.set(w.player.id, (potmBy.get(w.player.id) ?? 0) + 1); });
 
     const entries = elig.map(p => {
       const g = goals.get(p.id) ?? 0, a = assists.get(p.id) ?? 0, mp = apps.get(p.id) ?? 0, po = potmBy.get(p.id) ?? 0;
-      return { playerId: p.id, goals: g, assists: a, apps: mp, potm: po, score: g * 3 + a * 2 + mp + po * 5, rank: 0 };
+      const cs = cleanSheets.get(p.id) ?? 0;
+      return {
+        playerId: p.id, goals: g, assists: a, apps: mp, potm: po, cleanSheets: cs,
+        score: g * 3 + a * 2 + mp + po * 5 + cs * 2, rank: 0,
+      };
     }).filter(e => e.apps >= 1 && e.score > 0)
       .sort((x, y) => y.score - x.score || y.goals - x.goals || y.assists - x.assists);
 
