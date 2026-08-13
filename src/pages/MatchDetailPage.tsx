@@ -346,7 +346,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Data MOM - dual for custom matches */}
-      {match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
+      {tab === "facts" && (match.is_custom && (dualDataMOM.teamA || dualDataMOM.teamB) ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 grid grid-cols-2 gap-3">
           {([["teamA", dualDataMOM.teamA, matchTeams[0]?.name || "A팀", "border-blue-500/30 bg-blue-500/5"], ["teamB", dualDataMOM.teamB, matchTeams[1]?.name || "B팀", "border-orange-500/30 bg-orange-500/5"]] as const).map(([key, mom, teamName, colorClass]) => mom && (
             <div key={key} className={`rounded-xl border ${colorClass} p-4`}>
@@ -405,10 +405,10 @@ const MatchDetailPage = () => {
             </div>
           </div>
         </motion.div>
-      )}
+      ))}
 
       {/* Quarter Scoreboard */}
-      {matchQuarters && matchQuarters.length > 0 && (
+      {tab === "lineup" && matchQuarters && matchQuarters.length > 0 && (
         <div className="mx-4 mt-4">
           <QuarterScoreboard
             quarters={matchQuarters}
@@ -419,7 +419,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Quarter Pitch Viewer (FotMob style) */}
-      {matchQuarters && matchQuarters.length > 0 && (
+      {tab === "lineup" && matchQuarters && matchQuarters.length > 0 && (
         <div className="mx-4 mt-4">
           <QuarterPitchViewer
             quarters={matchQuarters}
@@ -434,7 +434,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* YouTube */}
-      {youtubeId && (
+      {tab === "facts" && youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Youtube size={18} /> MATCH VIDEO</h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border">
@@ -444,7 +444,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Goal Timeline */}
-      {match.has_detail_log && matchGoalEvents.length > 0 && (
+      {tab === "ticker" && match.has_detail_log && matchGoalEvents.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">GOAL TIMELINE</h2>
           <div className="space-y-1">
@@ -492,7 +492,7 @@ const MatchDetailPage = () => {
       )}
 
       {/* Match Summary with Court Margin + Clean Sheet Badge */}
-      {playerMatchStats.length > 0 && (
+      {tab === "stats" && playerMatchStats.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? L("종합 기록", "MATCH SUMMARY") : "MATCH SUMMARY"}</h2>
           {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">{L("쿼터별 상세 기록이 없는 경기입니다.", "No per-quarter detail log for this match.")}</p>}
