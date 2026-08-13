@@ -172,6 +172,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
                     <div className="flex flex-wrap gap-3 px-4 pb-3 text-[10px] text-muted-foreground">
                       <span>{L("출전 쿼터", "Quarters")} {r.quarters}</span>
                       <span>{L("수비 쿼터", "DF/GK quarters")} {r.defQuarters}</span>
+                      <span>{L("무실점", "Clean sheets")} {r.cleanSheets}</span>
                       <span>{L("쿼터 평균 실점", "Conceded/Q")} {r.avgConceded.toFixed(2)}</span>
                       <span>{L("쿼터 평균 마진", "Margin/Q")} {r.avgMargin > 0 ? "+" : ""}{r.avgMargin.toFixed(2)}</span>
                       <button onClick={() => navigate(`/player/${r.playerId}`)} className="ml-auto font-bold text-primary hover:underline">
