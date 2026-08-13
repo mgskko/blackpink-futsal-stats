@@ -2,13 +2,16 @@ import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
 
-// ─── Season Rating v2 (per-quarter normalized) ───
+// ─── Season Rating v2.1 (per-match normalized, lineup-optional) ───
 // base 6.0
-// + attack per quarter   : (goals*0.4 + assists*0.3) / quarters   * gain
-// + defense per quarter  : (cleanSheets*0.4 + suppression + gkDevotion) / quarters * gain
-// + avg quarter margin * 0.15
+// + attack   : (goals*0.4 + assists*0.3) / appearances * gain
+// + defense  : (cleanSheetRate*0.4 + suppressionRate*0.3 + gkRate*0.3) * gain   (only when lineup data exists)
+// + avg quarter margin * 0.15 (clamped ±1.5)
 // - fines * 0.2
 // clamped to 1.0 ~ 10.0
+// NOTE: older seasons often have no per-quarter lineup logs. Normalizing by the
+// (very small) number of logged quarters used to inflate ratings to the 10.0 cap
+// and zero out seasons with no lineup data at all — both are fixed here.
 export const RATING_V2 = {
   base: 6.0,
   goal: 0.4,
@@ -18,7 +21,7 @@ export const RATING_V2 = {
   gkBonus: 0.3,
   margin: 0.15,
   finePenalty: 0.2,
-  gain: 4, // per-quarter normalization gain so values spread naturally
+  gain: 2, // per-match normalization gain so values spread naturally
   min: 1,
   max: 10,
 };
@@ -91,17 +94,23 @@ export function computeSeasonRatings(
     const avgConceded = defQ > 0 ? conceded / defQ : 0;
     const avgMargin = qCount > 0 ? marginSum / qCount : 0;
     const fines = fineCountByPlayer.get(p.id) ?? 0;
-    const div = qCount > 0 ? qCount : 1;
+    const apps = matchIds.length;
+    const div = apps > 0 ? apps : 1;
 
-    // per-quarter normalized contributions
+    // per-match normalized attack contribution (independent of lineup logging)
     const attackScore = ((goals * RATING_V2.goal + assists * RATING_V2.assist) / div) * RATING_V2.gain;
-    const suppression = defQ > 0 ? Math.max(0, Math.min(1, (1.5 - avgConceded) / 1.5)) * RATING_V2.suppression * defQ : 0;
-    const gkScore = gkQ * RATING_V2.gkBonus * 0.5;
-    const defenseScore = ((cleanSheets * RATING_V2.cleanSheet + suppression + gkScore) / div) * RATING_V2.gain;
-    const marginScore = avgMargin * RATING_V2.margin;
+
+    // defense uses rates, so partial lineup logs can't inflate the score
+    const csRate = defQ > 0 ? cleanSheets / defQ : 0;
+    const suppressionRate = defQ > 0 ? Math.max(0, Math.min(1, (1.5 - avgConceded) / 1.5)) : 0;
+    const gkRate = defQ > 0 ? gkQ / defQ : 0;
+    const defenseScore = defQ > 0
+      ? (csRate * RATING_V2.cleanSheet + suppressionRate * RATING_V2.suppression + gkRate * RATING_V2.gkBonus) * RATING_V2.gain
+      : 0;
+    const marginScore = Math.max(-1.5, Math.min(1.5, avgMargin * RATING_V2.margin));
     const penalty = fines * RATING_V2.finePenalty;
 
-    const hasData = matchIds.length > 0 && qCount > 0;
+    const hasData = apps > 0;
     const rawUnsafe = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
     const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_V2.base;
     const rating = hasData

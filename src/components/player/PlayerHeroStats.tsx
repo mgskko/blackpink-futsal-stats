@@ -37,7 +37,7 @@ export default function PlayerHeroStats({ isEn, rating, appearances, goals, assi
       className="mx-4 mt-3 overflow-hidden rounded-2xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          {L("핵심 지표", "Key stats")}
+          {L("시즌 퍼포먼스", "Performance summary")}
         </span>
         <span className={`rounded-lg border px-2.5 py-1 font-display text-lg leading-none ${ratingColor}`}>
           {rating.toFixed(2)}
