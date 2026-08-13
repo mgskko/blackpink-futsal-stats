@@ -12,6 +12,7 @@ import MatchPrediction from "@/components/match/MatchPrediction";
 import MatchComments from "@/components/match/MatchComments";
 import QuarterScoreboard from "@/components/match/QuarterScoreboard";
 import QuarterPitchViewer from "@/components/match/QuarterPitchViewer";
+import HeadToHead from "@/components/match/HeadToHead";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
