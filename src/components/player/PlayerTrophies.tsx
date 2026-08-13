@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Match, Roster, GoalEvent, Player, Team, Result, MatchQuarter } from "@/hooks/useFutsalData";
-import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computePOTMWinners } from "@/lib/potm";
+import { computeSeasonTitles, computeBallonDor, type TitleKind, type TitleScope } from "@/lib/awards";
 
 interface Props {
   playerId: number;
@@ -18,97 +18,76 @@ interface Props {
 
 interface TrophyRow { emoji: string; title: string; meta: string }
 
+const KIND_META: Record<TitleKind, { emoji: string; ko: string; en: string; unit: [string, string] }> = {
+  goals: { emoji: "💥", ko: "득점왕", en: "Golden Boot", unit: ["골", "G"] },
+  assists: { emoji: "🅰️", ko: "도움왕", en: "Playmaker", unit: ["도움", "A"] },
+  apps: { emoji: "🏟️", ko: "출석왕", en: "Most Appearances", unit: ["경기", "MP"] },
+};
+
 export default function PlayerTrophies({ playerId, players, matches, rosters, goalEvents, teams, results, quarters, isEn }: Props) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
 
-  // ── Player of the Month wins, sourced from the same archive as the Statistics tab ──
   const potmWinnersAll = useMemo(
     () => computePOTMWinners(players, matches, teams ?? [], results ?? [], rosters, goalEvents, quarters ?? []),
     [players, matches, teams, results, rosters, goalEvents, quarters]
   );
   const potmWins = useMemo(() => potmWinnersAll.filter(w => w.player.id === playerId), [potmWinnersAll, playerId]);
 
-  const { seasonTrophies, mvpRows } = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const played = (matches ?? []).filter(m => m?.date && m.date <= today);
+  const ballonDor = useMemo(
+    () => computeBallonDor(players, matches, teams ?? [], results ?? [], rosters, goalEvents, quarters ?? []),
+    [players, matches, teams, results, rosters, goalEvents, quarters]
+  );
 
-    const eligible = (players ?? []).filter(p => p && !(p as any).is_guest && !/^용병\d*$/.test(p.name));
-
-    // Season/career tally for every eligible player using the non-duplicating AP rule
-    const tally = (scopeMatches: Match[]) => {
-      const ids = new Set(scopeMatches.map(m => m.id));
-      const scopedRosters = rosters.filter(r => ids.has(r.match_id));
-      const scopedEvents = goalEvents.filter(g => ids.has(g.match_id));
-      const goals = new Map<number, number>(), assists = new Map<number, number>(), apps = new Map<number, number>();
-      eligible.forEach(p => {
-        const ap = computeNonDuplicatedAP(p.id, scopeMatches, scopedRosters, scopedEvents);
-        if (ap.goals) goals.set(p.id, ap.goals);
-        if (ap.assists) assists.set(p.id, ap.assists);
-        const n = new Set(scopedRosters.filter(r => r.player_id === p.id).map(r => r.match_id)).size;
-        if (n) apps.set(p.id, n);
-      });
-      return { goals, assists, apps };
-    };
-    // Winners: ties all count as winners
-    const winners = (m: Map<number, number>) => {
-      const top = Math.max(0, ...m.values());
-      return top > 0 ? [...m.entries()].filter(([, v]) => v === top) : [];
-    };
-
-    const seasonTrophies: TrophyRow[] = [];
-
-    // Career-wide (종합) titles
-    const career = tally(played);
-    const careerDefs: { key: keyof typeof career; emoji: string; ko: string; en: string; unit: [string, string] }[] = [
-      { key: "goals", emoji: "🏅", ko: "종합 득점왕", en: "All-time Top Scorer", unit: ["골", "G"] },
-      { key: "assists", emoji: "🏅", ko: "종합 도움왕", en: "All-time Top Assister", unit: ["도움", "A"] },
-      { key: "apps", emoji: "🏅", ko: "종합 출석왕", en: "All-time Most Appearances", unit: ["경기", "MP"] },
-    ];
-    careerDefs.forEach(d => {
-      const w = winners(career[d.key]).find(([id]) => id === playerId);
-      if (w) seasonTrophies.push({ emoji: d.emoji, title: L(d.ko, d.en), meta: `${L("통산", "Career")} · ${w[1]}${L(d.unit[0], d.unit[1])}` });
-    });
-
-    // Season titles + Season MVP (Ballon d'Or concept), newest first
-    const years = [...new Set(played.map(m => m.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
-    const mvpRows: TrophyRow[] = [];
-
-    years.forEach(y => {
-      const yearMatches = played.filter(m => m.date.startsWith(y));
-      const { goals, assists, apps } = tally(yearMatches);
-
-      winners(goals).forEach(([id, v]) => { if (id === playerId) seasonTrophies.push({ emoji: "💥", title: `${y} ${L("공포왕", "Golden Boot")}`, meta: `${v}${L("골", "G")}` }); });
-      winners(assists).forEach(([id, v]) => { if (id === playerId) seasonTrophies.push({ emoji: "🅰️", title: `${y} ${L("도움왕", "Playmaker")}`, meta: `${v}${L("도움", "A")}` }); });
-      winners(apps).forEach(([id, v]) => { if (id === playerId) seasonTrophies.push({ emoji: "🏟️", title: `${y} ${L("출석왕", "Most Appearances")}`, meta: `${v}${L("경기", "MP")}` }); });
-
-      // Season MVP: Ballon d'Or style composite — goals x3 + assists x2 + appearances x1 + POTM x5
-      const potmByPlayer = new Map<number, number>();
-      potmWinnersAll.forEach(w => {
-        if (w.year === Number(y)) potmByPlayer.set(w.player.id, (potmByPlayer.get(w.player.id) ?? 0) + 1);
-      });
-      let bestId = 0, bestScore = 0, bestG = 0, bestA = 0;
-      eligible.forEach(p => {
-        const g = goals.get(p.id) ?? 0, a = assists.get(p.id) ?? 0, mp = apps.get(p.id) ?? 0;
-        if (mp < 2) return;
-        const score = g * 3 + a * 2 + mp + (potmByPlayer.get(p.id) ?? 0) * 5;
-        if (score > bestScore) { bestScore = score; bestId = p.id; bestG = g; bestA = a; }
-      });
-      if (bestScore > 0 && bestId === playerId) {
-        mvpRows.push({
+  const mvpRows: TrophyRow[] = useMemo(() => {
+    const rows: TrophyRow[] = [];
+    ballonDor.forEach(s => {
+      const me = s.entries.find(e => e.playerId === playerId);
+      if (me && me.rank === 1) {
+        rows.push({
           emoji: "🥇",
-          title: `${y} ${L("시즌 MVP", "Season MVP")}`,
-          meta: `${bestG}${L("골", "G")} · ${bestA}${L("도움", "A")} · ${L("포인트", "Pts")} ${bestScore}`,
+          title: `${s.year} ${L("발롱도르 (시즌 MVP)", "Ballon d'Or (Season MVP)")}`,
+          meta: `${me.goals}${L("골", "G")} · ${me.assists}${L("도움", "A")} · ${L("포인트", "Pts")} ${me.score}`,
         });
       }
     });
+    return rows;
+  }, [ballonDor, playerId, isEn]);
 
-    return { seasonTrophies, mvpRows };
-  }, [playerId, players, matches, rosters, goalEvents, isEn, potmWinnersAll]);
+  const titleRows = useMemo(() => {
+    const all = computeSeasonTitles(players, matches, rosters, goalEvents).filter(t => t.playerId === playerId);
+    const label = (scope: TitleScope, year?: number) =>
+      scope === "career" ? L("종합", "All-time") : scope === "custom" ? `${year} ${L("자체전", "Intrasquad")}` : `${year}`;
+    const group = (scope: TitleScope) =>
+      all.filter(t => t.scope === scope)
+        .sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
+        .map(t => {
+          const m = KIND_META[t.kind];
+          return {
+            emoji: t.scope === "career" ? "🏅" : m.emoji,
+            title: `${label(t.scope, t.year)} ${L(m.ko, m.en)}`,
+            meta: `${t.value}${L(m.unit[0], m.unit[1])}`,
+          } as TrophyRow;
+        });
+    return { career: group("career"), year: group("year"), custom: group("custom") };
+  }, [playerId, players, matches, rosters, goalEvents, isEn]);
 
-  if (seasonTrophies.length === 0 && potmWins.length === 0 && mvpRows.length === 0) return null;
+  const totalTitles = titleRows.career.length + titleRows.year.length + titleRows.custom.length;
+  if (totalTitles === 0 && potmWins.length === 0 && mvpRows.length === 0) return null;
 
   const sectionHead = (text: string) => (
     <div className="border-b border-border bg-secondary/40 px-3 py-2 text-xs font-bold text-foreground">{text}</div>
+  );
+
+  const list = (rows: TrophyRow[]) => (
+    <div>
+      {rows.map((t, i) => (
+        <div key={i} className="flex items-center gap-3 border-b border-border/60 px-3 py-2 last:border-0">
+          <span className="text-base">{t.emoji}</span>
+          <span className="flex-1 text-sm text-foreground">{t.title}</span>
+          <span className="text-[10px] text-muted-foreground">{t.meta}</span>
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -117,16 +96,8 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
 
       {mvpRows.length > 0 && (
         <div className="mb-3 overflow-hidden rounded-xl border border-amber-400/40">
-          {sectionHead(L(`시즌 MVP (발롱도르) · ${mvpRows.length}회`, `Season MVP (Ballon d'Or) · ${mvpRows.length}`))}
-          <div>
-            {mvpRows.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 border-b border-border/60 px-3 py-2 last:border-0">
-                <span className="text-base">{t.emoji}</span>
-                <span className="flex-1 text-sm font-semibold text-foreground">{t.title}</span>
-                <span className="text-[10px] text-muted-foreground">{t.meta}</span>
-              </div>
-            ))}
-          </div>
+          {sectionHead(L(`발롱도르 · ${mvpRows.length}회`, `Ballon d'Or · ${mvpRows.length}`))}
+          {list(mvpRows)}
         </div>
       )}
 
@@ -141,7 +112,7 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
                   {isEn ? `${w.year}.${String(w.month).padStart(2, "0")} POTM` : `${w.year}년 ${w.month}월 이달의 선수`}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {w.goals}{L("골", "G")} · {w.assists}{L("도움", "A")} · MOM {w.momCount}
+                  {w.goals}{L("골", "G")} · {w.assists}{L("도움", "A")}
                 </span>
               </div>
             ))}
@@ -149,18 +120,24 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
         </div>
       )}
 
-      {seasonTrophies.length > 0 && (
+      {titleRows.career.length > 0 && (
+        <div className="mb-3 overflow-hidden rounded-xl border border-primary/30">
+          {sectionHead(L(`종합 타이틀 · ${titleRows.career.length}개`, `All-time Titles · ${titleRows.career.length}`))}
+          {list(titleRows.career)}
+        </div>
+      )}
+
+      {titleRows.year.length > 0 && (
+        <div className="mb-3 overflow-hidden rounded-xl border border-border">
+          {sectionHead(L(`시즌 타이틀 · ${titleRows.year.length}개`, `Season Titles · ${titleRows.year.length}`))}
+          {list(titleRows.year)}
+        </div>
+      )}
+
+      {titleRows.custom.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-border">
-          {sectionHead(L(`버니즈 시즌 트로피 · ${seasonTrophies.length}개`, `Bunnies Season Trophies · ${seasonTrophies.length}`))}
-          <div>
-            {seasonTrophies.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 border-b border-border/60 px-3 py-2 last:border-0">
-                <span className="text-base">{t.emoji}</span>
-                <span className="flex-1 text-sm text-foreground">{t.title}</span>
-                <span className="text-xs text-muted-foreground">{t.meta}</span>
-              </div>
-            ))}
-          </div>
+          {sectionHead(L(`자체전 타이틀 · ${titleRows.custom.length}개`, `Intrasquad Titles · ${titleRows.custom.length}`))}
+          {list(titleRows.custom)}
         </div>
       )}
     </motion.div>
