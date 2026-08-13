@@ -825,6 +825,46 @@ const PlayerDetailPage = () => {
       {/* ===== STATS TAB ===== */}
       {activeTab === "stats" && (
         <div className="mx-4">
+          {/* Season selector */}
+          <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+            <span className="text-xs font-bold text-muted-foreground">{L("시즌 선택", "Season")}</span>
+            <select
+              value={filterMode === "year" ? selectedYear : filterMode}
+              onChange={e => {
+                const v = e.target.value;
+                if (v === "all" || v === "custom") handleFilterChange(v as FilterMode);
+                else handleFilterChange("year", v);
+              }}
+              className="rounded-lg border border-border bg-secondary px-2.5 py-1.5 text-xs font-bold text-foreground"
+            >
+              <option value="all">{L("전체 시즌", "All seasons")}</option>
+              {years.map(y => (
+                <option key={y} value={y}>{isEn ? `Bunnies FC ${y}` : `버니즈FC ${y}`}</option>
+              ))}
+              <option value="custom">{L("자체전", "Intrasquad")}</option>
+            </select>
+          </div>
+
+          {/* Key stat grid (3x2) */}
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-border bg-card p-3 text-center">
+            {[
+              { v: stats.goals, l: L("득점", "Goals") },
+              { v: stats.assists, l: L("어시스트", "Assists") },
+              { v: seasonRatingV2 ? seasonRatingV2.toFixed(2) : "-", l: L("평점", "Rating"), highlight: true },
+              { v: stats.appearances, l: L("경기", "Matches") },
+              { v: positionDist.total, l: L("선발 쿼터", "Starting quarters") },
+              { v: positionDist.total * 10, l: L("출전 시간(분)", "Minutes played") },
+            ].map((c, i) => (
+              <div key={i} className="rounded-lg bg-secondary/40 p-3">
+                <div className={`font-display text-xl ${c.highlight ? "text-primary text-glow" : "text-foreground"}`}>{c.v}</div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{c.l}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pitch heatmap */}
+          <PitchHeatmap dist={positionDist} isEn={isEn} />
+
           {/* Season by season records & ranks */}
           <SeasonStatsTable
             isEn={isEn}
