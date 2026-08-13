@@ -64,7 +64,8 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
   }, [fines]);
 
   const baseRows = useMemo(
-    () => computeSeasonRatings(players, matches, rosters, goalEvents, quarters, fineCounts).filter(r => r.appearances >= 2),
+    () => computeSeasonRatings(players ?? [], matches ?? [], rosters ?? [], goalEvents ?? [], quarters ?? [], fineCounts)
+      .filter(r => r.appearances >= 2),
     [players, matches, rosters, goalEvents, quarters, fineCounts]
   );
 
@@ -73,9 +74,10 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
     sorted.sort((a, b) => {
       let cmp: number;
       if (sortKey === "name") {
-        cmp = getPlayerName(players, a.playerId, lang).localeCompare(getPlayerName(players, b.playerId, lang));
+        cmp = String(getPlayerName(players ?? [], a.playerId, lang) ?? "")
+          .localeCompare(String(getPlayerName(players ?? [], b.playerId, lang) ?? ""));
       } else {
-        cmp = (a[sortKey] as number) - (b[sortKey] as number);
+        cmp = ((a[sortKey] as number) ?? 0) - ((b[sortKey] as number) ?? 0);
         if (cmp === 0) cmp = a.rating - b.rating;
       }
       return sortDir === "asc" ? cmp : -cmp;
