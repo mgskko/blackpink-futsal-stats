@@ -647,6 +647,12 @@ const PlayerDetailPage = () => {
       {/* ===== PROFILE TAB ===== */}
       {activeTab === "profile" && (
         <div className="mx-4">
+          {/* Position: main / other + mini pitch */}
+          <PlayerPositionCard dist={positionDist} isEn={isEn} />
+
+          {/* Trophies & awards */}
+          <PlayerTrophies playerId={playerId} players={players} matches={matches} rosters={rosters} goalEvents={goalEvents} momVotes={momVotes} isEn={isEn} />
+
           {/* FC Online Traits */}
           {playerTraits.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-primary/30 bg-card p-4">
