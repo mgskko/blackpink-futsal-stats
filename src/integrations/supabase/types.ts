@@ -469,6 +469,7 @@ export type Database = {
       }
       players: {
         Row: {
+          age: number | null
           back_number: number | null
           id: number
           is_active: boolean
@@ -479,6 +480,7 @@ export type Database = {
           profile_image_url: string | null
         }
         Insert: {
+          age?: number | null
           back_number?: number | null
           id: number
           is_active?: boolean
@@ -489,6 +491,7 @@ export type Database = {
           profile_image_url?: string | null
         }
         Update: {
+          age?: number | null
           back_number?: number | null
           id?: number
           is_active?: boolean
