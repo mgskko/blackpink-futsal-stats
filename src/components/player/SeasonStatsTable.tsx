@@ -31,17 +31,20 @@ export interface SeasonRow {
 
 export function buildSeasonRows(
   playerId: number,
-  players: Player[],
-  matches: Match[],
-  rosters: Roster[],
-  goalEvents: GoalEvent[],
-  results: Result[],
-  quarters: MatchQuarter[],
+  players: Player[] = [],
+  matches: Match[] = [],
+  rosters: Roster[] = [],
+  goalEvents: GoalEvent[] = [],
+  results: Result[] = [],
+  quarters: MatchQuarter[] = [],
   fineCounts: Map<number, number> = new Map(),
 ): SeasonRow[] {
   const today = new Date().toISOString().slice(0, 10);
-  const played = matches.filter(m => m.date <= today);
-  const eligible = players.filter(p => !/^용병\d*$/.test(p.name));
+  const played = (matches ?? []).filter(m => m?.date && m.date <= today);
+  const eligible = (players ?? []).filter(p => p?.name && !/^용병\d*$/.test(p.name));
+  const safeRosters = rosters ?? [];
+  const safeResults = results ?? [];
+  const safeQuarters = quarters ?? [];
 
   const years = [...new Set(played.map(m => m.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
   const rows: SeasonRow[] = [];
@@ -53,9 +56,9 @@ export function buildSeasonRows(
     const entries = computeSeasonRatings(
       eligible,
       yearMatches,
-      rosters.filter(r => yearIds.has(r.match_id)),
+      safeRosters.filter(r => yearIds.has(r?.match_id)),
       goalEvents,
-      quarters.filter(q => yearIds.has(q.match_id)),
+      safeQuarters.filter(q => yearIds.has(q?.match_id)),
       fineCounts,
     );
     const me = entries.find(e => e.playerId === playerId);
@@ -63,9 +66,9 @@ export function buildSeasonRows(
 
     let wins = 0, draws = 0, losses = 0;
     yearMatches.forEach(m => {
-      const mine = rosters.find(r => r.match_id === m.id && r.player_id === playerId);
+      const mine = safeRosters.find(r => r?.match_id === m.id && r?.player_id === playerId);
       if (!mine) return;
-      const res = results.find(x => x.match_id === m.id && x.team_id === mine.team_id);
+      const res = safeResults.find(x => x?.match_id === m.id && x?.team_id === mine.team_id);
       if (res?.result === "승") wins++;
       else if (res?.result === "패") losses++;
       else if (res?.result === "무") draws++;
