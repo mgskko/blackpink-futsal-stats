@@ -554,7 +554,10 @@ const PlayerDetailPage = () => {
                   {FIRE_TIER_CONFIG[fireTier].emoji} {FIRE_TIER_CONFIG[fireTier].label} — {fireInfo?.streak}{L("연속 출석!", " in a row!")}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-1">{L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(player as any).age ? <span className="mr-2 text-foreground">{isEn ? `${(player as any).age} yrs` : `${(player as any).age}살`}</span> : null}
+                {L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
+              </p>
             </div>
           </div>
         </div>
