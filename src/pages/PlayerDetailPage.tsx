@@ -654,7 +654,7 @@ const PlayerDetailPage = () => {
           })()}
 
           {/* Trophies & awards */}
-          <PlayerTrophies playerId={playerId} players={players} matches={matches} rosters={rosters} goalEvents={goalEvents} teams={teams} results={results} quarters={allQuarters} momVotes={momVotes} isEn={isEn} />
+          <PlayerTrophies playerId={playerId} players={players} matches={matches} rosters={rosters} goalEvents={goalEvents} teams={teams} results={results} quarters={allQuarters} isEn={isEn} />
 
           {/* FC Online Traits */}
           {playerTraits.length > 0 && (
