@@ -390,12 +390,29 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
-          {/* YouTube Link Edit */}
+          {/* Match Format */}
           <div className="rounded-lg border border-border bg-card p-4">
-            {null}
+            <h3 className="mb-2 text-sm font-bold text-primary">경기 포맷</h3>
+            <Select
+              value={editFormat}
+              onValueChange={async (v) => {
+                setEditFormat(v);
+                try {
+                  await supabase.from("matches").update({ match_format: v } as any).eq("id", matchId!);
+                  invalidateAll();
+                  toast({ title: "경기 포맷이 변경되었습니다 ✅" });
+                } catch (err: any) { toast({ title: "오류", description: err.message, variant: "destructive" }); }
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="포맷 선택" /></SelectTrigger>
+              <SelectContent>
+                {MATCH_FORMATS.map(f => <SelectItem key={f.code} value={f.code}>{f.labelKo}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-[11px] text-muted-foreground">포맷에 따라 포지션 슬롯(피치 배치)이 달라집니다.</p>
           </div>
-          {/* placeholder */}
-          <div className="hidden" />
+
+          {/* YouTube Link Edit */}
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
