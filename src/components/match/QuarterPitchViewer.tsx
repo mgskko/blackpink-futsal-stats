@@ -68,11 +68,9 @@ function positionsOf(lineup: any, formatCode?: string | null) {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId }: Props) {
+export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId, formatCode }: Props) {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
-  const { toast } = useToast();
-  const qc = useQueryClient();
   const lang = i18n.language ?? "ko";
   const isEn = lang.startsWith("en");
   const L = (ko: string, en: string) => (isEn ? en : ko);
@@ -95,22 +93,12 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     [quarters]
   );
 
-  const pitchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  // key: `${unit}:${playerId}` -> {x,y}
-  const [overrides, setOverrides] = useState<Record<string, { x: number; y: number }>>({});
-  const dirty = Object.keys(overrides).length > 0;
 
   const safeIdx = Math.min(idx, Math.max(0, list.length - 1));
   const current = list[safeIdx];
-
-  useEffect(() => {
-    setOverrides({});
-    setEditing(false);
-  }, [safeIdx]);
 
   if (list.length === 0) return null;
   const custom = isCustomLineup(current.lineup);
