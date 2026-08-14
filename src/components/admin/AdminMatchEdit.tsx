@@ -34,6 +34,7 @@ const AdminMatchEdit = () => {
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "match" | "goal" | "roster"; id: number } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editFormat, setEditFormat] = useState<string>(DEFAULT_FORMAT);
 
   // Goal editing states
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
