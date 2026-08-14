@@ -77,7 +77,11 @@ const StatisticsPage = () => {
   const L = (ko: string, en: string) => (isEn ? en : ko);
   // Result label mapper: DB stores Korean; we only translate the display.
   const resultLabel = (r: string) => (isEn ? (r === "승" ? "W" : r === "패" ? "L" : r === "무" ? "D" : r) : r);
-  const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportKey>("futsal");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
+  const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
+  const hasSoccer = useMemo(() => allSportMatches.some(m => sportOfMatch(m) === "soccer"), [allSportMatches]);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "formation" | "toto">("player");
   const [selectedRanking, setSelectedRanking] = useState<RankingOption>("ap");
