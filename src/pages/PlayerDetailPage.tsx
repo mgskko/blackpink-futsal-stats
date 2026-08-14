@@ -242,7 +242,14 @@ const PlayerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const playerId = Number(id);
-  const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportKey>("futsal");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
+  const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
+  const sportCounts = useMemo(() => ({
+    futsal: filterMatchesBySport(allSportMatches, "futsal").length,
+    soccer: filterMatchesBySport(allSportMatches, "soccer").length,
+  }), [allSportMatches]);
   const fireMap = useOnFirePlayers(matches, rosters);
   const fireInfo = fireMap.get(playerId);
   const fireTier: FireTier = fireInfo?.tier || "none";
@@ -290,7 +297,10 @@ const PlayerDetailPage = () => {
       return (data ?? []) as MatchQuarter[];
     },
   });
-  const allQuarters = allQuartersRaw ?? [];
+  const allQuarters = useMemo(
+    () => (allQuartersRaw ?? []).filter(q => sportMatchIds.has(q.match_id)),
+    [allQuartersRaw, sportMatchIds]
+  );
 
   const years = useMemo(() => getAvailableYears(matches), [matches]);
 
