@@ -1,20 +1,23 @@
 import { motion } from "framer-motion";
-import type { SportKey } from "@/lib/sport";
-import { sportLabel } from "@/lib/sport";
+import type { SportFilter } from "@/lib/sport";
+import { sportLabel, sportEmoji } from "@/lib/sport";
 
 interface Props {
-  value: SportKey;
-  onChange: (v: SportKey) => void;
+  value: SportFilter;
+  onChange: (v: SportFilter) => void;
   isEn: boolean;
   className?: string;
+  /** hide the "All" segment (default: shown) */
+  withAll?: boolean;
 }
 
-const SPORTS: SportKey[] = ["futsal", "soccer"];
+const SPORTS: SportFilter[] = ["all", "soccer", "futsal"];
 
-export default function SportToggle({ value, onChange, isEn, className }: Props) {
+export default function SportToggle({ value, onChange, isEn, className, withAll = true }: Props) {
+  const options = withAll ? SPORTS : SPORTS.filter(s => s !== "all");
   return (
     <div className={`inline-flex rounded-full border border-border bg-card/70 p-1 backdrop-blur ${className ?? ""}`}>
-      {SPORTS.map(s => {
+      {options.map(s => {
         const active = s === value;
         return (
           <button
@@ -26,7 +29,7 @@ export default function SportToggle({ value, onChange, isEn, className }: Props)
               <motion.span layoutId="sport-toggle-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 400, damping: 32 }} />
             )}
             <span className="relative flex items-center gap-1">
-              {s === "soccer" ? "⚽" : "🥅"} {sportLabel(s, isEn)}
+              {sportEmoji(s)} {sportLabel(s, isEn)}
             </span>
           </button>
         );
