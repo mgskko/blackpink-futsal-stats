@@ -24,6 +24,7 @@ const AdminMatchCreate = () => {
   const [newVenueName, setNewVenueName] = useState("");
   const [addingVenue, setAddingVenue] = useState(false);
   const [matchType, setMatchType] = useState("6:6 풋살");
+  const [matchFormat, setMatchFormat] = useState<string>("futsal6");
   const [isCustom, setIsCustom] = useState(false);
   const [opponentName, setOpponentName] = useState("");
   const [ageCategory, setAgeCategory] = useState("");
@@ -75,6 +76,7 @@ const AdminMatchCreate = () => {
           venue_id: venueId ? Number(venueId) : null,
           sub_venue: subVenue || null,
           match_type: matchType,
+          match_format: matchFormat,
           is_custom: isCustom,
           is_internal: isCustom,
           youtube_link: youtubeLink || null,
@@ -267,6 +269,16 @@ const AdminMatchCreate = () => {
             <SelectItem value="5:5 풋살">5:5 풋살</SelectItem>
             <SelectItem value="8:8 축구">8:8 축구</SelectItem>
             <SelectItem value="11:11 축구">11:11 축구</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">포지션 포맷</label>
+        <Select value={matchFormat} onValueChange={setMatchFormat}>
+          <SelectTrigger className="bg-card border-border"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {MATCH_FORMATS.map(f => <SelectItem key={f.code} value={f.code}>{f.ko}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
