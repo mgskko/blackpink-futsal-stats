@@ -103,6 +103,10 @@ const StatisticsPage = () => {
       return (data ?? []) as { match_id: number; voted_player_id: number }[];
     },
   });
+  const worstVotes = useMemo(
+    () => (worstVotesAll ?? []).filter(v => sportMatchIds.has(v.match_id)),
+    [worstVotesAll, sportMatchIds]
+  );
 
   const { data: allQuartersRaw } = useQuery({
     queryKey: ["all_match_quarters"],
