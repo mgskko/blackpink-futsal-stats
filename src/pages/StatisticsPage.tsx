@@ -297,7 +297,7 @@ const StatisticsPage = () => {
           : <p className="text-center text-sm text-muted-foreground py-4">{L("MOM 투표 데이터가 없습니다", "No MOM vote data")}</p>;
       case "worst": {
         const worstCounts = new Map<number, number>();
-        (worstVotesAll || []).forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
+        worstVotes.forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
         const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
         return worstRanking.length > 0
           ? <GenericRanking data={worstRanking} valueLabel={L("워스트", "Worst")} valueFn={(d: any) => `${d.count}${L("표", " votes")}`} />
@@ -383,7 +383,7 @@ const StatisticsPage = () => {
 
             {/* 먹튀 칭호 */}
             {(() => {
-              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotesAll);
+              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotes);
               if (!crasher || crasher.crashPercent < 20) return null;
               return (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
