@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
+import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
 import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
 
@@ -126,6 +127,7 @@ const AdminMatchEdit = () => {
     setEditYoutubeLink(m?.youtube_link || "");
     setEditVenueId(m?.venue_id ? String(m.venue_id) : "");
     setEditSubVenue((m as any)?.sub_venue || "");
+    setEditFormat((m as any)?.match_format || DEFAULT_FORMAT);
     setEditingVenue(false);
   };
 
