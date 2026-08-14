@@ -200,6 +200,11 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                   <span className="mt-1 max-w-[84px] truncate rounded bg-black/55 px-1.5 py-px text-[11px] font-semibold text-white drop-shadow">
                     {pn(p.playerId)}
                   </span>
+                  {p.slot && (
+                    <span className="rounded bg-primary/80 px-1.5 py-px text-[9px] font-bold text-primary-foreground">
+                      {slotLabel(p.slot, isEn, formatCode)}
+                    </span>
+                  )}
                   {(qs.goals > 0 || qs.assists > 0) && (
                     <span className="flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-px text-[9px] font-bold text-white">
                       {qs.goals > 0 && <span>⚽{qs.goals}</span>}
