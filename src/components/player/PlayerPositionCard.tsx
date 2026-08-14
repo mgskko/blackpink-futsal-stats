@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
+import { slotLabel } from "@/lib/positions";
 
-type Dist = { GK: number; DF: number; MF: number; FW: number; total: number };
+type Dist = { GK: number; DF: number; MF: number; FW: number; total: number; slots?: Record<string, number> };
 
 const POS_LABEL: Record<string, { ko: string; en: string; abbr: string; y: number }> = {
   FW: { ko: "스트라이커", en: "Striker", abbr: "FW", y: 16 },
@@ -22,6 +23,7 @@ export default function PlayerPositionCard({ dist, isEn }: { dist: Dist; isEn: b
   const main = ranked[0];
   const others = ranked.slice(1);
   const pct = (n: number) => Math.round((n / dist.total) * 100);
+  const slotRanked = Object.entries(dist.slots ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-border bg-card p-4">
@@ -66,6 +68,18 @@ export default function PlayerPositionCard({ dist, isEn }: { dist: Dist; isEn: b
           ))}
         </div>
       </div>
+      {slotRanked.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="mb-1.5 text-[11px] font-bold text-muted-foreground">{L("세부 포지션", "Detailed roles")}</div>
+          <div className="flex flex-wrap gap-1.5">
+            {slotRanked.map(([code, n]) => (
+              <span key={code} className="rounded-full border border-border bg-secondary/40 px-2 py-0.5 text-[11px] text-foreground">
+                {slotLabel(code, isEn)} <span className="text-muted-foreground">{n}Q</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
