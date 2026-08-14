@@ -1,4 +1,5 @@
 import type { Player, Match, Team, Result, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
+import { slotOfPlayer } from "@/lib/positions";
 
 // ─── Court Margin (+/-) for a player across quarters ───
 export interface PlayerCourtMargin {
