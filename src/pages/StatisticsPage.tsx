@@ -119,7 +119,10 @@ const StatisticsPage = () => {
       return allData;
     },
   });
-  const allQuarters = allQuartersRaw ?? [];
+  const allQuarters = useMemo(
+    () => (allQuartersRaw ?? []).filter(q => sportMatchIds.has(q.match_id)),
+    [allQuartersRaw, sportMatchIds]
+  );
 
   const inactiveIds = useMemo(() => getInactivePlayerIds(players, matches, rosters), [players, matches, rosters]);
 
