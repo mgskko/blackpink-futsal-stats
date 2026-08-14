@@ -11,6 +11,8 @@ import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getBiggestCrasher } from "@/hooks/useMarketValue";
 import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos, computePositionDuosByWinRate, computeTriosByWinRate } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
+import SportToggle from "@/components/SportToggle";
+import { filterMatchesBySport, sportOfMatch, sportLabel, type SportKey } from "@/lib/sport";
 import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -222,7 +224,7 @@ const StatisticsPage = () => {
   const duoSynergy = getDuoSynergyWinRate(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
   const ownGoals = getOwnGoalRanking(memberPlayers, filteredGoalEvents);
   const hallOfFame = getHallOfFame(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents);
-  const momRanking = getMOMRanking(memberPlayers, momVotes || []);
+  const momRanking = getMOMRanking(memberPlayers, (momVotes || []).filter(v => filteredMatchIds.has(v.match_id)));
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 
@@ -302,6 +304,14 @@ const StatisticsPage = () => {
   return (
     <div className="pb-20">
       <PageHeader title="STATISTICS" subtitle={L("버니즈 통계", "Bunnies Stats")} />
+
+      {/* Sport toggle (Football / Futsal) */}
+      <div className="px-4 mb-3 flex items-center gap-2">
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} />
+        <span className="text-[11px] text-muted-foreground">
+          {L(`${sportLabel(sport, false)} 기록만 집계`, `${sportLabel(sport, true)} records only`)}
+        </span>
+      </div>
 
       {/* Filter */}
       <div className="px-4 mb-4">
