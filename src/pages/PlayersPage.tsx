@@ -68,7 +68,13 @@ const PlayersPage = () => {
     },
   });
 
-  const activePlayers = players.filter(p => !(p as any).is_guest);
+  const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
+  const activePlayers = useMemo(() => {
+    const base = players.filter(p => !(p as any).is_guest);
+    if (sport === "all") return base;
+    const playedIds = new Set(rosters.filter(r => sportMatchIds.has(r.match_id)).map(r => r.player_id));
+    return base.filter(p => playedIds.has(p.id));
+  }, [players, rosters, sportMatchIds, sport]);
   const concacafSet = useMemo(() => {
     if (!concacafMode) return new Set<number>();
     const s = new Set<number>();
