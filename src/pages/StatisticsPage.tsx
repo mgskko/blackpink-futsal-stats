@@ -12,7 +12,7 @@ import { getBiggestCrasher } from "@/hooks/useMarketValue";
 import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos, computePositionDuosByWinRate, computeTriosByWinRate } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
 import SportToggle from "@/components/SportToggle";
-import { filterMatchesBySport, sportOfMatch, sportLabel, type SportKey } from "@/lib/sport";
+import { filterMatchesBySport, sportOfMatch, sportLabel, type SportFilter } from "@/lib/sport";
 import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,7 +80,7 @@ const StatisticsPage = () => {
   // Result label mapper: DB stores Korean; we only translate the display.
   const resultLabel = (r: string) => (isEn ? (r === "승" ? "W" : r === "패" ? "L" : r === "무" ? "D" : r) : r);
   const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
-  const [sport, setSport] = useState<SportKey>("futsal");
+  const [sport, setSport] = useState<SportFilter>("all");
   const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
   const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
   const hasSoccer = useMemo(() => allSportMatches.some(m => sportOfMatch(m) === "soccer"), [allSportMatches]);
@@ -316,7 +316,9 @@ const StatisticsPage = () => {
       <div className="px-4 mb-3 flex items-center gap-2">
         <SportToggle value={sport} onChange={setSport} isEn={isEn} />
         <span className="text-[11px] text-muted-foreground">
-          {L(`${sportLabel(sport, false)} 기록만 집계`, `${sportLabel(sport, true)} records only`)}
+          {sport === "all"
+            ? L("축구 + 풋살 통합 집계", "Football + Futsal aggregated")
+            : L(`${sportLabel(sport, false)} 기록만 집계`, `${sportLabel(sport, true)} records only`)}
         </span>
       </div>
 

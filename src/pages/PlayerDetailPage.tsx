@@ -36,7 +36,7 @@ import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 import SportToggle from "@/components/SportToggle";
-import { filterMatchesBySport, sportLabel, type SportKey } from "@/lib/sport";
+import { filterMatchesBySport, sportLabel, type SportFilter } from "@/lib/sport";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
 
 // Concacaf country label → EN translation
@@ -245,10 +245,11 @@ const PlayerDetailPage = () => {
   const navigate = useNavigate();
   const playerId = Number(id);
   const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
-  const [sport, setSport] = useState<SportKey>("futsal");
+  const [sport, setSport] = useState<SportFilter>("all");
   const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
   const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
   const sportCounts = useMemo(() => ({
+    all: allSportMatches.length,
     futsal: filterMatchesBySport(allSportMatches, "futsal").length,
     soccer: filterMatchesBySport(allSportMatches, "soccer").length,
   }), [allSportMatches]);
@@ -610,8 +611,8 @@ const PlayerDetailPage = () => {
         <SportToggle value={sport} onChange={setSport} isEn={isEn} />
         <span className="text-[11px] text-muted-foreground">
           {L(
-            `${sportLabel(sport, false)} 기록 ${sport === "soccer" ? sportCounts.soccer : sportCounts.futsal}경기`,
-            `${sportCounts[sport]} ${sportLabel(sport, true).toLowerCase()} matches on record`
+            `${sportLabel(sport, false)} 기록 ${sportCounts[sport]}경기`,
+            `${sportCounts[sport]} ${sport === "all" ? "" : sportLabel(sport, true).toLowerCase() + " "}matches on record`
           )}
         </span>
       </div>
