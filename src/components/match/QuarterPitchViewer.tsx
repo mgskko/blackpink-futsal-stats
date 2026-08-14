@@ -141,36 +141,13 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const ratingTone = (r: number) =>
     r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
 
-  const save = async () => {
-    if (!dirty || !current) return;
-    setSaving(true);
-    const base: any = JSON.parse(JSON.stringify(current.lineup ?? {}));
-    Object.entries(overrides).forEach(([key, val]) => {
-      const [unitKey, pid] = key.split(":");
-      const unit = unitKey === "A" ? (base.teamA ??= {}) : unitKey === "B" ? (base.teamB ??= {}) : base;
-      unit._pos = { ...(unit._pos ?? {}), [pid]: { x: Math.round(val.x * 10) / 10, y: Math.round(val.y * 10) / 10 } };
-    });
-    const { error } = await (supabase as any).from("match_quarters").update({ lineup: base }).eq("id", current.id);
-    setSaving(false);
-    if (error) {
-      toast({ title: L("저장 실패", "Save failed"), description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: L("포메이션 저장 완료", "Formation saved") });
-    setOverrides({});
-    setEditing(false);
-    if (matchId) qc.invalidateQueries({ queryKey: ["match_quarters", matchId] });
-    else qc.invalidateQueries({ queryKey: ["match_quarters"] });
-  };
-
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
-    const positions = positionsOf(lineup);
+    const positions = positionsOf(lineup, formatCode);
     const bench = benchOf(lineup);
     return (
       <div className="flex-1 min-w-0">
         {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
         <div
-          ref={el => { pitchRefs.current[unitKey] = el; }}
           className="relative w-full overflow-hidden rounded-2xl border border-green-900/60 shadow-inner"
           style={{
             aspectRatio: "3/4",
@@ -192,35 +169,19 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
           {positions.map((p, i) => {
             const img = avatar(p.playerId);
             const qs = quarterStats(p.playerId);
-            const key = `${unitKey}:${p.playerId}`;
-            const stored = storedPos(lineup, p.playerId);
-            const pos = overrides[key] ?? stored ?? { x: p.x, y: p.y };
+            const pos = { x: p.x, y: p.y };
             return (
               <motion.div
                 key={`${p.playerId}-${p.role}-${i}`}
-                drag={editing}
-                dragMomentum={false}
-                dragElastic={0}
-                onDragEnd={(_, info) => {
-                  const rect = pitchRefs.current[unitKey]?.getBoundingClientRect();
-                  if (!rect) return;
-                  setOverrides(o => ({
-                    ...o,
-                    [key]: {
-                      x: clamp(pos.x + (info.offset.x / rect.width) * 100, 6, 94),
-                      y: clamp(pos.y + (info.offset.y / rect.height) * 100, 6, 94),
-                    },
-                  }));
-                }}
-                className={`absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 ${editing ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                 style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               >
                 <button
-                  onClick={() => !editing && setSel(p.playerId)}
+                  onClick={() => setSel(p.playerId)}
                   className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
                 >
                   <div className="relative">
-                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)] ${editing ? "ring-dashed" : ""}`}>
+                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}>
                       {img ? (
                         <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
                       ) : (
