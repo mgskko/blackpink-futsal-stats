@@ -392,6 +392,11 @@ const AdminMatchEdit = () => {
 
           {/* YouTube Link Edit */}
           <div className="rounded-lg border border-border bg-card p-4">
+            {null}
+          </div>
+          {/* placeholder */}
+          <div className="hidden" />
+          <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
               {!editingYoutube ? (
