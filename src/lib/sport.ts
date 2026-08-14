@@ -1,6 +1,7 @@
 import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
 
 export type SportKey = "futsal" | "soccer";
+export type SportFilter = SportKey | "all";
 
 const FORMAT_SPORT: Record<string, SportKey> = MATCH_FORMATS.reduce((acc, f) => {
   acc[f.code] = f.sport;
@@ -20,10 +21,17 @@ export function sportOfMatch(m: { match_format?: string | null; match_type?: str
 
 export function filterMatchesBySport<T extends { match_format?: string | null; match_type?: string | null }>(
   matches: T[],
-  sport: SportKey
+  sport: SportFilter
 ): T[] {
+  if (sport === "all") return matches;
   return matches.filter(m => sportOfMatch(m) === sport);
 }
 
-export const sportLabel = (sport: SportKey, isEn: boolean) =>
-  sport === "soccer" ? (isEn ? "Football" : "축구") : isEn ? "Futsal" : "풋살";
+export const sportLabel = (sport: SportFilter, isEn: boolean) =>
+  sport === "all"
+    ? isEn ? "All" : "전체"
+    : sport === "soccer"
+      ? isEn ? "Football" : "축구"
+      : isEn ? "Futsal" : "풋살";
+
+export const sportEmoji = (sport: SportFilter) => (sport === "soccer" ? "⚽" : sport === "futsal" ? "🥅" : "🏅");
