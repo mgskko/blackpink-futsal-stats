@@ -411,6 +411,8 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                       const units = isCustomLineup(l) ? [l.teamA, l.teamB] : [l];
                       for (const u of units) {
                         if (!u) continue;
+                        const code = slotMapOf(u)[String(sel)];
+                        if (code) return slotLabel(code, isEn, formatCode);
                         for (const r of ROLE_ORDER) if (idsOf(u[r] ?? u[r.toLowerCase()]).includes(sel)) return roleLabel(r);
                         if (benchOf(u).includes(sel)) return roleLabel("Bench");
                       }
