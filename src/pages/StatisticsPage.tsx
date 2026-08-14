@@ -11,6 +11,8 @@ import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getBiggestCrasher } from "@/hooks/useMarketValue";
 import { computeDeathLineup, computePassNetwork, computeToxicDuos, computeBestDefenseLine, computeSynergyMargin, computeWithoutYou, computeFWDuos, computePositionDuosByWinRate, computeTriosByWinRate } from "@/hooks/useChemistryStats";
 import PageHeader from "@/components/PageHeader";
+import SportToggle from "@/components/SportToggle";
+import { filterMatchesBySport, sportOfMatch, sportLabel, type SportKey } from "@/lib/sport";
 import SplashScreen from "@/components/SplashScreen";
 import { Skull, Trophy, Flame, Ghost, Target, Clock, Users, MapPin, Shield, Swords, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +79,11 @@ const StatisticsPage = () => {
   const L = (ko: string, en: string) => (isEn ? en : ko);
   // Result label mapper: DB stores Korean; we only translate the display.
   const resultLabel = (r: string) => (isEn ? (r === "승" ? "W" : r === "패" ? "L" : r === "무" ? "D" : r) : r);
-  const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportKey>("futsal");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
+  const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
+  const hasSoccer = useMemo(() => allSportMatches.some(m => sportOfMatch(m) === "soccer"), [allSportMatches]);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [activeTab, setActiveTab] = useState<"player" | "team" | "fun" | "chemistry" | "formation" | "toto">("player");
   const [selectedRanking, setSelectedRanking] = useState<RankingOption>("ap");
@@ -97,6 +103,10 @@ const StatisticsPage = () => {
       return (data ?? []) as { match_id: number; voted_player_id: number }[];
     },
   });
+  const worstVotes = useMemo(
+    () => (worstVotesAll ?? []).filter(v => sportMatchIds.has(v.match_id)),
+    [worstVotesAll, sportMatchIds]
+  );
 
   const { data: allQuartersRaw } = useQuery({
     queryKey: ["all_match_quarters"],
@@ -113,7 +123,10 @@ const StatisticsPage = () => {
       return allData;
     },
   });
-  const allQuarters = allQuartersRaw ?? [];
+  const allQuarters = useMemo(
+    () => (allQuartersRaw ?? []).filter(q => sportMatchIds.has(q.match_id)),
+    [allQuartersRaw, sportMatchIds]
+  );
 
   const inactiveIds = useMemo(() => getInactivePlayerIds(players, matches, rosters), [players, matches, rosters]);
 
@@ -218,7 +231,7 @@ const StatisticsPage = () => {
   const duoSynergy = getDuoSynergyWinRate(memberPlayers, filteredMatches, filteredTeams, filteredResults, filteredRosters);
   const ownGoals = getOwnGoalRanking(memberPlayers, filteredGoalEvents);
   const hallOfFame = getHallOfFame(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents);
-  const momRanking = getMOMRanking(memberPlayers, momVotes || []);
+  const momRanking = getMOMRanking(memberPlayers, (momVotes || []).filter(v => filteredMatchIds.has(v.match_id)));
 
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 
@@ -284,7 +297,7 @@ const StatisticsPage = () => {
           : <p className="text-center text-sm text-muted-foreground py-4">{L("MOM 투표 데이터가 없습니다", "No MOM vote data")}</p>;
       case "worst": {
         const worstCounts = new Map<number, number>();
-        (worstVotesAll || []).forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
+        worstVotes.forEach((v: any) => worstCounts.set(v.voted_player_id, (worstCounts.get(v.voted_player_id) || 0) + 1));
         const worstRanking = [...worstCounts.entries()].map(([pid, count]) => ({ id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10);
         return worstRanking.length > 0
           ? <GenericRanking data={worstRanking} valueLabel={L("워스트", "Worst")} valueFn={(d: any) => `${d.count}${L("표", " votes")}`} />
@@ -298,6 +311,14 @@ const StatisticsPage = () => {
   return (
     <div className="pb-20">
       <PageHeader title="STATISTICS" subtitle={L("버니즈 통계", "Bunnies Stats")} />
+
+      {/* Sport toggle (Football / Futsal) */}
+      <div className="px-4 mb-3 flex items-center gap-2">
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} />
+        <span className="text-[11px] text-muted-foreground">
+          {L(`${sportLabel(sport, false)} 기록만 집계`, `${sportLabel(sport, true)} records only`)}
+        </span>
+      </div>
 
       {/* Filter */}
       <div className="px-4 mb-4">
@@ -362,7 +383,7 @@ const StatisticsPage = () => {
 
             {/* 먹튀 칭호 */}
             {(() => {
-              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotesAll);
+              const crasher = getBiggestCrasher(memberPlayers, filteredMatches, filteredRosters, filteredGoalEvents, filteredQuarters, worstVotes);
               if (!crasher || crasher.crashPercent < 20) return null;
               return (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-red-500/30 bg-red-500/5 p-4">

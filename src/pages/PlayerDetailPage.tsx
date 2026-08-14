@@ -35,6 +35,8 @@ import { computeSeasonRatings } from "@/hooks/useSeasonRating";
 import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
+import SportToggle from "@/components/SportToggle";
+import { filterMatchesBySport, sportLabel, type SportKey } from "@/lib/sport";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
 
 // Concacaf country label → EN translation
@@ -242,7 +244,14 @@ const PlayerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const playerId = Number(id);
-  const { players, matches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportKey>("futsal");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
+  const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
+  const sportCounts = useMemo(() => ({
+    futsal: filterMatchesBySport(allSportMatches, "futsal").length,
+    soccer: filterMatchesBySport(allSportMatches, "soccer").length,
+  }), [allSportMatches]);
   const fireMap = useOnFirePlayers(matches, rosters);
   const fireInfo = fireMap.get(playerId);
   const fireTier: FireTier = fireInfo?.tier || "none";
@@ -290,7 +299,10 @@ const PlayerDetailPage = () => {
       return (data ?? []) as MatchQuarter[];
     },
   });
-  const allQuarters = allQuartersRaw ?? [];
+  const allQuarters = useMemo(
+    () => (allQuartersRaw ?? []).filter(q => sportMatchIds.has(q.match_id)),
+    [allQuartersRaw, sportMatchIds]
+  );
 
   const years = useMemo(() => getAvailableYears(matches), [matches]);
 
@@ -592,6 +604,17 @@ const PlayerDetailPage = () => {
         ppq={courtStats ? courtStats.ppq : null}
         goalsPerGame={goalsPerGame}
       />
+
+      {/* Sport split (Football / Futsal) */}
+      <div className="mx-4 mt-4 flex flex-wrap items-center gap-2">
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} />
+        <span className="text-[11px] text-muted-foreground">
+          {L(
+            `${sportLabel(sport, false)} 기록 ${sport === "soccer" ? sportCounts.soccer : sportCounts.futsal}경기`,
+            `${sportCounts[sport]} ${sportLabel(sport, true).toLowerCase()} matches on record`
+          )}
+        </span>
+      </div>
 
       {/* 4-Tab System */}
       <div className="mx-4 mt-4">
