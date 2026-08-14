@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Save, RotateCcw, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, SlidersHorizontal, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlayerName } from "@/hooks/useFutsalData";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
+import { DEFAULT_FORMAT, formatLabel, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
 
 interface Props {
@@ -18,6 +17,7 @@ interface Props {
   courtMargins?: Map<number, { margin: number; isSuperSub?: boolean }> | null;
   isAdmin?: boolean;
   matchId?: number;
+  formatCode?: string | null;
 }
 
 const ROLE_ORDER = ["GK", "DF", "MF", "FW"] as const;
@@ -33,16 +33,35 @@ const isCustomLineup = (l: any) => !!l && typeof l === "object" && !Array.isArra
 const idsOf = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
 const benchOf = (lineup: any) => idsOf(lineup?.Bench ?? lineup?.bench);
 
-function positionsOf(lineup: any) {
-  const out: { playerId: number; x: number; y: number; role: string }[] = [];
+function positionsOf(lineup: any, formatCode?: string | null) {
+  const out: { playerId: number; x: number; y: number; role: string; slot?: string }[] = [];
   if (!lineup) return out;
+  const slotMap = slotMapOf(lineup);
+  const mapped = new Set<number>();
+  Object.entries(slotMap).forEach(([pid, code]) => {
+    const sl = getSlot(code, formatCode);
+    const id = Number(pid);
+    if (!sl || Number.isNaN(id)) return;
+    out.push({ playerId: id, x: sl.x, y: sl.y, role: sl.role, slot: code });
+    mapped.add(id);
+  });
   ROLE_ORDER.forEach(role => {
-    const ids = idsOf(lineup[role] ?? lineup[role.toLowerCase()]);
+    const ids = idsOf(lineup[role] ?? lineup[role.toLowerCase()]).filter(id => !mapped.has(id));
     ids.forEach((id, i) => {
       const count = ids.length;
       const x = count === 1 ? 50 : role === "GK" ? 50 : 18 + (64 / (count - 1)) * i;
       out.push({ playerId: id, x, y: ROLE_Y[role], role });
     });
+  });
+  // spread players sharing the exact same slot coordinates
+  const groups = new Map<string, typeof out>();
+  out.forEach(p => {
+    const k = `${p.x}:${p.y}`;
+    groups.set(k, [...(groups.get(k) ?? []), p]);
+  });
+  groups.forEach(g => {
+    if (g.length < 2) return;
+    g.forEach((p, i) => { p.x = clamp(p.x + (i - (g.length - 1) / 2) * 16, 8, 92); });
   });
   return out;
 }
