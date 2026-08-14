@@ -97,6 +97,9 @@ const PlayersPage = () => {
       <AvatarModal imageUrl={avatarPlayer?.url || null} name={avatarPlayer?.name || ""} open={!!avatarPlayer} onClose={() => setAvatarPlayer(null)} />
       <PageHeader title="PLAYERS" subtitle={`총 ${activePlayers.length}명`} />
       <div className="px-4 pb-3">
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full justify-between" />
+      </div>
+      <div className="px-4 pb-3">
         <button
           onClick={() => setConcacafMode(v => !v)}
           className={`w-full rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] ${
@@ -131,6 +134,9 @@ const PlayersPage = () => {
           const condition = getPlayerCondition(player.id, matches, rosters, goalEvents, allQuarters);
           const inactive = isPlayerInactive(player.id, matches, rosters);
           const isConcacaf = concacafSet.has(player.id);
+          const myMatchIds = new Set(rosters.filter(r => r.player_id === player.id).map(r => r.match_id));
+          const soccerApps = allSportMatches.filter(m => myMatchIds.has(m.id) && sportOfMatch(m) === "soccer").length;
+          const futsalApps = allSportMatches.filter(m => myMatchIds.has(m.id) && sportOfMatch(m) === "futsal").length;
           return (
             <motion.div key={player.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
               onClick={() => navigate(`/player/${player.id}`)}
@@ -175,6 +181,18 @@ const PlayersPage = () => {
                   <div className="text-center"><div className="font-display text-lg text-pink-soft">{stats.assists}</div><div className="text-muted-foreground">도움</div></div>
                   <div className="text-center"><div className="font-display text-lg text-foreground">{stats.appearances}</div><div className="text-muted-foreground">출전</div></div>
                   <div className="text-center"><div className="font-display text-lg text-primary">{stats.winRate}%</div><div className="text-muted-foreground">승률</div></div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                  {sport === "all" ? (
+                    <>
+                      <span className="rounded-full border border-border/70 bg-secondary/40 px-1.5 py-px text-[9px] font-bold text-foreground/80">⚽ {soccerApps}</span>
+                      <span className="rounded-full border border-border/70 bg-secondary/40 px-1.5 py-px text-[9px] font-bold text-foreground/80">🥅 {futsalApps}</span>
+                    </>
+                  ) : (
+                    <span className="rounded-full border border-border/70 bg-secondary/40 px-1.5 py-px text-[9px] font-bold text-foreground/80">
+                      {sportEmoji(sport)} {sportLabel(sport, isEn)}
+                    </span>
+                  )}
                 </div>
               </div>
             </motion.div>
