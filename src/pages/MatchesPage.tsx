@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Users, PenSquare, Calendar } from "lucide-react";
@@ -9,13 +9,18 @@ import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
 import { useTranslation } from "react-i18next";
 import { useTeamName } from "@/lib/displayName";
+import SportToggle from "@/components/SportToggle";
+import { filterMatchesBySport, sportOfMatch, sportLabel, sportEmoji, type SportFilter } from "@/lib/sport";
 
 const MatchesPage = () => {
   const navigate = useNavigate();
-  const { matches, venues, teams, results, isLoading } = useAllFutsalData();
+  const { matches: allSportMatches, venues, teams, results, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportFilter>("all");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
   const { isAdmin } = useAuth();
   const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
   const teamName = useTeamName();
 
   useEffect(() => {
@@ -74,6 +79,9 @@ const MatchesPage = () => {
           ) : null
         }
       />
+      <div className="px-4 pb-3">
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full justify-between" />
+      </div>
       <div className="space-y-3 px-4">
         {sortedMatches.map((match, i) => {
           const venue = venues.find((v) => v.id === match.venue_id);
@@ -114,6 +122,10 @@ const MatchesPage = () => {
                     <span>{match.date}</span>
                     <span className="opacity-40">•</span>
                     <span className="truncate">{venue?.name}{match.sub_venue ? ` ${match.sub_venue}` : ""}</span>
+                    <span className="opacity-40">•</span>
+                    <span className="rounded-full border border-border/70 bg-secondary/40 px-1.5 py-px text-[9px] font-bold tracking-normal text-foreground/80">
+                      {sportEmoji(sportOfMatch(match))} {sportLabel(sportOfMatch(match), isEn)}
+                    </span>
                     {match.is_custom && (
                       <>
                         <span className="opacity-40">•</span>

@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { MatchQuarter } from "@/hooks/useFutsalData";
 import { useDisplayName } from "@/lib/displayName";
 import { getConcacafMode } from "@/pages/PlayerDetailPage";
+import SportToggle from "@/components/SportToggle";
+import { filterMatchesBySport, sportOfMatch, sportLabel, sportEmoji, type SportFilter } from "@/lib/sport";
+import { useTranslation } from "react-i18next";
 
 function getCardClass(tier: FireTier) {
   if (tier === "none") return "border-border bg-card hover:border-primary/40 hover:box-glow";
@@ -30,7 +33,11 @@ function getFireEmoji(tier: FireTier) {
 
 const PlayersPage = () => {
   const navigate = useNavigate();
-  const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { players, matches: allSportMatches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const { i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
+  const [sport, setSport] = useState<SportFilter>("all");
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
   const fireMap = useOnFirePlayers(matches, rosters);
   const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
   const [concacafMode, setConcacafMode] = useState(false);
