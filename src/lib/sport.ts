@@ -12,10 +12,16 @@ const FORMAT_SPORT: Record<string, SportKey> = MATCH_FORMATS.reduce((acc, f) => 
 export function sportOfMatch(m: { match_format?: string | null; match_type?: string | null } | null | undefined): SportKey {
   if (!m) return "futsal";
   const fmt = m.match_format ?? undefined;
-  if (fmt && FORMAT_SPORT[fmt]) return FORMAT_SPORT[fmt];
   const t = (m.match_type ?? "").toLowerCase();
-  if (t.includes("축구") || t.includes("soccer") || t.includes("football")) return "soccer";
-  if (t.includes("풋살") || t.includes("futsal")) return "futsal";
+  const fromType: SportKey | null =
+    t.includes("축구") || t.includes("soccer") || t.includes("football")
+      ? "soccer"
+      : t.includes("풋살") || t.includes("futsal")
+        ? "futsal"
+        : null;
+  // Explicit match_type wins when it contradicts a (possibly stale) format code.
+  if (fromType) return fromType;
+  if (fmt && FORMAT_SPORT[fmt]) return FORMAT_SPORT[fmt];
   return FORMAT_SPORT[DEFAULT_FORMAT] ?? "futsal";
 }
 

@@ -1,0 +1,2 @@
+UPDATE public.matches SET match_format = 's8' WHERE match_type = '8:8 축구' AND match_format = 'futsal5';
+UPDATE public.matches SET match_format = 's11' WHERE match_type = '11:11 축구' AND match_format = 'futsal5';
