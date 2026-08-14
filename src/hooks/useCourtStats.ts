@@ -1,4 +1,5 @@
 import type { Player, Match, Team, Result, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
+import { slotOfPlayer } from "@/lib/positions";
 
 // ─── Court Margin (+/-) for a player across quarters ───
 export interface PlayerCourtMargin {
@@ -168,13 +169,14 @@ export interface PositionDistribution {
   MF: number;
   FW: number;
   total: number;
+  slots: Record<string, number>;
 }
 
 export function getPlayerPositionDistribution(
   playerId: number,
   allQuarters: MatchQuarter[]
 ): PositionDistribution {
-  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0 };
+  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0, slots: {} };
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const pos = getPlayerPosition(q.lineup, playerId);
@@ -184,6 +186,9 @@ export function getPlayerPositionDistribution(
       else if (pos === "DF") dist.DF++;
       else if (pos === "MF") dist.MF++;
       else if (pos === "FW") dist.FW++;
+      const l: any = q.lineup;
+      const code = slotOfPlayer(l, playerId) ?? slotOfPlayer(l?.teamA, playerId) ?? slotOfPlayer(l?.teamB, playerId);
+      if (code) dist.slots[code] = (dist.slots[code] || 0) + 1;
     }
   });
   return dist;

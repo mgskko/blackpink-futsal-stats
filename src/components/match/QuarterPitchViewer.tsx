@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Save, RotateCcw, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, SlidersHorizontal, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlayerName } from "@/hooks/useFutsalData";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
+import { DEFAULT_FORMAT, formatLabel, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
 
 interface Props {
@@ -18,6 +17,7 @@ interface Props {
   courtMargins?: Map<number, { margin: number; isSuperSub?: boolean }> | null;
   isAdmin?: boolean;
   matchId?: number;
+  formatCode?: string | null;
 }
 
 const ROLE_ORDER = ["GK", "DF", "MF", "FW"] as const;
@@ -33,27 +33,44 @@ const isCustomLineup = (l: any) => !!l && typeof l === "object" && !Array.isArra
 const idsOf = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
 const benchOf = (lineup: any) => idsOf(lineup?.Bench ?? lineup?.bench);
 
-function positionsOf(lineup: any) {
-  const out: { playerId: number; x: number; y: number; role: string }[] = [];
+function positionsOf(lineup: any, formatCode?: string | null) {
+  const out: { playerId: number; x: number; y: number; role: string; slot?: string }[] = [];
   if (!lineup) return out;
+  const slotMap = slotMapOf(lineup);
+  const mapped = new Set<number>();
+  Object.entries(slotMap).forEach(([pid, code]) => {
+    const sl = getSlot(code, formatCode);
+    const id = Number(pid);
+    if (!sl || Number.isNaN(id)) return;
+    out.push({ playerId: id, x: sl.x, y: sl.y, role: sl.role, slot: code });
+    mapped.add(id);
+  });
   ROLE_ORDER.forEach(role => {
-    const ids = idsOf(lineup[role] ?? lineup[role.toLowerCase()]);
+    const ids = idsOf(lineup[role] ?? lineup[role.toLowerCase()]).filter(id => !mapped.has(id));
     ids.forEach((id, i) => {
       const count = ids.length;
       const x = count === 1 ? 50 : role === "GK" ? 50 : 18 + (64 / (count - 1)) * i;
       out.push({ playerId: id, x, y: ROLE_Y[role], role });
     });
   });
+  // spread players sharing the exact same slot coordinates
+  const groups = new Map<string, typeof out>();
+  out.forEach(p => {
+    const k = `${p.x}:${p.y}`;
+    groups.set(k, [...(groups.get(k) ?? []), p]);
+  });
+  groups.forEach(g => {
+    if (g.length < 2) return;
+    g.forEach((p, i) => { p.x = clamp(p.x + (i - (g.length - 1) / 2) * 16, 8, 92); });
+  });
   return out;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId }: Props) {
+export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId, formatCode }: Props) {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
-  const { toast } = useToast();
-  const qc = useQueryClient();
   const lang = i18n.language ?? "ko";
   const isEn = lang.startsWith("en");
   const L = (ko: string, en: string) => (isEn ? en : ko);
@@ -76,22 +93,12 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     [quarters]
   );
 
-  const pitchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  // key: `${unit}:${playerId}` -> {x,y}
-  const [overrides, setOverrides] = useState<Record<string, { x: number; y: number }>>({});
-  const dirty = Object.keys(overrides).length > 0;
 
   const safeIdx = Math.min(idx, Math.max(0, list.length - 1));
   const current = list[safeIdx];
-
-  useEffect(() => {
-    setOverrides({});
-    setEditing(false);
-  }, [safeIdx]);
 
   if (list.length === 0) return null;
   const custom = isCustomLineup(current.lineup);
@@ -134,36 +141,13 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const ratingTone = (r: number) =>
     r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
 
-  const save = async () => {
-    if (!dirty || !current) return;
-    setSaving(true);
-    const base: any = JSON.parse(JSON.stringify(current.lineup ?? {}));
-    Object.entries(overrides).forEach(([key, val]) => {
-      const [unitKey, pid] = key.split(":");
-      const unit = unitKey === "A" ? (base.teamA ??= {}) : unitKey === "B" ? (base.teamB ??= {}) : base;
-      unit._pos = { ...(unit._pos ?? {}), [pid]: { x: Math.round(val.x * 10) / 10, y: Math.round(val.y * 10) / 10 } };
-    });
-    const { error } = await (supabase as any).from("match_quarters").update({ lineup: base }).eq("id", current.id);
-    setSaving(false);
-    if (error) {
-      toast({ title: L("저장 실패", "Save failed"), description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: L("포메이션 저장 완료", "Formation saved") });
-    setOverrides({});
-    setEditing(false);
-    if (matchId) qc.invalidateQueries({ queryKey: ["match_quarters", matchId] });
-    else qc.invalidateQueries({ queryKey: ["match_quarters"] });
-  };
-
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
-    const positions = positionsOf(lineup);
+    const positions = positionsOf(lineup, formatCode);
     const bench = benchOf(lineup);
     return (
       <div className="flex-1 min-w-0">
         {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
         <div
-          ref={el => { pitchRefs.current[unitKey] = el; }}
           className="relative w-full overflow-hidden rounded-2xl border border-green-900/60 shadow-inner"
           style={{
             aspectRatio: "3/4",
@@ -185,35 +169,19 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
           {positions.map((p, i) => {
             const img = avatar(p.playerId);
             const qs = quarterStats(p.playerId);
-            const key = `${unitKey}:${p.playerId}`;
-            const stored = storedPos(lineup, p.playerId);
-            const pos = overrides[key] ?? stored ?? { x: p.x, y: p.y };
+            const pos = { x: p.x, y: p.y };
             return (
               <motion.div
                 key={`${p.playerId}-${p.role}-${i}`}
-                drag={editing}
-                dragMomentum={false}
-                dragElastic={0}
-                onDragEnd={(_, info) => {
-                  const rect = pitchRefs.current[unitKey]?.getBoundingClientRect();
-                  if (!rect) return;
-                  setOverrides(o => ({
-                    ...o,
-                    [key]: {
-                      x: clamp(pos.x + (info.offset.x / rect.width) * 100, 6, 94),
-                      y: clamp(pos.y + (info.offset.y / rect.height) * 100, 6, 94),
-                    },
-                  }));
-                }}
-                className={`absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 ${editing ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                 style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               >
                 <button
-                  onClick={() => !editing && setSel(p.playerId)}
+                  onClick={() => setSel(p.playerId)}
                   className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
                 >
                   <div className="relative">
-                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)] ${editing ? "ring-dashed" : ""}`}>
+                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}>
                       {img ? (
                         <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
                       ) : (
@@ -232,6 +200,11 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                   <span className="mt-1 max-w-[84px] truncate rounded bg-black/55 px-1.5 py-px text-[11px] font-semibold text-white drop-shadow">
                     {pn(p.playerId)}
                   </span>
+                  {p.slot && (
+                    <span className="rounded bg-primary/80 px-1.5 py-px text-[9px] font-bold text-primary-foreground">
+                      {slotLabel(p.slot, isEn, formatCode)}
+                    </span>
+                  )}
                   {(qs.goals > 0 || qs.assists > 0) && (
                     <span className="flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-px text-[9px] font-bold text-white">
                       {qs.goals > 0 && <span>⚽{qs.goals}</span>}
@@ -262,52 +235,23 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
+        <div>
+          <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
+          <p className="text-[10px] text-muted-foreground">{formatLabel(formatCode ?? DEFAULT_FORMAT, isEn)}</p>
+        </div>
         {isAdmin && (
-          <div className="flex items-center gap-1.5">
-            {editing ? (
-              <>
-                <button
-                  onClick={() => setOverrides({})}
-                  disabled={!dirty}
-                  title={L("변경 초기화", "Reset changes")}
-                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground disabled:opacity-40"
-                >
-                  <RotateCcw size={12} /> {L("초기화", "Reset")}
-                </button>
-                <button
-                  onClick={() => { setOverrides({}); setEditing(false); }}
-                  title={L("편집 종료", "Exit editor")}
-                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
-                >
-                  <X size={12} /> {L("취소", "Cancel")}
-                </button>
-                <button
-                  onClick={save}
-                  disabled={!dirty || saving}
-                  title={L("포메이션 저장", "Save formation")}
-                  className="flex items-center gap-1 rounded-full gradient-pink px-3 py-1 text-[11px] font-bold text-primary-foreground disabled:opacity-40"
-                >
-                  <Save size={12} /> {saving ? L("저장 중...", "Saving...") : L("저장", "Save")}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditing(true)}
-                title={L("선수를 드래그해 포메이션을 조정합니다", "Drag players to adjust the formation")}
-                className="flex items-center gap-1 rounded-full border border-primary/50 px-3 py-1 text-[11px] font-bold text-primary"
-              >
-                <Pencil size={12} /> {L("포메이션 편집", "Edit formation")}
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setEditing(e => !e)}
+            className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold ${editing ? "border border-border text-muted-foreground" : "border border-primary/50 text-primary"}`}
+          >
+            {editing ? <X size={12} /> : <SlidersHorizontal size={12} />}
+            {editing ? L("닫기", "Close") : L("포지션 지정", "Positions")}
+          </button>
         )}
       </div>
 
-      {editing && (
-        <p className="mb-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
-          {L("선수를 드래그해 위치를 옮긴 뒤 저장을 누르세요. 이 쿼터에만 적용됩니다.", "Drag players to reposition them, then hit Save. Changes apply to this quarter only.")}
-        </p>
+      {isAdmin && editing && matchId != null && (
+        <AdminPositionPanel matchId={matchId} quarters={list} players={players} formatCode={formatCode ?? DEFAULT_FORMAT} />
       )}
 
       {/* Quarter tabs */}
@@ -467,6 +411,8 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                       const units = isCustomLineup(l) ? [l.teamA, l.teamB] : [l];
                       for (const u of units) {
                         if (!u) continue;
+                        const code = slotMapOf(u)[String(sel)];
+                        if (code) return slotLabel(code, isEn, formatCode);
                         for (const r of ROLE_ORDER) if (idsOf(u[r] ?? u[r.toLowerCase()]).includes(sel)) return roleLabel(r);
                         if (benchOf(u).includes(sel)) return roleLabel("Bench");
                       }

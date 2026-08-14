@@ -429,6 +429,7 @@ const MatchDetailPage = () => {
             courtMargins={courtMargins as any}
             isAdmin={isAdmin}
             matchId={matchId}
+            formatCode={match?.match_format}
           />
         </div>
       )}

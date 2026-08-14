@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
+import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
 import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
 
@@ -33,6 +34,7 @@ const AdminMatchEdit = () => {
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "match" | "goal" | "roster"; id: number } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editFormat, setEditFormat] = useState<string>(DEFAULT_FORMAT);
 
   // Goal editing states
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
@@ -126,6 +128,7 @@ const AdminMatchEdit = () => {
     setEditYoutubeLink(m?.youtube_link || "");
     setEditVenueId(m?.venue_id ? String(m.venue_id) : "");
     setEditSubVenue((m as any)?.sub_venue || "");
+    setEditFormat((m as any)?.match_format || DEFAULT_FORMAT);
     setEditingVenue(false);
   };
 
@@ -385,6 +388,28 @@ const AdminMatchEdit = () => {
                 {venues.find(v => String(v.id) === editVenueId)?.name ?? "미정"}{editSubVenue ? ` ${editSubVenue}` : ""}
               </p>
             )}
+          </div>
+
+          {/* Match Format */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="mb-2 text-sm font-bold text-primary">경기 포맷</h3>
+            <Select
+              value={editFormat}
+              onValueChange={async (v) => {
+                setEditFormat(v);
+                try {
+                  await supabase.from("matches").update({ match_format: v } as any).eq("id", matchId!);
+                  invalidateAll();
+                  toast({ title: "경기 포맷이 변경되었습니다 ✅" });
+                } catch (err: any) { toast({ title: "오류", description: err.message, variant: "destructive" }); }
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="포맷 선택" /></SelectTrigger>
+              <SelectContent>
+                {MATCH_FORMATS.map(f => <SelectItem key={f.code} value={f.code}>{f.ko}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-[11px] text-muted-foreground">포맷에 따라 포지션 슬롯(피치 배치)이 달라집니다.</p>
           </div>
 
           {/* YouTube Link Edit */}
