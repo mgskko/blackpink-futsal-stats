@@ -406,7 +406,7 @@ const AdminMatchEdit = () => {
             >
               <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="포맷 선택" /></SelectTrigger>
               <SelectContent>
-                {MATCH_FORMATS.map(f => <SelectItem key={f.code} value={f.code}>{f.labelKo}</SelectItem>)}
+                {MATCH_FORMATS.map(f => <SelectItem key={f.code} value={f.code}>{f.ko}</SelectItem>)}
               </SelectContent>
             </Select>
             <p className="mt-2 text-[11px] text-muted-foreground">포맷에 따라 포지션 슬롯(피치 배치)이 달라집니다.</p>
