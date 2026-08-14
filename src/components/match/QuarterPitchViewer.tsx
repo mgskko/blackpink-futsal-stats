@@ -230,52 +230,23 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
+        <div>
+          <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
+          <p className="text-[10px] text-muted-foreground">{formatLabel(formatCode ?? DEFAULT_FORMAT, isEn)}</p>
+        </div>
         {isAdmin && (
-          <div className="flex items-center gap-1.5">
-            {editing ? (
-              <>
-                <button
-                  onClick={() => setOverrides({})}
-                  disabled={!dirty}
-                  title={L("변경 초기화", "Reset changes")}
-                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground disabled:opacity-40"
-                >
-                  <RotateCcw size={12} /> {L("초기화", "Reset")}
-                </button>
-                <button
-                  onClick={() => { setOverrides({}); setEditing(false); }}
-                  title={L("편집 종료", "Exit editor")}
-                  className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
-                >
-                  <X size={12} /> {L("취소", "Cancel")}
-                </button>
-                <button
-                  onClick={save}
-                  disabled={!dirty || saving}
-                  title={L("포메이션 저장", "Save formation")}
-                  className="flex items-center gap-1 rounded-full gradient-pink px-3 py-1 text-[11px] font-bold text-primary-foreground disabled:opacity-40"
-                >
-                  <Save size={12} /> {saving ? L("저장 중...", "Saving...") : L("저장", "Save")}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditing(true)}
-                title={L("선수를 드래그해 포메이션을 조정합니다", "Drag players to adjust the formation")}
-                className="flex items-center gap-1 rounded-full border border-primary/50 px-3 py-1 text-[11px] font-bold text-primary"
-              >
-                <Pencil size={12} /> {L("포메이션 편집", "Edit formation")}
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setEditing(e => !e)}
+            className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold ${editing ? "border border-border text-muted-foreground" : "border border-primary/50 text-primary"}`}
+          >
+            {editing ? <X size={12} /> : <SlidersHorizontal size={12} />}
+            {editing ? L("닫기", "Close") : L("포지션 지정", "Positions")}
+          </button>
         )}
       </div>
 
-      {editing && (
-        <p className="mb-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
-          {L("선수를 드래그해 위치를 옮긴 뒤 저장을 누르세요. 이 쿼터에만 적용됩니다.", "Drag players to reposition them, then hit Save. Changes apply to this quarter only.")}
-        </p>
+      {isAdmin && editing && matchId != null && (
+        <AdminPositionPanel matchId={matchId} quarters={list} players={players} formatCode={formatCode ?? DEFAULT_FORMAT} />
       )}
 
       {/* Quarter tabs */}
