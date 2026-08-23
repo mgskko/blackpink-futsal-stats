@@ -53,6 +53,43 @@ export const MATCH_FORMATS: MatchFormat[] = [
     ],
   },
   {
+    code: "futsal7",
+    ko: "풋살 7대7",
+    en: "Futsal 7v7",
+    sport: "futsal",
+    slots: [
+      s("GK", "골레이로", "Goleiro", "GK", 50, 88),
+      s("FIXO", "픽소", "Fixo", "DF", 50, 72),
+      s("L-FIXO", "좌측 픽소", "Left Fixo", "DF", 26, 72),
+      s("R-FIXO", "우측 픽소", "Right Fixo", "DF", 74, 72),
+      s("ALA", "중앙 아라", "Central Ala", "MF", 50, 48),
+      s("L-ALA", "좌측 아라", "Left Ala", "MF", 18, 46),
+      s("R-ALA", "우측 아라", "Right Ala", "MF", 82, 46),
+      s("PIVO", "피보", "Pivo", "FW", 50, 20),
+      s("L-PIVO", "좌측 피보", "Left Pivo", "FW", 30, 22),
+      s("R-PIVO", "우측 피보", "Right Pivo", "FW", 70, 22),
+    ],
+  },
+  {
+    code: "futsal8",
+    ko: "풋살 8대8",
+    en: "Futsal 8v8",
+    sport: "futsal",
+    slots: [
+      s("GK", "골레이로", "Goleiro", "GK", 50, 90),
+      s("FIXO", "픽소", "Fixo", "DF", 50, 74),
+      s("L-FIXO", "좌측 픽소", "Left Fixo", "DF", 24, 74),
+      s("R-FIXO", "우측 픽소", "Right Fixo", "DF", 76, 74),
+      s("ALA", "중앙 아라", "Central Ala", "MF", 50, 50),
+      s("L-ALA", "좌측 아라", "Left Ala", "MF", 16, 48),
+      s("R-ALA", "우측 아라", "Right Ala", "MF", 84, 48),
+      s("PIVO", "피보", "Pivo", "FW", 50, 18),
+      s("L-PIVO", "좌측 피보", "Left Pivo", "FW", 28, 22),
+      s("R-PIVO", "우측 피보", "Right Pivo", "FW", 72, 22),
+    ],
+  },
+
+  {
     code: "s7",
     ko: "축구 7대7",
     en: "Soccer 7v7",
@@ -184,3 +221,26 @@ export const slotMapOf = (unit: any): Record<string, string> =>
 
 export const slotOfPlayer = (unit: any, playerId: number): string | null =>
   slotMapOf(unit)[String(playerId)] ?? null;
+
+/** Special "utility" tag: no fixed position, fills whatever slot is left. */
+export const UTIL_CODE = "UTIL";
+export const UTIL_LABEL = { ko: "땜빵 (전 포지션)", en: "Utility (any position)" };
+
+/** Every selectable position code for admin preference tagging (dedup across formats). */
+export const PREF_POSITION_OPTIONS: { code: string; ko: string; en: string }[] = [
+  { code: UTIL_CODE, ko: UTIL_LABEL.ko, en: UTIL_LABEL.en },
+  ...Object.values(ALL_SLOTS).map(sl => ({ code: sl.code, ko: sl.ko, en: sl.en })),
+];
+
+export const prefLabel = (code: string, isEn: boolean) => {
+  if (code === UTIL_CODE) return isEn ? UTIL_LABEL.en : UTIL_LABEL.ko;
+  const sl = ALL_SLOTS[code];
+  return sl ? `${code} · ${isEn ? sl.en : sl.ko}` : code;
+};
+
+/** Age from birth year, based on the current calendar year. */
+export const ageFromBirthYear = (birthYear?: number | null): number | null => {
+  if (!birthYear || !Number.isFinite(birthYear)) return null;
+  const age = new Date().getFullYear() - Number(birthYear) + 1; // Korean age convention
+  return age > 0 && age < 120 ? age : null;
+};

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Camera, Save, User, Plus, Trash2, X } from "lucide-react";
+import { PREF_POSITION_OPTIONS, UTIL_CODE, ageFromBirthYear, prefLabel } from "@/lib/positions";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
@@ -27,6 +28,8 @@ const AdminPlayerManage = () => {
   const [savingNameEnId, setSavingNameEnId] = useState<number | null>(null);
   const [editingAges, setEditingAges] = useState<Record<number, string>>({});
   const [savingAgeId, setSavingAgeId] = useState<number | null>(null);
+  const [editingProfile, setEditingProfile] = useState<Record<number, { pref: string; sub: string; note: string }>>({});
+  const [savingProfileId, setSavingProfileId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
@@ -125,23 +128,49 @@ const AdminPlayerManage = () => {
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
+  // Stores the birth year; the displayed age is derived automatically.
   const saveAge = async (playerId: number) => {
     const val = editingAges[playerId];
     if (val === undefined) return;
     setSavingAgeId(playerId);
     const parsed = val.trim() === "" ? null : parseInt(val, 10);
-    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1 || parsed > 100)) {
+    const thisYear = new Date().getFullYear();
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1930 || parsed > thisYear)) {
       setSavingAgeId(null);
-      toast.error("나이는 1~100 사이 숫자여야 합니다");
+      toast.error(`출생년도는 1930~${thisYear} 사이여야 합니다`);
       return;
     }
-    const { error } = await supabase.from("players").update({ age: parsed } as any).eq("id", playerId);
+    const { error } = await supabase
+      .from("players")
+      .update({ birth_year: parsed, age: ageFromBirthYear(parsed) } as any)
+      .eq("id", playerId);
     setSavingAgeId(null);
-    if (error) { toast.error("나이 저장 실패"); return; }
-    toast.success("나이 저장 완료");
+    if (error) { toast.error("출생년도 저장 실패: " + error.message); return; }
+    toast.success("출생년도 저장 완료");
     setEditingAges(prev => { const n = { ...prev }; delete n[playerId]; return n; });
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
+
+  const saveProfileInfo = async (playerId: number) => {
+    const val = editingProfile[playerId];
+    if (!val) return;
+    setSavingProfileId(playerId);
+    const clean = (s: string) => (s.trim() === "" ? null : s.trim());
+    const { error } = await supabase
+      .from("players")
+      .update({
+        pref_positions: clean(val.pref),
+        sub_positions: clean(val.sub),
+        note: clean(val.note),
+      } as any)
+      .eq("id", playerId);
+    setSavingProfileId(null);
+    if (error) { toast.error("저장 실패: " + error.message); return; }
+    toast.success("선호 포지션/특이사항 저장 완료");
+    setEditingProfile(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
 
   const handleImageUpload = async (playerId: number, file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("이미지 파일만 업로드 가능합니다"); return; }
@@ -198,8 +227,17 @@ const AdminPlayerManage = () => {
     const hasChanged = editingNumbers[player.id] !== undefined;
     const currentNameEn = editingNamesEn[player.id] ?? ((player as any).name_en ?? "");
     const hasNameEnChanged = editingNamesEn[player.id] !== undefined;
-    const currentAge = editingAges[player.id] ?? ((player as any).age?.toString() ?? "");
+    const currentAge = editingAges[player.id] ?? ((player as any).birth_year?.toString() ?? "");
     const hasAgeChanged = editingAges[player.id] !== undefined;
+    const derivedAge = ageFromBirthYear(parseInt(currentAge, 10));
+    const prof = editingProfile[player.id] ?? {
+      pref: (player as any).pref_positions ?? "",
+      sub: (player as any).sub_positions ?? "",
+      note: (player as any).note ?? "",
+    };
+    const hasProfChanged = editingProfile[player.id] !== undefined;
+    const setProf = (pid: number, patch: Partial<{ pref: string; sub: string; note: string }>) =>
+      setEditingProfile(prev => ({ ...prev, [pid]: { ...prof, ...(prev[pid] ?? {}), ...patch } }));
 
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
@@ -299,16 +337,19 @@ const AdminPlayerManage = () => {
             </Button>
           )}
         </div>
-        {/* Age editor */}
+        {/* Birth year editor (age auto-calculated) */}
         <div className="flex items-center gap-2 pl-15">
-          <span className="text-[10px] font-bold text-muted-foreground w-10">나이</span>
+          <span className="text-[10px] font-bold text-muted-foreground w-10">생년</span>
           <Input
             type="number"
             value={currentAge}
             onChange={(e) => setEditingAges(prev => ({ ...prev, [player.id]: e.target.value }))}
-            placeholder="나이 (예: 34)"
+            placeholder="출생년도 (예: 1999)"
             className="h-8 flex-1 text-sm bg-secondary border-border"
           />
+          <span className="w-14 shrink-0 text-[11px] font-bold text-primary">
+            {derivedAge ? `${derivedAge}살` : "-"}
+          </span>
           {hasAgeChanged && (
             <Button
               size="sm"
@@ -321,6 +362,64 @@ const AdminPlayerManage = () => {
             </Button>
           )}
         </div>
+
+        {/* Preferred positions & note */}
+        <div className="space-y-1.5 rounded-lg border border-border/60 bg-secondary/30 p-2">
+          <div className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-[10px] font-bold text-muted-foreground">주 포지션</span>
+            <Input
+              value={prof.pref}
+              onChange={(e) => setProf(player.id, { pref: e.target.value })}
+              placeholder="예: LW, ST 또는 땜빵"
+              className="h-8 flex-1 text-sm bg-card border-border"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-[10px] font-bold text-muted-foreground">서브</span>
+            <Input
+              value={prof.sub}
+              onChange={(e) => setProf(player.id, { sub: e.target.value })}
+              placeholder="예: CM, DM"
+              className="h-8 flex-1 text-sm bg-card border-border"
+            />
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="w-14 shrink-0 pt-2 text-[10px] font-bold text-muted-foreground">특이사항</span>
+            <textarea
+              value={prof.note}
+              onChange={(e) => setProf(player.id, { note: e.target.value })}
+              placeholder="예: 체력 이슈로 ST로만 2회 출전 가능 (연속 쿼터 X)"
+              rows={2}
+              className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {[UTIL_CODE, "GK", "FIXO", "PIVO", "L-ALA", "R-ALA", "ST", "LW", "RW", "CM", "DM", "CB"].map(code => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setProf(player.id, {
+                  pref: prof.pref.trim() === "" ? code : `${prof.pref}, ${code}`,
+                })}
+                className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-primary hover:text-primary"
+                title={prefLabel(code, false)}
+              >
+                {code === UTIL_CODE ? "땜빵" : code}
+              </button>
+            ))}
+          </div>
+          {hasProfChanged && (
+            <Button
+              size="sm"
+              className="h-7 w-full gap-1 text-[11px]"
+              onClick={() => saveProfileInfo(player.id)}
+              disabled={savingProfileId === player.id}
+            >
+              <Save size={12} /> 선호 포지션/특이사항 저장
+            </Button>
+          )}
+        </div>
+
       </div>
     );
   };
@@ -352,14 +451,14 @@ const AdminPlayerManage = () => {
       <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
         <div className="space-y-2">
-          {activePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
+          {activePlayers.map(p => <div key={p.id}>{PlayerRow({ player: p })}</div>)}
         </div>
       </div>
       {inactivePlayers.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-bold text-muted-foreground">비활동 선수 ({inactivePlayers.length}명)</h3>
           <div className="space-y-2">
-            {inactivePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
+            {inactivePlayers.map(p => <div key={p.id}>{PlayerRow({ player: p })}</div>)}
           </div>
         </div>
       )}
