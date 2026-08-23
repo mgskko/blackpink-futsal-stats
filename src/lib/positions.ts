@@ -221,3 +221,26 @@ export const slotMapOf = (unit: any): Record<string, string> =>
 
 export const slotOfPlayer = (unit: any, playerId: number): string | null =>
   slotMapOf(unit)[String(playerId)] ?? null;
+
+/** Special "utility" tag: no fixed position, fills whatever slot is left. */
+export const UTIL_CODE = "UTIL";
+export const UTIL_LABEL = { ko: "땜빵 (전 포지션)", en: "Utility (any position)" };
+
+/** Every selectable position code for admin preference tagging (dedup across formats). */
+export const PREF_POSITION_OPTIONS: { code: string; ko: string; en: string }[] = [
+  { code: UTIL_CODE, ko: UTIL_LABEL.ko, en: UTIL_LABEL.en },
+  ...Object.values(ALL_SLOTS).map(sl => ({ code: sl.code, ko: sl.ko, en: sl.en })),
+];
+
+export const prefLabel = (code: string, isEn: boolean) => {
+  if (code === UTIL_CODE) return isEn ? UTIL_LABEL.en : UTIL_LABEL.ko;
+  const sl = ALL_SLOTS[code];
+  return sl ? `${code} · ${isEn ? sl.en : sl.ko}` : code;
+};
+
+/** Age from birth year, based on the current calendar year. */
+export const ageFromBirthYear = (birthYear?: number | null): number | null => {
+  if (!birthYear || !Number.isFinite(birthYear)) return null;
+  const age = new Date().getFullYear() - Number(birthYear) + 1; // Korean age convention
+  return age > 0 && age < 120 ? age : null;
+};
