@@ -51,6 +51,7 @@ export const MATCH_FORMATS: MatchFormat[] = [
       s("L-PIVO", "좌측 피보", "Left Pivo", "FW", 32, 20),
       s("R-PIVO", "우측 피보", "Right Pivo", "FW", 68, 20),
     ],
+  },
   {
     code: "futsal7",
     ko: "풋살 7대7",
