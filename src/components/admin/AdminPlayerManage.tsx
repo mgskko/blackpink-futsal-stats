@@ -361,6 +361,18 @@ const AdminPlayerManage = () => {
             </Button>
           )}
         </div>
+        {/* Member status toggle */}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-secondary/30 px-2 py-1.5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold text-foreground">현재 정회원 (Active Member)</div>
+            <div className="text-[10px] text-muted-foreground">OFF = 비회원/탈퇴/용병 (회비 명단 제외)</div>
+          </div>
+          <Switch
+            checked={(player as any).is_member !== false}
+            disabled={savingMemberId === player.id}
+            onCheckedChange={(c) => toggleMember(player.id, c)}
+          />
+        </div>
         {/* Birth year editor (age auto-calculated) */}
         <div className="flex items-center gap-2 pl-15">
           <span className="text-[10px] font-bold text-muted-foreground w-10">생년</span>
