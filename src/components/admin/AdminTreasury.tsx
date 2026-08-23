@@ -2,12 +2,18 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
-import { useTreasuryEntries, useMonthlyDues, formatKRW, recentMonths } from "@/hooks/useTreasury";
+import {
+  useTreasuryEntries,
+  useMonthlyDues,
+  useClubSetting,
+  BALANCE_KEY,
+  formatKRW,
+} from "@/hooks/useTreasury";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Trash2, Plus, ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const STATUS_CYCLE = [
@@ -19,7 +25,7 @@ const STATUS_CYCLE = [
 
 const statusLabel = (status: string, amount: number, isEnglish: boolean) => {
   if (status === "exempt") return isEnglish ? "Exempt" : "예외";
-  if (status === "paid") return `${(amount / 10000).toFixed(0)}만`;
+  if (status === "paid") return isEnglish ? `${(amount / 1000).toFixed(0)}k` : `${(amount / 10000).toFixed(0)}만`;
   return isEnglish ? "Unpaid" : "미납";
 };
 
@@ -32,9 +38,51 @@ const AdminTreasury = () => {
 
   const { data: entries = [] } = useTreasuryEntries();
   const { data: dues = [] } = useMonthlyDues();
+  const { data: manualBalance } = useClubSetting(BALANCE_KEY);
 
-  const months = useMemo(() => recentMonths(6), []);
+  const now = new Date();
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [month, setMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
+  const selectedYm = `${year}-${month}`;
+  const years = useMemo(
+    () => Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 3 + i)),
+    []
+  );
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")),
+    []
+  );
+
+  const [balanceInput, setBalanceInput] = useState("");
+  const [savingBalance, setSavingBalance] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const saveBalance = async () => {
+    const raw = balanceInput.replace(/[^0-9-]/g, "");
+    if (!raw) {
+      toast({
+        title: isEnglish ? "Enter an amount" : "금액을 입력하세요",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingBalance(true);
+    const { error } = await supabase
+      .from("club_settings")
+      .upsert({ key: BALANCE_KEY, value: raw, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setSavingBalance(false);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    setBalanceInput("");
+    qc.invalidateQueries({ queryKey: ["club_settings", BALANCE_KEY] });
+    toast({ title: isEnglish ? "Balance updated" : "잔고가 반영되었습니다" });
+  };
+
+  const clearBalance = async () => {
+    const { error } = await supabase.from("club_settings").delete().eq("key", BALANCE_KEY);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    qc.invalidateQueries({ queryKey: ["club_settings", BALANCE_KEY] });
+    toast({ title: isEnglish ? "Reverted to auto balance" : "자동 계산 잔액으로 되돌렸습니다" });
+  };
 
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
@@ -116,6 +164,40 @@ const AdminTreasury = () => {
         </div>
       </div>
 
+      {/* Manual balance override */}
+      <div className="space-y-2 rounded-xl border border-primary/30 bg-card p-3">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+          <Wallet size={13} /> {isEnglish ? "Current bank balance" : "현재 통장 잔고"}
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {isEnglish
+            ? manualBalance
+              ? `Currently shown to members: ${formatKRW(Number(manualBalance))}`
+              : "Not set — members see the auto-calculated balance."
+            : manualBalance
+            ? `멤버에게 표시 중: ${formatKRW(Number(manualBalance))}`
+            : "미설정 — 멤버에게는 자동 계산 잔액이 표시됩니다."}
+        </p>
+        <div className="flex gap-2">
+          <Input
+            inputMode="numeric"
+            placeholder={isEnglish ? "e.g. 30651" : "예: 30651"}
+            value={balanceInput}
+            onChange={(e) => setBalanceInput(e.target.value)}
+            className="bg-background"
+          />
+          <Button onClick={saveBalance} disabled={savingBalance} className="shrink-0">
+            {isEnglish ? "Save" : "저장"}
+          </Button>
+        </div>
+        {manualBalance && (
+          <Button variant="outline" size="sm" onClick={clearBalance} className="w-full text-xs">
+            {isEnglish ? "Use auto-calculated balance" : "자동 계산 잔액으로 되돌리기"}
+          </Button>
+        )}
+      </div>
+
+
       {/* Entry form */}
       <div className="space-y-2 rounded-xl border border-border bg-card p-3">
         <p className="text-xs font-bold text-foreground">{isEnglish ? "Add ledger entry" : "입출금 내역 추가"}</p>
@@ -180,47 +262,62 @@ const AdminTreasury = () => {
         ))}
       </div>
 
-      {/* Dues matrix */}
+      {/* Dues by selected month */}
       <div className="space-y-2">
-        <p className="text-xs font-bold text-foreground">{isEnglish ? "Monthly dues (tap to change)" : "멤버별 월 회비 (탭하여 변경)"}</p>
+        <p className="text-xs font-bold text-foreground">
+          {isEnglish ? "Monthly dues (tap to change)" : "멤버별 월 회비 (탭하여 변경)"}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={year} onValueChange={setYear}>
+            <SelectTrigger className="bg-background text-xs">
+              <SelectValue placeholder={isEnglish ? "Year" : "연도"} />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={y}>
+                  {isEnglish ? y : `${y}년`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="bg-background text-xs">
+              <SelectValue placeholder={isEnglish ? "Month" : "월"} />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {isEnglish
+                    ? new Date(2000, Number(m) - 1, 1).toLocaleDateString("en-US", { month: "long" })
+                    : `${Number(m)}월`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <p className="text-[10px] text-muted-foreground">
           {isEnglish ? "Unpaid → 30,000 → 20,000 → Exempt" : "미납 → 3만원 → 2만원 → 예외(개인사정)"}
         </p>
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="sticky left-0 bg-card px-2 py-2 text-left text-[10px] text-muted-foreground">{isEnglish ? "Player" : "선수"}</th>
-                {months.map((m) => (
-                  <th key={m} className="px-1 py-2 text-center text-[10px] text-muted-foreground">{m.slice(5)}{isEnglish ? "" : "월"}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {activePlayers.map((p) => (
-                <tr key={p.id} className="border-b border-border/50 last:border-0">
-                  <td className="sticky left-0 bg-card px-2 py-1.5 text-left font-medium text-foreground whitespace-nowrap">{p.name}</td>
-                  {months.map((m) => {
-                    const cur = duesMap.get(`${p.id}|${m}`) ?? { status: "unpaid", amount: 0 };
-                    const tone =
-                      cur.status === "paid" ? "bg-primary/20 text-primary"
-                      : cur.status === "exempt" ? "bg-muted text-muted-foreground"
-                      : "bg-background text-muted-foreground/60";
-                    return (
-                      <td key={m} className="px-1 py-1.5 text-center">
-                        <button
-                          onClick={() => cycleDue(p.id, m)}
-                          className={`w-full rounded-md px-1 py-1 text-[10px] font-semibold ${tone}`}
-                        >
-                          {statusLabel(cur.status, cur.amount, isEnglish)}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-2 gap-2">
+          {activePlayers.map((p) => {
+            const cur = duesMap.get(`${p.id}|${selectedYm}`) ?? { status: "unpaid", amount: 0 };
+            const tone =
+              cur.status === "paid"
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : cur.status === "exempt"
+                ? "border-border bg-muted/40 text-muted-foreground"
+                : "border-border bg-card text-muted-foreground";
+            return (
+              <button
+                key={p.id}
+                onClick={() => cycleDue(p.id, selectedYm)}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${tone}`}
+              >
+                <span className="truncate font-medium text-foreground">{p.name}</span>
+                <span className="shrink-0 font-bold">{statusLabel(cur.status, cur.amount, isEnglish)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

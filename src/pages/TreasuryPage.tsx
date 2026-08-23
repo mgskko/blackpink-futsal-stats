@@ -17,7 +17,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useTreasuryEntries, useMonthlyDues, formatKRW, recentMonths } from "@/hooks/useTreasury";
+import {
+  useTreasuryEntries,
+  useMonthlyDues,
+  useClubSetting,
+  BALANCE_KEY,
+  formatKRW,
+  recentMonths,
+} from "@/hooks/useTreasury";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
 
 const MONTHLY_FEE = 20000;
@@ -91,7 +98,9 @@ const TreasuryPage = () => {
 
   const totalIn = entries.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
   const totalOut = entries.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
-  const balance = totalIn - totalOut;
+  const { data: manualBalance } = useClubSetting(BALANCE_KEY);
+  const isManual = manualBalance != null && manualBalance !== "";
+  const balance = isManual ? Number(manualBalance) : totalIn - totalOut;
 
   const monthStat = useMemo(() => {
     const paid = activePlayers.filter((p) => getDue(p.id, selectedMonth).status === "paid");
@@ -131,6 +140,11 @@ const TreasuryPage = () => {
             <Wallet size={14} /> {isEnglish ? "Total balance" : "총 잔액"}
           </div>
           <p className="mt-1 text-3xl font-bold text-primary">{formatKRW(balance)}</p>
+          {isManual && (
+            <p className="text-[10px] text-muted-foreground">
+              {isEnglish ? "Updated by the admin" : "관리자가 입력한 실제 통장 잔고"}
+            </p>
+          )}
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-emerald-500/10 p-3">
               <p className="text-[10px] text-muted-foreground">{isEnglish ? "Income" : "총 입금"}</p>
