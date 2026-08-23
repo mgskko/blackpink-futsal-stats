@@ -784,8 +784,12 @@ const StatisticsPage = () => {
         )}
 
         {activeTab === "formation" && (
-          <FormationStatsTab players={activePlayers} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
+          <>
+            <PositionShareBoard players={activePlayers} quarters={filteredQuarters} sport={sport} />
+            <FormationStatsTab players={activePlayers} matches={filteredMatches} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} rosters={rosters} />
+          </>
         )}
+
 
         {activeTab === "fun" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
