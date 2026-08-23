@@ -38,6 +38,7 @@ import { useTranslation } from "react-i18next";
 import SportToggle from "@/components/SportToggle";
 import { filterMatchesBySport, sportLabel, type SportFilter } from "@/lib/sport";
 import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, translateScoutingLine, translateTraitName, translateTraitDescription } from "@/lib/i18nBadges";
+import { UTIL_CODE, prefLabel, ageFromBirthYear } from "@/lib/positions";
 
 // Concacaf country label → EN translation
 const CONCACAF_COUNTRY_EN: Record<string, string> = {
