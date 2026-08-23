@@ -659,6 +659,41 @@ export type Database = {
           },
         ]
       }
+      squad_depth: {
+        Row: {
+          created_at: string
+          id: string
+          player_id: number | null
+          position_code: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          player_id?: number | null
+          position_code: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_id?: number | null
+          position_code?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_depth_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tactics: {
         Row: {
           created_at: string

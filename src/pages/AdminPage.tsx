@@ -8,6 +8,7 @@ import AdminMatchCreate from "@/components/admin/AdminMatchCreate";
 import AdminMatchResult from "@/components/admin/AdminMatchResult";
 import AdminMatchEdit from "@/components/admin/AdminMatchEdit";
 import AdminAttendance from "@/components/admin/AdminAttendance";
+import AdminSquadDepth from "@/components/admin/AdminSquadDepth";
 import AdminTreasury from "@/components/admin/AdminTreasury";
 import AdminFines from "@/components/admin/AdminFines";
 import AdminManageRoles from "@/components/admin/AdminManageRoles";
@@ -33,7 +34,7 @@ const AdminPage = () => {
       <PageHeader title="ADMIN" subtitle="관리자 패널" />
       <div className="px-4">
         <Tabs defaultValue="attendance" className="w-full">
-          <TabsList className="grid w-full grid-cols-9 bg-card border border-border">
+          <TabsList className="grid w-full grid-cols-10 bg-card border border-border">
             <TabsTrigger value="attendance" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">참석</TabsTrigger>
             <TabsTrigger value="create" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">생성</TabsTrigger>
             <TabsTrigger value="result" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">기록</TabsTrigger>
@@ -42,6 +43,7 @@ const AdminPage = () => {
             <TabsTrigger value="fines" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">벌금</TabsTrigger>
             <TabsTrigger value="players" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">선수</TabsTrigger>
             <TabsTrigger value="history" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">역사</TabsTrigger>
+            <TabsTrigger value="depth" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">뎁스</TabsTrigger>
             <TabsTrigger value="roles" className="text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">권한</TabsTrigger>
           </TabsList>
           <TabsContent value="attendance"><AdminAttendance /></TabsContent>
@@ -52,6 +54,7 @@ const AdminPage = () => {
           <TabsContent value="fines"><AdminFines /></TabsContent>
           <TabsContent value="players"><AdminPlayerManage /></TabsContent>
           <TabsContent value="history"><AdminTeamHistory /></TabsContent>
+          <TabsContent value="depth"><AdminSquadDepth /></TabsContent>
           <TabsContent value="roles"><AdminManageRoles /></TabsContent>
         </Tabs>
       </div>
