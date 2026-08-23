@@ -42,7 +42,7 @@ const TreasuryPage = () => {
   const { players } = useAllFutsalData();
 
   const activePlayers = useMemo(
-    () => players.filter((p) => p.is_active && !p.is_guest),
+    () => players.filter((p) => p.is_active),
     [players]
   );
 
