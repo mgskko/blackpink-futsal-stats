@@ -228,47 +228,62 @@ const AdminTreasury = () => {
         ))}
       </div>
 
-      {/* Dues matrix */}
+      {/* Dues by selected month */}
       <div className="space-y-2">
-        <p className="text-xs font-bold text-foreground">{isEnglish ? "Monthly dues (tap to change)" : "멤버별 월 회비 (탭하여 변경)"}</p>
+        <p className="text-xs font-bold text-foreground">
+          {isEnglish ? "Monthly dues (tap to change)" : "멤버별 월 회비 (탭하여 변경)"}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={year} onValueChange={setYear}>
+            <SelectTrigger className="bg-background text-xs">
+              <SelectValue placeholder={isEnglish ? "Year" : "연도"} />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={y}>
+                  {isEnglish ? y : `${y}년`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="bg-background text-xs">
+              <SelectValue placeholder={isEnglish ? "Month" : "월"} />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {isEnglish
+                    ? new Date(2000, Number(m) - 1, 1).toLocaleDateString("en-US", { month: "long" })
+                    : `${Number(m)}월`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <p className="text-[10px] text-muted-foreground">
           {isEnglish ? "Unpaid → 30,000 → 20,000 → Exempt" : "미납 → 3만원 → 2만원 → 예외(개인사정)"}
         </p>
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="sticky left-0 bg-card px-2 py-2 text-left text-[10px] text-muted-foreground">{isEnglish ? "Player" : "선수"}</th>
-                {months.map((m) => (
-                  <th key={m} className="px-1 py-2 text-center text-[10px] text-muted-foreground">{m.slice(5)}{isEnglish ? "" : "월"}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {activePlayers.map((p) => (
-                <tr key={p.id} className="border-b border-border/50 last:border-0">
-                  <td className="sticky left-0 bg-card px-2 py-1.5 text-left font-medium text-foreground whitespace-nowrap">{p.name}</td>
-                  {months.map((m) => {
-                    const cur = duesMap.get(`${p.id}|${m}`) ?? { status: "unpaid", amount: 0 };
-                    const tone =
-                      cur.status === "paid" ? "bg-primary/20 text-primary"
-                      : cur.status === "exempt" ? "bg-muted text-muted-foreground"
-                      : "bg-background text-muted-foreground/60";
-                    return (
-                      <td key={m} className="px-1 py-1.5 text-center">
-                        <button
-                          onClick={() => cycleDue(p.id, m)}
-                          className={`w-full rounded-md px-1 py-1 text-[10px] font-semibold ${tone}`}
-                        >
-                          {statusLabel(cur.status, cur.amount, isEnglish)}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-2 gap-2">
+          {activePlayers.map((p) => {
+            const cur = duesMap.get(`${p.id}|${selectedYm}`) ?? { status: "unpaid", amount: 0 };
+            const tone =
+              cur.status === "paid"
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : cur.status === "exempt"
+                ? "border-border bg-muted/40 text-muted-foreground"
+                : "border-border bg-card text-muted-foreground";
+            return (
+              <button
+                key={p.id}
+                onClick={() => cycleDue(p.id, selectedYm)}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${tone}`}
+              >
+                <span className="truncate font-medium text-foreground">{p.name}</span>
+                <span className="shrink-0 font-bold">{statusLabel(cur.status, cur.amount, isEnglish)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
