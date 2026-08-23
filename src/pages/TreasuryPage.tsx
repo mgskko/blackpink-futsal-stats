@@ -98,7 +98,9 @@ const TreasuryPage = () => {
 
   const totalIn = entries.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
   const totalOut = entries.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
-  const balance = totalIn - totalOut;
+  const { data: manualBalance } = useClubSetting(BALANCE_KEY);
+  const isManual = manualBalance != null && manualBalance !== "";
+  const balance = isManual ? Number(manualBalance) : totalIn - totalOut;
 
   const monthStat = useMemo(() => {
     const paid = activePlayers.filter((p) => getDue(p.id, selectedMonth).status === "paid");
