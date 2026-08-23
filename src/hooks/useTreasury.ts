@@ -55,3 +55,19 @@ export const recentMonths = (count = 12) => {
   }
   return out;
 };
+
+export const BALANCE_KEY = "treasury_balance";
+
+export const useClubSetting = (key: string) =>
+  useQuery({
+    queryKey: ["club_settings", key],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("club_settings")
+        .select("value")
+        .eq("key", key)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.value ?? null) as string | null;
+    },
+  });
