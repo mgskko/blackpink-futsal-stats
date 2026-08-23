@@ -328,16 +328,19 @@ const AdminPlayerManage = () => {
             </Button>
           )}
         </div>
-        {/* Age editor */}
+        {/* Birth year editor (age auto-calculated) */}
         <div className="flex items-center gap-2 pl-15">
-          <span className="text-[10px] font-bold text-muted-foreground w-10">나이</span>
+          <span className="text-[10px] font-bold text-muted-foreground w-10">생년</span>
           <Input
             type="number"
             value={currentAge}
             onChange={(e) => setEditingAges(prev => ({ ...prev, [player.id]: e.target.value }))}
-            placeholder="나이 (예: 34)"
+            placeholder="출생년도 (예: 1999)"
             className="h-8 flex-1 text-sm bg-secondary border-border"
           />
+          <span className="w-14 shrink-0 text-[11px] font-bold text-primary">
+            {derivedAge ? `${derivedAge}살` : "-"}
+          </span>
           {hasAgeChanged && (
             <Button
               size="sm"
@@ -350,6 +353,64 @@ const AdminPlayerManage = () => {
             </Button>
           )}
         </div>
+
+        {/* Preferred positions & note */}
+        <div className="space-y-1.5 rounded-lg border border-border/60 bg-secondary/30 p-2">
+          <div className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-[10px] font-bold text-muted-foreground">주 포지션</span>
+            <Input
+              value={prof.pref}
+              onChange={(e) => setProf(player.id, { pref: e.target.value })}
+              placeholder="예: LW, ST 또는 땜빵"
+              className="h-8 flex-1 text-sm bg-card border-border"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-[10px] font-bold text-muted-foreground">서브</span>
+            <Input
+              value={prof.sub}
+              onChange={(e) => setProf(player.id, { sub: e.target.value })}
+              placeholder="예: CM, DM"
+              className="h-8 flex-1 text-sm bg-card border-border"
+            />
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="w-14 shrink-0 pt-2 text-[10px] font-bold text-muted-foreground">특이사항</span>
+            <textarea
+              value={prof.note}
+              onChange={(e) => setProf(player.id, { note: e.target.value })}
+              placeholder="예: 체력 이슈로 ST로만 2회 출전 가능 (연속 쿼터 X)"
+              rows={2}
+              className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {[UTIL_CODE, "GK", "FIXO", "PIVO", "L-ALA", "R-ALA", "ST", "LW", "RW", "CM", "DM", "CB"].map(code => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setProf(player.id, {
+                  pref: prof.pref.trim() === "" ? code : `${prof.pref}, ${code}`,
+                })}
+                className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-primary hover:text-primary"
+                title={prefLabel(code, false)}
+              >
+                {code === UTIL_CODE ? "땜빵" : code}
+              </button>
+            ))}
+          </div>
+          {hasProfChanged && (
+            <Button
+              size="sm"
+              className="h-7 w-full gap-1 text-[11px]"
+              onClick={() => saveProfileInfo(player.id)}
+              disabled={savingProfileId === player.id}
+            >
+              <Save size={12} /> 선호 포지션/특이사항 저장
+            </Button>
+          )}
+        </div>
+
       </div>
     );
   };
