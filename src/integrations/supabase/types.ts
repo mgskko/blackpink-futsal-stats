@@ -355,25 +355,34 @@ export type Database = {
       }
       monthly_dues: {
         Row: {
+          amount: number
           id: string
           is_paid: boolean
+          note: string | null
           player_id: number
+          status: string
           updated_at: string
           updated_by: string | null
           year_month: string
         }
         Insert: {
+          amount?: number
           id?: string
           is_paid?: boolean
+          note?: string | null
           player_id: number
+          status?: string
           updated_at?: string
           updated_by?: string | null
           year_month: string
         }
         Update: {
+          amount?: number
           id?: string
           is_paid?: boolean
+          note?: string | null
           player_id?: number
+          status?: string
           updated_at?: string
           updated_by?: string | null
           year_month?: string
@@ -768,6 +777,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      treasury_entries: {
+        Row: {
+          amount: number
+          counterparty: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          entry_date: string
+          id: string
+          memo: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          counterparty?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          entry_date?: string
+          id?: string
+          memo?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          counterparty?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          entry_date?: string
+          id?: string
+          memo?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
