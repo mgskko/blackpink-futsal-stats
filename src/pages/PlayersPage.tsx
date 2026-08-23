@@ -41,6 +41,7 @@ const PlayersPage = () => {
   const fireMap = useOnFirePlayers(matches, rosters);
   const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
   const [concacafMode, setConcacafMode] = useState(false);
+  const [membersOnly, setMembersOnly] = useState(true);
   const displayName = useDisplayName();
 
   const { data: allQuartersRaw } = useQuery({
