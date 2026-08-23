@@ -70,11 +70,12 @@ const PlayersPage = () => {
 
   const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
   const activePlayers = useMemo(() => {
-    const base = players.filter(p => !(p as any).is_guest);
+    let base = players.filter(p => !(p as any).is_guest);
+    if (membersOnly) base = base.filter(p => (p as any).is_member !== false);
     if (sport === "all") return base;
     const playedIds = new Set(rosters.filter(r => sportMatchIds.has(r.match_id)).map(r => r.player_id));
     return base.filter(p => playedIds.has(p.id));
-  }, [players, rosters, sportMatchIds, sport]);
+  }, [players, rosters, sportMatchIds, sport, membersOnly]);
   const concacafSet = useMemo(() => {
     if (!concacafMode) return new Set<number>();
     const s = new Set<number>();
