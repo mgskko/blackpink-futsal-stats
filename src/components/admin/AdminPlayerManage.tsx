@@ -131,6 +131,16 @@ const AdminPlayerManage = () => {
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
+  // Toggles "current dues-paying member" status (drives Treasury lists).
+  const toggleMember = async (playerId: number, next: boolean) => {
+    setSavingMemberId(playerId);
+    const { error } = await supabase.from("players").update({ is_member: next } as any).eq("id", playerId);
+    setSavingMemberId(null);
+    if (error) { toast.error("회원 상태 저장 실패: " + error.message); return; }
+    toast.success(next ? "정회원으로 지정했습니다" : "비회원으로 변경했습니다");
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
   // Stores the birth year; the displayed age is derived automatically.
   const saveAge = async (playerId: number) => {
     const val = editingAges[playerId];
