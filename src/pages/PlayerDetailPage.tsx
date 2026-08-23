@@ -593,6 +593,49 @@ const PlayerDetailPage = () => {
         </div>
       )}
 
+      {((player as any).pref_positions || (player as any).sub_positions || (player as any).note) && (
+        <div className="mx-4 mt-3 space-y-2 rounded-2xl border border-primary/25 bg-primary/5 p-4 backdrop-blur-sm">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-primary">
+            {L("선호 포지션 & 특이사항", "Preferred position & notes")}
+          </h3>
+          {(player as any).pref_positions && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="w-12 text-[10px] font-bold text-muted-foreground">{L("주", "Main")}</span>
+              {String((player as any).pref_positions).split(",").map((code: string, i: number) => {
+                const c = code.trim();
+                if (!c) return null;
+                const isUtil = c === UTIL_CODE || c === "땜빵";
+                return (
+                  <span key={i} className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${isUtil ? "border-amber-400/40 bg-amber-400/10 text-amber-300" : "border-primary/40 bg-primary/10 text-primary"}`}>
+                    {isUtil ? (isEn ? "Utility (any position)" : "땜빵 (전 포지션)") : prefLabel(c, isEn)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {(player as any).sub_positions && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="w-12 text-[10px] font-bold text-muted-foreground">{L("서브", "Sub")}</span>
+              {String((player as any).sub_positions).split(",").map((code: string, i: number) => {
+                const c = code.trim();
+                if (!c) return null;
+                return (
+                  <span key={i} className="rounded-full border border-border bg-secondary/60 px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    {prefLabel(c, isEn)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {(player as any).note && (
+            <p className="rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-[11px] leading-relaxed text-foreground">
+              📌 {(player as any).note}
+            </p>
+          )}
+        </div>
+      )}
+
+
       {/* FotMob-style performance summary */}
       <PlayerHeroStats
         isEn={isEn}
