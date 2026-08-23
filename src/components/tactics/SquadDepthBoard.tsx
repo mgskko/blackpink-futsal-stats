@@ -11,7 +11,8 @@ export const DEPTH_POSITIONS = [
   { code: "RCM", ko: "우측 중앙 미드필더", en: "Right Central Mid", x: 70, y: 45 },
   { code: "DM", ko: "수비형 미드필더", en: "Defensive Mid", x: 50, y: 64 },
   { code: "LB", ko: "왼쪽 풀백", en: "Left Back", x: 18, y: 77 },
-  { code: "CB", ko: "센터백", en: "Centre Back", x: 50, y: 84 },
+  { code: "LCB", ko: "좌측 센터백", en: "Left Centre Back", x: 36, y: 85 },
+  { code: "RCB", ko: "우측 센터백", en: "Right Centre Back", x: 64, y: 85 },
   { code: "RB", ko: "오른쪽 풀백", en: "Right Back", x: 82, y: 77 },
   { code: "GK", ko: "골키퍼", en: "Goalkeeper", x: 50, y: 95 },
 ] as const;
