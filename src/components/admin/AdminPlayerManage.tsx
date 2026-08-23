@@ -466,7 +466,12 @@ const AdminPlayerManage = () => {
   return (
     <div className="mt-4 space-y-6">
       {/* 신규 선수 등록 */}
-      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-foreground">현재 정회원 (Active Member)으로 등록</span>
+          <Switch checked={newIsMember} onCheckedChange={setNewIsMember} />
+        </div>
+        <div className="flex items-center gap-2">
         <Input
           value={newPlayerName}
           onChange={(e) => setNewPlayerName(e.target.value)}
