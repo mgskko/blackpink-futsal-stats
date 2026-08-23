@@ -474,35 +474,47 @@ export type Database = {
         Row: {
           age: number | null
           back_number: number | null
+          birth_year: number | null
           id: number
           is_active: boolean
           is_guest: boolean
           join_date: string
           name: string
           name_en: string | null
+          note: string | null
+          pref_positions: string | null
           profile_image_url: string | null
+          sub_positions: string | null
         }
         Insert: {
           age?: number | null
           back_number?: number | null
+          birth_year?: number | null
           id: number
           is_active?: boolean
           is_guest?: boolean
           join_date: string
           name: string
           name_en?: string | null
+          note?: string | null
+          pref_positions?: string | null
           profile_image_url?: string | null
+          sub_positions?: string | null
         }
         Update: {
           age?: number | null
           back_number?: number | null
+          birth_year?: number | null
           id?: number
           is_active?: boolean
           is_guest?: boolean
           join_date?: string
           name?: string
           name_en?: string | null
+          note?: string | null
+          pref_positions?: string | null
           profile_image_url?: string | null
+          sub_positions?: string | null
         }
         Relationships: []
       }
