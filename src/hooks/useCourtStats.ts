@@ -590,3 +590,69 @@ export function getAssistConnectionMap(
   });
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, topN);
 }
+
+// ─── Sport-scoped position leaderboard ───
+export interface SlotLeader {
+  playerId: number;
+  quarters: number;
+  share: number; // % of that player's own slot-tagged quarters
+}
+export interface SlotStat {
+  code: string;
+  quarters: number;
+  leaders: SlotLeader[];
+}
+
+/**
+ * Aggregates detailed slot usage for one sport only.
+ * Slot codes belonging to the other sport (bad/legacy data) are dropped entirely.
+ */
+export function computeSlotStats(
+  quarters: MatchQuarter[],
+  sport: "futsal" | "soccer" | "all",
+  validPlayerIds?: Set<number>
+): { slots: SlotStat[]; totalTagged: number; excluded: number } {
+  const perSlot = new Map<string, Map<number, number>>();
+  const perPlayerTotal = new Map<number, number>();
+  let totalTagged = 0;
+  let excluded = 0;
+
+  const collect = (unit: any) => {
+    const map = slotMapOf(unit);
+    Object.entries(map).forEach(([pid, code]) => {
+      const id = Number(pid);
+      if (!Number.isFinite(id)) return;
+      if (validPlayerIds && !validPlayerIds.has(id)) return;
+      if (!isSlotForSport(code, sport)) { excluded++; return; }
+      totalTagged++;
+      if (!perSlot.has(code)) perSlot.set(code, new Map());
+      const m = perSlot.get(code)!;
+      m.set(id, (m.get(id) || 0) + 1);
+      perPlayerTotal.set(id, (perPlayerTotal.get(id) || 0) + 1);
+    });
+  };
+
+  quarters.forEach(q => {
+    const l: any = q.lineup;
+    if (!l || typeof l !== "object") return;
+    if (l.teamA || l.teamB) { collect(l.teamA); collect(l.teamB); }
+    else collect(l);
+  });
+
+  const slots: SlotStat[] = [...perSlot.entries()]
+    .map(([code, m]) => ({
+      code,
+      quarters: [...m.values()].reduce((s, n) => s + n, 0),
+      leaders: [...m.entries()]
+        .map(([playerId, n]) => ({
+          playerId,
+          quarters: n,
+          share: perPlayerTotal.get(playerId) ? Math.round((n / perPlayerTotal.get(playerId)!) * 100) : 0,
+        }))
+        .sort((a, b) => b.quarters - a.quarters)
+        .slice(0, 3),
+    }))
+    .sort((a, b) => b.quarters - a.quarters);
+
+  return { slots, totalTagged, excluded };
+}
