@@ -27,6 +27,8 @@ const AdminPlayerManage = () => {
   const [savingNameEnId, setSavingNameEnId] = useState<number | null>(null);
   const [editingAges, setEditingAges] = useState<Record<number, string>>({});
   const [savingAgeId, setSavingAgeId] = useState<number | null>(null);
+  const [editingProfile, setEditingProfile] = useState<Record<number, { pref: string; sub: string; note: string }>>({});
+  const [savingProfileId, setSavingProfileId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
