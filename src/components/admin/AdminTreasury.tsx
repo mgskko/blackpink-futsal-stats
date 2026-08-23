@@ -164,6 +164,40 @@ const AdminTreasury = () => {
         </div>
       </div>
 
+      {/* Manual balance override */}
+      <div className="space-y-2 rounded-xl border border-primary/30 bg-card p-3">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+          <Wallet size={13} /> {isEnglish ? "Current bank balance" : "현재 통장 잔고"}
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          {isEnglish
+            ? manualBalance
+              ? `Currently shown to members: ${formatKRW(Number(manualBalance))}`
+              : "Not set — members see the auto-calculated balance."
+            : manualBalance
+            ? `멤버에게 표시 중: ${formatKRW(Number(manualBalance))}`
+            : "미설정 — 멤버에게는 자동 계산 잔액이 표시됩니다."}
+        </p>
+        <div className="flex gap-2">
+          <Input
+            inputMode="numeric"
+            placeholder={isEnglish ? "e.g. 30651" : "예: 30651"}
+            value={balanceInput}
+            onChange={(e) => setBalanceInput(e.target.value)}
+            className="bg-background"
+          />
+          <Button onClick={saveBalance} disabled={savingBalance} className="shrink-0">
+            {isEnglish ? "Save" : "저장"}
+          </Button>
+        </div>
+        {manualBalance && (
+          <Button variant="outline" size="sm" onClick={clearBalance} className="w-full text-xs">
+            {isEnglish ? "Use auto-calculated balance" : "자동 계산 잔액으로 되돌리기"}
+          </Button>
+        )}
+      </div>
+
+
       {/* Entry form */}
       <div className="space-y-2 rounded-xl border border-border bg-card p-3">
         <p className="text-xs font-bold text-foreground">{isEnglish ? "Add ledger entry" : "입출금 내역 추가"}</p>
