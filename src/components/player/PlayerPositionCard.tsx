@@ -1,14 +1,15 @@
 import { motion } from "framer-motion";
-import { getSlot, slotLabel } from "@/lib/positions";
+import { getSlot, slotLabel, roleLabel, isSlotForSport } from "@/lib/positions";
 
-type Dist = { GK: number; DF: number; MF: number; FW: number; total: number; slots?: Record<string, number> };
-
-const POS_LABEL: Record<string, { ko: string; en: string; abbr: string; y: number }> = {
-  FW: { ko: "스트라이커", en: "Striker", abbr: "FW", y: 16 },
-  MF: { ko: "미드필더", en: "Midfielder", abbr: "MF", y: 42 },
-  DF: { ko: "수비수", en: "Defender", abbr: "DF", y: 68 },
-  GK: { ko: "골키퍼", en: "Goalkeeper", abbr: "GK", y: 89 },
+type Dist = {
+  GK: number; DF: number; MF: number; FW: number; total: number;
+  slots?: Record<string, number>;
+  crossSportExcluded?: number;
+  unassigned?: number;
 };
+
+const POS_Y: Record<string, number> = { FW: 16, MF: 42, DF: 68, GK: 89 };
+
 
 type Node = { key: string; label: string; abbr: string; count: number; x: number; y: number };
 
