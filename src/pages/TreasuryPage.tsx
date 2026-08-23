@@ -140,6 +140,11 @@ const TreasuryPage = () => {
             <Wallet size={14} /> {isEnglish ? "Total balance" : "총 잔액"}
           </div>
           <p className="mt-1 text-3xl font-bold text-primary">{formatKRW(balance)}</p>
+          {isManual && (
+            <p className="text-[10px] text-muted-foreground">
+              {isEnglish ? "Updated by the admin" : "관리자가 입력한 실제 통장 잔고"}
+            </p>
+          )}
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-emerald-500/10 p-3">
               <p className="text-[10px] text-muted-foreground">{isEnglish ? "Income" : "총 입금"}</p>
