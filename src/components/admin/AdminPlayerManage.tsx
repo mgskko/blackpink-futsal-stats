@@ -127,23 +127,49 @@ const AdminPlayerManage = () => {
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
+  // Stores the birth year; the displayed age is derived automatically.
   const saveAge = async (playerId: number) => {
     const val = editingAges[playerId];
     if (val === undefined) return;
     setSavingAgeId(playerId);
     const parsed = val.trim() === "" ? null : parseInt(val, 10);
-    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1 || parsed > 100)) {
+    const thisYear = new Date().getFullYear();
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1930 || parsed > thisYear)) {
       setSavingAgeId(null);
-      toast.error("나이는 1~100 사이 숫자여야 합니다");
+      toast.error(`출생년도는 1930~${thisYear} 사이여야 합니다`);
       return;
     }
-    const { error } = await supabase.from("players").update({ age: parsed } as any).eq("id", playerId);
+    const { error } = await supabase
+      .from("players")
+      .update({ birth_year: parsed, age: ageFromBirthYear(parsed) } as any)
+      .eq("id", playerId);
     setSavingAgeId(null);
-    if (error) { toast.error("나이 저장 실패"); return; }
-    toast.success("나이 저장 완료");
+    if (error) { toast.error("출생년도 저장 실패: " + error.message); return; }
+    toast.success("출생년도 저장 완료");
     setEditingAges(prev => { const n = { ...prev }; delete n[playerId]; return n; });
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
+
+  const saveProfileInfo = async (playerId: number) => {
+    const val = editingProfile[playerId];
+    if (!val) return;
+    setSavingProfileId(playerId);
+    const clean = (s: string) => (s.trim() === "" ? null : s.trim());
+    const { error } = await supabase
+      .from("players")
+      .update({
+        pref_positions: clean(val.pref),
+        sub_positions: clean(val.sub),
+        note: clean(val.note),
+      } as any)
+      .eq("id", playerId);
+    setSavingProfileId(null);
+    if (error) { toast.error("저장 실패: " + error.message); return; }
+    toast.success("선호 포지션/특이사항 저장 완료");
+    setEditingProfile(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
 
   const handleImageUpload = async (playerId: number, file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("이미지 파일만 업로드 가능합니다"); return; }
