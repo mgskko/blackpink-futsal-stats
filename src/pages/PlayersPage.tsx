@@ -169,8 +169,15 @@ const PlayersPage = () => {
                   <span className={`text-sm ${condition.colorClass}`}>{condition.emoji}</span>
                   {tier !== "none" && <span className="sparkle-anim inline-block text-xs">✨</span>}
                   {inactive && (
-                    <span className="rounded-full border border-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">💤 비활동</span>
+                    <span className="rounded-full border border-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">{isEn ? "💤 Inactive" : "💤 비활동"}</span>
                   )}
+                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${
+                    (player as any).is_member !== false
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+                  }`}>
+                    {(player as any).is_member !== false ? (isEn ? "Member" : "정회원") : (isEn ? "Guest" : "비회원")}
+                  </span>
                 </div>
                 {tier === "onfire" && (
                   <>
