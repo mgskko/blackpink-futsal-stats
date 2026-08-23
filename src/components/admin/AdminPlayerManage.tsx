@@ -227,8 +227,17 @@ const AdminPlayerManage = () => {
     const hasChanged = editingNumbers[player.id] !== undefined;
     const currentNameEn = editingNamesEn[player.id] ?? ((player as any).name_en ?? "");
     const hasNameEnChanged = editingNamesEn[player.id] !== undefined;
-    const currentAge = editingAges[player.id] ?? ((player as any).age?.toString() ?? "");
+    const currentAge = editingAges[player.id] ?? ((player as any).birth_year?.toString() ?? "");
     const hasAgeChanged = editingAges[player.id] !== undefined;
+    const derivedAge = ageFromBirthYear(parseInt(currentAge, 10));
+    const prof = editingProfile[player.id] ?? {
+      pref: (player as any).pref_positions ?? "",
+      sub: (player as any).sub_positions ?? "",
+      note: (player as any).note ?? "",
+    };
+    const hasProfChanged = editingProfile[player.id] !== undefined;
+    const setProf = (pid: number, patch: Partial<{ pref: string; sub: string; note: string }>) =>
+      setEditingProfile(prev => ({ ...prev, [pid]: { ...prof, ...(prev[pid] ?? {}), ...patch } }));
 
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
