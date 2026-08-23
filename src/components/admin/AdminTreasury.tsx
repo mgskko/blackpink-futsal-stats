@@ -2,12 +2,18 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
-import { useTreasuryEntries, useMonthlyDues, formatKRW, recentMonths } from "@/hooks/useTreasury";
+import {
+  useTreasuryEntries,
+  useMonthlyDues,
+  useClubSetting,
+  BALANCE_KEY,
+  formatKRW,
+} from "@/hooks/useTreasury";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Trash2, Plus, ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const STATUS_CYCLE = [
@@ -19,7 +25,7 @@ const STATUS_CYCLE = [
 
 const statusLabel = (status: string, amount: number, isEnglish: boolean) => {
   if (status === "exempt") return isEnglish ? "Exempt" : "예외";
-  if (status === "paid") return `${(amount / 10000).toFixed(0)}만`;
+  if (status === "paid") return isEnglish ? `${(amount / 1000).toFixed(0)}k` : `${(amount / 10000).toFixed(0)}만`;
   return isEnglish ? "Unpaid" : "미납";
 };
 
@@ -32,9 +38,51 @@ const AdminTreasury = () => {
 
   const { data: entries = [] } = useTreasuryEntries();
   const { data: dues = [] } = useMonthlyDues();
+  const { data: manualBalance } = useClubSetting(BALANCE_KEY);
 
-  const months = useMemo(() => recentMonths(6), []);
+  const now = new Date();
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [month, setMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
+  const selectedYm = `${year}-${month}`;
+  const years = useMemo(
+    () => Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 3 + i)),
+    []
+  );
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")),
+    []
+  );
+
+  const [balanceInput, setBalanceInput] = useState("");
+  const [savingBalance, setSavingBalance] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const saveBalance = async () => {
+    const raw = balanceInput.replace(/[^0-9-]/g, "");
+    if (!raw) {
+      toast({
+        title: isEnglish ? "Enter an amount" : "금액을 입력하세요",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingBalance(true);
+    const { error } = await supabase
+      .from("club_settings")
+      .upsert({ key: BALANCE_KEY, value: raw, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setSavingBalance(false);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    setBalanceInput("");
+    qc.invalidateQueries({ queryKey: ["club_settings", BALANCE_KEY] });
+    toast({ title: isEnglish ? "Balance updated" : "잔고가 반영되었습니다" });
+  };
+
+  const clearBalance = async () => {
+    const { error } = await supabase.from("club_settings").delete().eq("key", BALANCE_KEY);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    qc.invalidateQueries({ queryKey: ["club_settings", BALANCE_KEY] });
+    toast({ title: isEnglish ? "Reverted to auto balance" : "자동 계산 잔액으로 되돌렸습니다" });
+  };
 
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
