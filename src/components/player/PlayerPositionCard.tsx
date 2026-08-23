@@ -141,6 +141,15 @@ export default function PlayerPositionCard({
           </div>
         </div>
       )}
+
+      {sport !== "all" && !!dist.crossSportExcluded && (
+        <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-[10px] leading-relaxed text-amber-300">
+          ⚠️ {isEn
+            ? `${dist.crossSportExcluded} quarter(s) are tagged with ${sport === "futsal" ? "football" : "futsal"} positions and are excluded until an admin re-maps them.`
+            : `${dist.crossSportExcluded}개 쿼터가 ${sport === "futsal" ? "축구" : "풋살"} 포지션으로 잘못 입력되어 집계에서 제외되었습니다. (관리자 수정 필요)`}
+        </p>
+      )}
+
     </motion.div>
   );
 }
