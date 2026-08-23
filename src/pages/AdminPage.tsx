@@ -8,7 +8,7 @@ import AdminMatchCreate from "@/components/admin/AdminMatchCreate";
 import AdminMatchResult from "@/components/admin/AdminMatchResult";
 import AdminMatchEdit from "@/components/admin/AdminMatchEdit";
 import AdminAttendance from "@/components/admin/AdminAttendance";
-import AdminDues from "@/components/admin/AdminDues";
+import AdminTreasury from "@/components/admin/AdminTreasury";
 import AdminFines from "@/components/admin/AdminFines";
 import AdminManageRoles from "@/components/admin/AdminManageRoles";
 import AdminPlayerManage from "@/components/admin/AdminPlayerManage";
@@ -48,7 +48,7 @@ const AdminPage = () => {
           <TabsContent value="create"><AdminMatchCreate /></TabsContent>
           <TabsContent value="result"><AdminMatchResult /></TabsContent>
           <TabsContent value="edit"><AdminMatchEdit /></TabsContent>
-          <TabsContent value="dues"><AdminDues /></TabsContent>
+          <TabsContent value="dues"><AdminTreasury /></TabsContent>
           <TabsContent value="fines"><AdminFines /></TabsContent>
           <TabsContent value="players"><AdminPlayerManage /></TabsContent>
           <TabsContent value="history"><AdminTeamHistory /></TabsContent>
