@@ -5,14 +5,14 @@ import { motion } from "framer-motion";
 
 export const DEPTH_POSITIONS = [
   { code: "ST", ko: "스트라이커", en: "Striker", x: 50, y: 9 },
-  { code: "LW", ko: "왼쪽 윙어", en: "Left Wing", x: 15, y: 26 },
-  { code: "RW", ko: "오른쪽 윙어", en: "Right Wing", x: 85, y: 26 },
-  { code: "CM", ko: "중앙 미드필더", en: "Central Mid", x: 50, y: 44 },
-  { code: "DM", ko: "수비형 미드필더", en: "Defensive Mid", x: 50, y: 62 },
-  { code: "LB", ko: "왼쪽 풀백", en: "Left Back", x: 13, y: 74 },
-  { code: "CB", ko: "센터백", en: "Centre Back", x: 50, y: 80 },
-  { code: "RB", ko: "오른쪽 풀백", en: "Right Back", x: 87, y: 74 },
-  { code: "GK", ko: "골키퍼", en: "Goalkeeper", x: 50, y: 94 },
+  { code: "LW", ko: "왼쪽 윙어", en: "Left Wing", x: 18, y: 27 },
+  { code: "RW", ko: "오른쪽 윙어", en: "Right Wing", x: 82, y: 27 },
+  { code: "CM", ko: "중앙 미드필더", en: "Central Mid", x: 50, y: 43 },
+  { code: "DM", ko: "수비형 미드필더", en: "Defensive Mid", x: 50, y: 64 },
+  { code: "LB", ko: "왼쪽 풀백", en: "Left Back", x: 18, y: 77 },
+  { code: "CB", ko: "센터백", en: "Centre Back", x: 50, y: 84 },
+  { code: "RB", ko: "오른쪽 풀백", en: "Right Back", x: 82, y: 77 },
+  { code: "GK", ko: "골키퍼", en: "Goalkeeper", x: 50, y: 95 },
 ] as const;
 
 export type DepthRow = { id: string; position_code: string; player_id: number | null; sort_order: number };
@@ -57,7 +57,7 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
       <div
         className="relative w-full overflow-hidden rounded-2xl border border-white/10"
         style={{
-          aspectRatio: "3 / 4",
+          aspectRatio: "3 / 4.6",
           background:
             "linear-gradient(180deg, hsl(160 40% 12%) 0%, hsl(160 45% 9%) 50%, hsl(160 40% 12%) 100%)",
         }}
@@ -80,7 +80,7 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
           return (
             <div
               key={pos.code}
-              className="absolute flex w-[34%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+              className="absolute flex w-[30%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
             >
               <span className="rounded-full bg-black/45 px-1.5 py-px text-[8px] font-bold tracking-wider text-white/70">
