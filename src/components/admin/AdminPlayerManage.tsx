@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Camera, Save, User, Plus, Trash2, X } from "lucide-react";
+import { PREF_POSITION_OPTIONS, UTIL_CODE, ageFromBirthYear, prefLabel } from "@/lib/positions";
 
 const AdminPlayerManage = () => {
   const { data: players = [], isLoading } = usePlayers();
