@@ -404,7 +404,10 @@ const PlayerDetailPage = () => {
     return allMargins.find(p => p.playerId === playerId) || null;
   }, [playerId, players, filtered.matches, filtered.quarters, filtered.goalEvents]);
 
-  const positionDist = useMemo(() => getPlayerPositionDistribution(playerId, filtered.quarters), [playerId, filtered.quarters]);
+  const positionDist = useMemo(
+    () => getPlayerPositionDistribution(playerId, filtered.quarters, sport === "all" ? "all" : sport),
+    [playerId, filtered.quarters, sport]
+  );
   const killerQuarter = useMemo(() => getKillerQuarter(playerId, filtered.goalEvents), [playerId, filtered.goalEvents]);
   const defenseCont = useMemo(() => getDefenseContribution(playerId, filtered.quarters), [playerId, filtered.quarters]);
   const ownGoalInducer = useMemo(() => getOwnGoalInducerCount(playerId, filtered.goalEvents, filtered.quarters), [playerId, filtered.goalEvents, filtered.quarters]);
