@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useAllFutsalData } from "@/hooks/useFutsalData";
+import SquadDepthBoard from "@/components/tactics/SquadDepthBoard";
 
 interface TacticDB {
   id: string;
@@ -25,6 +28,9 @@ interface TacticDB {
 const TacticsPage = () => {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { players } = useAllFutsalData();
+  const playerNames = new Map(players.map((p) => [p.id, p.name]));
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -181,6 +187,8 @@ const TacticsPage = () => {
       <PageHeader title="TACTICS" subtitle="감독의 작전판" />
 
       <div className="px-4 space-y-4">
+        <SquadDepthBoard playerNames={playerNames} onPlayerClick={(id) => navigate(`/player/${id}`)} />
+
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-xs text-primary font-bold mb-1">📋 전술 보드</p>
           <p className="text-xs text-muted-foreground">각 전술 카드를 탭하면 상세 내용을 확인할 수 있습니다.</p>
