@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +32,9 @@ const AdminPlayerManage = () => {
   const [editingProfile, setEditingProfile] = useState<Record<number, { pref: string; sub: string; note: string }>>({});
   const [savingProfileId, setSavingProfileId] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
+  const [newIsMember, setNewIsMember] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [savingMemberId, setSavingMemberId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<typeof players[0] | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -86,8 +89,9 @@ const AdminPlayerManage = () => {
       name,
       is_active: true,
       is_guest: false,
+      is_member: newIsMember,
       join_date: today,
-    });
+    } as any);
     setIsAdding(false);
     if (error) { toast.error("선수 등록 실패: " + error.message); return; }
     toast.success(`${name} 선수가 등록되었습니다`);
@@ -125,6 +129,16 @@ const AdminPlayerManage = () => {
     if (error) { toast.error("EN 이름 저장 실패"); return; }
     toast.success("영문 이름 저장 완료");
     setEditingNamesEn(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+    queryClient.invalidateQueries({ queryKey: ["players"] });
+  };
+
+  // Toggles "current dues-paying member" status (drives Treasury lists).
+  const toggleMember = async (playerId: number, next: boolean) => {
+    setSavingMemberId(playerId);
+    const { error } = await supabase.from("players").update({ is_member: next } as any).eq("id", playerId);
+    setSavingMemberId(null);
+    if (error) { toast.error("회원 상태 저장 실패: " + error.message); return; }
+    toast.success(next ? "정회원으로 지정했습니다" : "비회원으로 변경했습니다");
     queryClient.invalidateQueries({ queryKey: ["players"] });
   };
 
@@ -280,7 +294,18 @@ const AdminPlayerManage = () => {
 
         {/* Name */}
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-foreground text-sm truncate">{player.name}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-medium text-foreground text-sm truncate">{player.name}</span>
+            <span
+              className={`shrink-0 rounded-full border px-1.5 py-px text-[9px] font-bold ${
+                (player as any).is_member !== false
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+              }`}
+            >
+              {(player as any).is_member !== false ? "정회원" : "비회원"}
+            </span>
+          </div>
           {uploadingId === player.id && <div className="text-[10px] text-primary animate-pulse">업로드 중...</div>}
         </div>
 
@@ -336,6 +361,18 @@ const AdminPlayerManage = () => {
               <Save size={14} />
             </Button>
           )}
+        </div>
+        {/* Member status toggle */}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-secondary/30 px-2 py-1.5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold text-foreground">현재 정회원 (Active Member)</div>
+            <div className="text-[10px] text-muted-foreground">OFF = 비회원/탈퇴/용병 (회비 명단 제외)</div>
+          </div>
+          <Switch
+            checked={(player as any).is_member !== false}
+            disabled={savingMemberId === player.id}
+            onCheckedChange={(c) => toggleMember(player.id, c)}
+          />
         </div>
         {/* Birth year editor (age auto-calculated) */}
         <div className="flex items-center gap-2 pl-15">
@@ -429,7 +466,12 @@ const AdminPlayerManage = () => {
   return (
     <div className="mt-4 space-y-6">
       {/* 신규 선수 등록 */}
-      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-foreground">현재 정회원 (Active Member)으로 등록</span>
+          <Switch checked={newIsMember} onCheckedChange={setNewIsMember} />
+        </div>
+        <div className="flex items-center gap-2">
         <Input
           value={newPlayerName}
           onChange={(e) => setNewPlayerName(e.target.value)}
@@ -447,6 +489,7 @@ const AdminPlayerManage = () => {
           <Plus size={14} />
           등록
         </Button>
+        </div>
       </div>
       <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>

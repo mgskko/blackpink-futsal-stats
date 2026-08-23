@@ -48,8 +48,9 @@ const TreasuryPage = () => {
   const { data: dues = [] } = useMonthlyDues();
   const { players } = useAllFutsalData();
 
+  // Only current members (is_member) are billed dues.
   const activePlayers = useMemo(
-    () => players.filter((p) => p.is_active),
+    () => players.filter((p) => p.is_active && (p as any).is_member !== false),
     [players]
   );
 

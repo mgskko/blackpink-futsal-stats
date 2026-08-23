@@ -34,7 +34,11 @@ const AdminTreasury = () => {
   const isEnglish = (i18n.language ?? "ko").startsWith("en");
   const qc = useQueryClient();
   const { players } = useAllFutsalData();
-  const activePlayers = useMemo(() => players.filter((p) => p.is_active), [players]);
+  // Dues are only charged to current members (is_member).
+  const activePlayers = useMemo(
+    () => players.filter((p) => p.is_active && (p as any).is_member !== false),
+    [players]
+  );
 
   const { data: entries = [] } = useTreasuryEntries();
   const { data: dues = [] } = useMonthlyDues();

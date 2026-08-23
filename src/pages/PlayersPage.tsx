@@ -41,6 +41,7 @@ const PlayersPage = () => {
   const fireMap = useOnFirePlayers(matches, rosters);
   const [avatarPlayer, setAvatarPlayer] = useState<{ url: string | null; name: string } | null>(null);
   const [concacafMode, setConcacafMode] = useState(false);
+  const [membersOnly, setMembersOnly] = useState(true);
   const displayName = useDisplayName();
 
   const { data: allQuartersRaw } = useQuery({
@@ -70,11 +71,12 @@ const PlayersPage = () => {
 
   const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
   const activePlayers = useMemo(() => {
-    const base = players.filter(p => !(p as any).is_guest);
+    let base = players.filter(p => !(p as any).is_guest);
+    if (membersOnly) base = base.filter(p => (p as any).is_member !== false);
     if (sport === "all") return base;
     const playedIds = new Set(rosters.filter(r => sportMatchIds.has(r.match_id)).map(r => r.player_id));
     return base.filter(p => playedIds.has(p.id));
-  }, [players, rosters, sportMatchIds, sport]);
+  }, [players, rosters, sportMatchIds, sport, membersOnly]);
   const concacafSet = useMemo(() => {
     if (!concacafMode) return new Set<number>();
     const s = new Set<number>();
@@ -104,6 +106,20 @@ const PlayersPage = () => {
       <PageHeader title="PLAYERS" subtitle={`총 ${activePlayers.length}명`} />
       <div className="px-4 pb-3">
         <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full justify-between" />
+      </div>
+      <div className="px-4 pb-3">
+        <button
+          onClick={() => setMembersOnly(v => !v)}
+          className={`w-full rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition ${
+            membersOnly
+              ? "border-primary/60 bg-primary/15 text-primary"
+              : "border-border bg-card/60 text-muted-foreground hover:border-primary/40"
+          }`}
+        >
+          {membersOnly
+            ? (isEn ? "👥 Members only" : "👥 정회원만 보기")
+            : (isEn ? "👥 All players (incl. guests)" : "👥 전체 보기 (비회원 포함)")}
+        </button>
       </div>
       <div className="px-4 pb-3">
         <button
@@ -167,8 +183,15 @@ const PlayersPage = () => {
                   <span className={`text-sm ${condition.colorClass}`}>{condition.emoji}</span>
                   {tier !== "none" && <span className="sparkle-anim inline-block text-xs">✨</span>}
                   {inactive && (
-                    <span className="rounded-full border border-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">💤 비활동</span>
+                    <span className="rounded-full border border-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">{isEn ? "💤 Inactive" : "💤 비활동"}</span>
                   )}
+                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${
+                    (player as any).is_member !== false
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+                  }`}>
+                    {(player as any).is_member !== false ? (isEn ? "Member" : "정회원") : (isEn ? "Guest" : "비회원")}
+                  </span>
                 </div>
                 {tier === "onfire" && (
                   <>
