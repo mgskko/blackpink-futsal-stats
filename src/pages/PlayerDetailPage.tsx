@@ -694,8 +694,10 @@ const PlayerDetailPage = () => {
           <PlayerPositionCard
             dist={positionDist}
             isEn={isEn}
+            sport={sport === "all" ? "all" : sport}
             formatCode={sport === "soccer" ? "s11" : sport === "futsal" ? "futsal6" : null}
           />
+
 
           {/* Market Value — profile tab only */}
           {(() => {
