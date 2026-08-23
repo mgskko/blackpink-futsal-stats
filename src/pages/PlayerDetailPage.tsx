@@ -569,7 +569,10 @@ const PlayerDetailPage = () => {
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                {(player as any).age ? <span className="mr-2 text-foreground">{isEn ? `${(player as any).age} yrs` : `${(player as any).age}살`}</span> : null}
+                {(() => {
+                  const shownAge = ageFromBirthYear((player as any).birth_year) ?? (player as any).age ?? null;
+                  return shownAge ? <span className="mr-2 text-foreground">{isEn ? `${shownAge} yrs` : `${shownAge}살`}</span> : null;
+                })()}
                 {L("가입일", "Joined")}: {player.join_date}{player.is_active && <span className="ml-2 text-primary">● ACTIVE</span>}
               </p>
             </div>
