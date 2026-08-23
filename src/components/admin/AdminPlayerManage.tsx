@@ -489,6 +489,7 @@ const AdminPlayerManage = () => {
           <Plus size={14} />
           등록
         </Button>
+        </div>
       </div>
       <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
