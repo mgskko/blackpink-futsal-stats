@@ -109,6 +109,20 @@ const PlayersPage = () => {
       </div>
       <div className="px-4 pb-3">
         <button
+          onClick={() => setMembersOnly(v => !v)}
+          className={`w-full rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition ${
+            membersOnly
+              ? "border-primary/60 bg-primary/15 text-primary"
+              : "border-border bg-card/60 text-muted-foreground hover:border-primary/40"
+          }`}
+        >
+          {membersOnly
+            ? (isEn ? "👥 Members only" : "👥 정회원만 보기")
+            : (isEn ? "👥 All players (incl. guests)" : "👥 전체 보기 (비회원 포함)")}
+        </button>
+      </div>
+      <div className="px-4 pb-3">
+        <button
           onClick={() => setConcacafMode(v => !v)}
           className={`w-full rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] ${
             concacafMode
