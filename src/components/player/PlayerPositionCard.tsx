@@ -37,12 +37,15 @@ function spread(nodes: Node[]): Node[] {
 }
 
 export default function PlayerPositionCard({
-  dist, isEn, formatCode,
-}: { dist: Dist; isEn: boolean; formatCode?: string | null }) {
+  dist, isEn, formatCode, sport = "all",
+}: { dist: Dist; isEn: boolean; formatCode?: string | null; sport?: "futsal" | "soccer" | "all" }) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
   if (!dist || dist.total === 0) return null;
 
-  const slotEntries = Object.entries(dist.slots ?? {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  // Defense in depth: drop any cross-sport code that slipped through the aggregation.
+  const slotEntries = Object.entries(dist.slots ?? {})
+    .filter(([code, n]) => n > 0 && isSlotForSport(code, sport))
+    .sort((a, b) => b[1] - a[1]);
   const useSlots = slotEntries.length > 0;
 
   const nodes: Node[] = useSlots
@@ -64,12 +67,13 @@ export default function PlayerPositionCard({
         .sort((a, b) => dist[b] - dist[a])
         .map(k => ({
           key: k,
-          label: L(POS_LABEL[k].ko, POS_LABEL[k].en),
-          abbr: POS_LABEL[k].abbr,
+          label: roleLabel(k, isEn, sport),
+          abbr: k,
           count: dist[k],
           x: 50,
-          y: POS_LABEL[k].y,
+          y: POS_Y[k],
         }));
+
 
   if (nodes.length === 0) return null;
 
