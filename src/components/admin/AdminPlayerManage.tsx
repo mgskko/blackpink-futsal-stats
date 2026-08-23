@@ -280,7 +280,18 @@ const AdminPlayerManage = () => {
 
         {/* Name */}
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-foreground text-sm truncate">{player.name}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-medium text-foreground text-sm truncate">{player.name}</span>
+            <span
+              className={`shrink-0 rounded-full border px-1.5 py-px text-[9px] font-bold ${
+                (player as any).is_member !== false
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+              }`}
+            >
+              {(player as any).is_member !== false ? "정회원" : "비회원"}
+            </span>
+          </div>
           {uploadingId === player.id && <div className="text-[10px] text-primary animate-pulse">업로드 중...</div>}
         </div>
 
