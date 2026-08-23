@@ -33,7 +33,7 @@ const isCustomLineup = (l: any) => !!l && typeof l === "object" && !Array.isArra
 const idsOf = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
 const benchOf = (lineup: any) => idsOf(lineup?.Bench ?? lineup?.bench);
 
-function positionsOf(lineup: any, formatCode?: string | null) {
+function positionsOf(lineup: any, formatCode?: string | null, compact = false) {
   const out: { playerId: number; x: number; y: number; role: string; slot?: string }[] = [];
   if (!lineup) return out;
   const slotMap = slotMapOf(lineup);
@@ -53,7 +53,7 @@ function positionsOf(lineup: any, formatCode?: string | null) {
       out.push({ playerId: id, x, y: ROLE_Y[role], role });
     });
   });
-  return spreadOverlaps(out);
+  return spreadOverlaps(out, compact);
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -62,7 +62,9 @@ const MIN_DX = 22; // horizontal breathing room between avatars (%)
 const MIN_DY = 11; // vertical band that counts as "same row" (%)
 
 /** Dynamic collision prevention: fan out players sharing a slot, then resolve residual overlaps. */
-function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerId: number }>(list: T[]): T[] {
+function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerId: number }>(list: T[], compact = false): T[] {
+  const minDx = compact ? 15 : MIN_DX;
+  const minDy = compact ? 8 : MIN_DY;
   // 1) fan out identical slot coordinates (left / center / right, wrapping to a second row when crowded)
   const groups = new Map<string, T[]>();
   list.forEach(p => {
@@ -77,7 +79,7 @@ function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerI
       const row = Math.floor(i / perRow);
       const col = i % perRow;
       const inRow = Math.min(perRow, g.length - row * perRow);
-      const step = Math.min(MIN_DX, 84 / Math.max(1, inRow - 1 || 1));
+      const step = Math.min(minDx, 84 / Math.max(1, inRow - 1 || 1));
       p.x = clamp(p.x + (col - (inRow - 1) / 2) * step, 10, 90);
       if (rows > 1) p.y = clamp(p.y + (row - (rows - 1) / 2) * 12, 8, 92);
     });
@@ -90,9 +92,9 @@ function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerI
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
         const a = sorted[i], b = sorted[j];
-        if (Math.abs(a.y - b.y) >= MIN_DY) continue;
+        if (Math.abs(a.y - b.y) >= minDy) continue;
         const dx = b.x - a.x;
-        const overlap = MIN_DX - Math.abs(dx);
+        const overlap = minDx - Math.abs(dx);
         if (overlap <= 0) continue;
         const dir = dx === 0 ? (i % 2 === 0 ? 1 : -1) : Math.sign(dx);
         const shift = overlap / 2 + 0.5;
@@ -189,7 +191,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
 
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
-    const positions = positionsOf(lineup, formatCode);
+    const positions = positionsOf(lineup, formatCode, isSoccer);
     const bench = benchOf(lineup);
     return (
       <div className="flex-1 min-w-0">
