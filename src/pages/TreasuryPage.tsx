@@ -17,7 +17,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useTreasuryEntries, useMonthlyDues, formatKRW, recentMonths } from "@/hooks/useTreasury";
+import {
+  useTreasuryEntries,
+  useMonthlyDues,
+  useClubSetting,
+  BALANCE_KEY,
+  formatKRW,
+  recentMonths,
+} from "@/hooks/useTreasury";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
 
 const MONTHLY_FEE = 20000;
