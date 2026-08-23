@@ -1,5 +1,5 @@
 import type { Player, Match, Team, Result, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
-import { slotOfPlayer } from "@/lib/positions";
+import { slotOfPlayer, isSlotForSport, slotMapOf } from "@/lib/positions";
 
 // ─── Court Margin (+/-) for a player across quarters ───
 export interface PlayerCourtMargin {
@@ -162,7 +162,7 @@ export function computeAllCourtMargins(
     .filter(p => p.quartersPlayed > 0);
 }
 
-// ─── Position distribution ───
+// ─── Position distribution (sport-scoped) ───
 export interface PositionDistribution {
   GK: number;
   DF: number;
@@ -170,13 +170,18 @@ export interface PositionDistribution {
   FW: number;
   total: number;
   slots: Record<string, number>;
+  /** Quarters whose stored slot code belongs to the other sport (excluded from `slots`). */
+  crossSportExcluded: number;
+  /** Quarters with no detailed slot assigned at all. */
+  unassigned: number;
 }
 
 export function getPlayerPositionDistribution(
   playerId: number,
-  allQuarters: MatchQuarter[]
+  allQuarters: MatchQuarter[],
+  sport: "futsal" | "soccer" | "all" = "all"
 ): PositionDistribution {
-  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0, slots: {} };
+  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0, slots: {}, crossSportExcluded: 0, unassigned: 0 };
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const pos = getPlayerPosition(q.lineup, playerId);
@@ -188,11 +193,14 @@ export function getPlayerPositionDistribution(
       else if (pos === "FW") dist.FW++;
       const l: any = q.lineup;
       const code = slotOfPlayer(l, playerId) ?? slotOfPlayer(l?.teamA, playerId) ?? slotOfPlayer(l?.teamB, playerId);
-      if (code) dist.slots[code] = (dist.slots[code] || 0) + 1;
+      if (!code) { dist.unassigned++; return; }
+      if (!isSlotForSport(code, sport)) { dist.crossSportExcluded++; return; }
+      dist.slots[code] = (dist.slots[code] || 0) + 1;
     }
   });
   return dist;
 }
+
 
 export function getKillerQuarter(playerId: number, goalEvents: GoalEvent[]): { quarter: number; ap: number } | null {
   const qMap = new Map<number, number>();
@@ -581,4 +589,70 @@ export function getAssistConnectionMap(
     }
   });
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, topN);
+}
+
+// ─── Sport-scoped position leaderboard ───
+export interface SlotLeader {
+  playerId: number;
+  quarters: number;
+  share: number; // % of that player's own slot-tagged quarters
+}
+export interface SlotStat {
+  code: string;
+  quarters: number;
+  leaders: SlotLeader[];
+}
+
+/**
+ * Aggregates detailed slot usage for one sport only.
+ * Slot codes belonging to the other sport (bad/legacy data) are dropped entirely.
+ */
+export function computeSlotStats(
+  quarters: MatchQuarter[],
+  sport: "futsal" | "soccer" | "all",
+  validPlayerIds?: Set<number>
+): { slots: SlotStat[]; totalTagged: number; excluded: number } {
+  const perSlot = new Map<string, Map<number, number>>();
+  const perPlayerTotal = new Map<number, number>();
+  let totalTagged = 0;
+  let excluded = 0;
+
+  const collect = (unit: any) => {
+    const map = slotMapOf(unit);
+    Object.entries(map).forEach(([pid, code]) => {
+      const id = Number(pid);
+      if (!Number.isFinite(id)) return;
+      if (validPlayerIds && !validPlayerIds.has(id)) return;
+      if (!isSlotForSport(code, sport)) { excluded++; return; }
+      totalTagged++;
+      if (!perSlot.has(code)) perSlot.set(code, new Map());
+      const m = perSlot.get(code)!;
+      m.set(id, (m.get(id) || 0) + 1);
+      perPlayerTotal.set(id, (perPlayerTotal.get(id) || 0) + 1);
+    });
+  };
+
+  quarters.forEach(q => {
+    const l: any = q.lineup;
+    if (!l || typeof l !== "object") return;
+    if (l.teamA || l.teamB) { collect(l.teamA); collect(l.teamB); }
+    else collect(l);
+  });
+
+  const slots: SlotStat[] = [...perSlot.entries()]
+    .map(([code, m]) => ({
+      code,
+      quarters: [...m.values()].reduce((s, n) => s + n, 0),
+      leaders: [...m.entries()]
+        .map(([playerId, n]) => ({
+          playerId,
+          quarters: n,
+          share: perPlayerTotal.get(playerId) ? Math.round((n / perPlayerTotal.get(playerId)!) * 100) : 0,
+        }))
+        .sort((a, b) => b.quarters - a.quarters)
+        .slice(0, 3),
+    }))
+    .sort((a, b) => b.quarters - a.quarters);
+
+  return { slots, totalTagged, excluded };
 }

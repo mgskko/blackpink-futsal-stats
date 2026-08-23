@@ -1,14 +1,15 @@
 import { motion } from "framer-motion";
-import { getSlot, slotLabel } from "@/lib/positions";
+import { getSlot, slotLabel, roleLabel, isSlotForSport } from "@/lib/positions";
 
-type Dist = { GK: number; DF: number; MF: number; FW: number; total: number; slots?: Record<string, number> };
-
-const POS_LABEL: Record<string, { ko: string; en: string; abbr: string; y: number }> = {
-  FW: { ko: "스트라이커", en: "Striker", abbr: "FW", y: 16 },
-  MF: { ko: "미드필더", en: "Midfielder", abbr: "MF", y: 42 },
-  DF: { ko: "수비수", en: "Defender", abbr: "DF", y: 68 },
-  GK: { ko: "골키퍼", en: "Goalkeeper", abbr: "GK", y: 89 },
+type Dist = {
+  GK: number; DF: number; MF: number; FW: number; total: number;
+  slots?: Record<string, number>;
+  crossSportExcluded?: number;
+  unassigned?: number;
 };
+
+const POS_Y: Record<string, number> = { FW: 16, MF: 42, DF: 68, GK: 89 };
+
 
 type Node = { key: string; label: string; abbr: string; count: number; x: number; y: number };
 
@@ -36,12 +37,15 @@ function spread(nodes: Node[]): Node[] {
 }
 
 export default function PlayerPositionCard({
-  dist, isEn, formatCode,
-}: { dist: Dist; isEn: boolean; formatCode?: string | null }) {
+  dist, isEn, formatCode, sport = "all",
+}: { dist: Dist; isEn: boolean; formatCode?: string | null; sport?: "futsal" | "soccer" | "all" }) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
   if (!dist || dist.total === 0) return null;
 
-  const slotEntries = Object.entries(dist.slots ?? {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  // Defense in depth: drop any cross-sport code that slipped through the aggregation.
+  const slotEntries = Object.entries(dist.slots ?? {})
+    .filter(([code, n]) => n > 0 && isSlotForSport(code, sport))
+    .sort((a, b) => b[1] - a[1]);
   const useSlots = slotEntries.length > 0;
 
   const nodes: Node[] = useSlots
@@ -63,12 +67,13 @@ export default function PlayerPositionCard({
         .sort((a, b) => dist[b] - dist[a])
         .map(k => ({
           key: k,
-          label: L(POS_LABEL[k].ko, POS_LABEL[k].en),
-          abbr: POS_LABEL[k].abbr,
+          label: roleLabel(k, isEn, sport),
+          abbr: k,
           count: dist[k],
           x: 50,
-          y: POS_LABEL[k].y,
+          y: POS_Y[k],
         }));
+
 
   if (nodes.length === 0) return null;
 
@@ -136,6 +141,15 @@ export default function PlayerPositionCard({
           </div>
         </div>
       )}
+
+      {sport !== "all" && !!dist.crossSportExcluded && (
+        <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-[10px] leading-relaxed text-amber-300">
+          ⚠️ {isEn
+            ? `${dist.crossSportExcluded} quarter(s) are tagged with ${sport === "futsal" ? "football" : "futsal"} positions and are excluded until an admin re-maps them.`
+            : `${dist.crossSportExcluded}개 쿼터가 ${sport === "futsal" ? "축구" : "풋살"} 포지션으로 잘못 입력되어 집계에서 제외되었습니다. (관리자 수정 필요)`}
+        </p>
+      )}
+
     </motion.div>
   );
 }

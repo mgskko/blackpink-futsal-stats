@@ -244,3 +244,68 @@ export const ageFromBirthYear = (birthYear?: number | null): number | null => {
   const age = new Date().getFullYear() - Number(birthYear) + 1; // Korean age convention
   return age > 0 && age < 120 ? age : null;
 };
+
+// ─────────────────────────────────────────────────────────────
+// Sport scoping: keep futsal and soccer position vocabularies apart
+// ─────────────────────────────────────────────────────────────
+
+export type SportOfSlot = "futsal" | "soccer" | "both";
+
+/** Which sports each slot code legitimately belongs to (derived from the format table). */
+export const SLOT_SPORTS: Record<string, Set<"futsal" | "soccer">> = MATCH_FORMATS.reduce((acc, f) => {
+  f.slots.forEach(sl => {
+    if (!acc[sl.code]) acc[sl.code] = new Set();
+    acc[sl.code].add(f.sport);
+  });
+  return acc;
+}, {} as Record<string, Set<"futsal" | "soccer">>);
+
+export const slotSport = (code?: string | null): SportOfSlot | null => {
+  if (!code) return null;
+  const set = SLOT_SPORTS[code];
+  if (!set) return null;
+  if (set.has("futsal") && set.has("soccer")) return "both";
+  return set.has("futsal") ? "futsal" : "soccer";
+};
+
+/**
+ * True when a stored slot code is valid for the given sport.
+ * Cross-sport codes (e.g. "CB" inside a futsal match, "PIVO" inside a soccer match)
+ * are treated as bad data and excluded from stats until an admin fixes them.
+ */
+export const isSlotForSport = (code?: string | null, sport?: "futsal" | "soccer" | "all" | null): boolean => {
+  if (!code) return false;
+  const s = slotSport(code);
+  if (!s) return false; // unknown code → never counted
+  if (!sport || sport === "all") return true;
+  return s === "both" || s === sport;
+};
+
+/** Slot catalogue for one sport (deduped across that sport's formats). */
+export const slotsOfSport = (sport: "futsal" | "soccer"): PositionSlot[] => {
+  const out: PositionSlot[] = [];
+  MATCH_FORMATS.filter(f => f.sport === sport).forEach(f =>
+    f.slots.forEach(sl => { if (!out.some(o => o.code === sl.code)) out.push(sl); })
+  );
+  return out;
+};
+
+/** Coarse role label per sport (futsal uses the Portuguese futsal vocabulary). */
+export const roleLabel = (role: RoleKey, isEn: boolean, sport: "futsal" | "soccer" | "all" = "all") => {
+  if (sport === "futsal") {
+    const map: Record<RoleKey, [string, string]> = {
+      GK: ["골레이로", "Goleiro"],
+      DF: ["픽소", "Fixo"],
+      MF: ["아라", "Ala"],
+      FW: ["피보", "Pivo"],
+    };
+    return isEn ? map[role][1] : map[role][0];
+  }
+  const map: Record<RoleKey, [string, string]> = {
+    GK: ["골키퍼", "Goalkeeper"],
+    DF: ["수비수", "Defender"],
+    MF: ["미드필더", "Midfielder"],
+    FW: ["공격수", "Forward"],
+  };
+  return isEn ? map[role][1] : map[role][0];
+};
