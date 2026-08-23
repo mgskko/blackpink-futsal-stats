@@ -86,8 +86,9 @@ const AdminPlayerManage = () => {
       name,
       is_active: true,
       is_guest: false,
+      is_member: newIsMember,
       join_date: today,
-    });
+    } as any);
     setIsAdding(false);
     if (error) { toast.error("선수 등록 실패: " + error.message); return; }
     toast.success(`${name} 선수가 등록되었습니다`);
