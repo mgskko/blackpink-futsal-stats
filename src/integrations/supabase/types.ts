@@ -508,6 +508,7 @@ export type Database = {
           id: number
           is_active: boolean
           is_guest: boolean
+          is_member: boolean
           join_date: string
           name: string
           name_en: string | null
@@ -523,6 +524,7 @@ export type Database = {
           id: number
           is_active?: boolean
           is_guest?: boolean
+          is_member?: boolean
           join_date: string
           name: string
           name_en?: string | null
@@ -538,6 +540,7 @@ export type Database = {
           id?: number
           is_active?: boolean
           is_guest?: boolean
+          is_member?: boolean
           join_date?: string
           name?: string
           name_en?: string | null
