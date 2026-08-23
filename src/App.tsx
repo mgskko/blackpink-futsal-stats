@@ -18,6 +18,7 @@ import MyPage from "@/pages/MyPage";
 import AdminPage from "@/pages/AdminPage";
 import TacticsPage from "@/pages/TacticsPage";
 import ClubhousePage from "@/pages/ClubhousePage";
+import TreasuryPage from "@/pages/TreasuryPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/tactics" element={<TacticsPage />} />
               <Route path="/guide" element={<ClubhousePage />} />
               <Route path="/clubhouse" element={<ClubhousePage />} />
+              <Route path="/treasury" element={<TreasuryPage />} />
               <Route path="/my" element={<MyPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />

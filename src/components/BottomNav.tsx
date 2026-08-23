@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Trophy, Users, BarChart3, UserCircle, Shield, ClipboardList, Landmark } from "lucide-react";
+import { Trophy, Users, BarChart3, UserCircle, Shield, ClipboardList, Landmark, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +17,7 @@ const BottomNav = () => {
     { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
     { path: "/tactics", label: t("nav.tactics"), icon: ClipboardList },
     { path: "/guide", label: t("nav.club"), icon: Landmark },
+    { path: "/treasury", label: t("nav.treasury"), icon: Wallet },
     { path: "/my", label: t("nav.my"), icon: UserCircle },
     ...(isAdmin ? [{ path: "/admin", label: t("nav.admin"), icon: Shield }] : []),
   ];
