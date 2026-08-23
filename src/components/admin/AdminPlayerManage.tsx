@@ -451,14 +451,14 @@ const AdminPlayerManage = () => {
       <div>
         <h3 className="mb-3 text-sm font-bold text-foreground">활동 선수 ({activePlayers.length}명)</h3>
         <div className="space-y-2">
-          {activePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
+          {activePlayers.map(p => <div key={p.id}>{PlayerRow({ player: p })}</div>)}
         </div>
       </div>
       {inactivePlayers.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-bold text-muted-foreground">비활동 선수 ({inactivePlayers.length}명)</h3>
           <div className="space-y-2">
-            {inactivePlayers.map(p => <PlayerRow key={p.id} player={p} />)}
+            {inactivePlayers.map(p => <div key={p.id}>{PlayerRow({ player: p })}</div>)}
           </div>
         </div>
       )}
