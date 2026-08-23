@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
-import { DEFAULT_FORMAT, formatLabel, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
+import { DEFAULT_FORMAT, formatLabel, getFormat, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
 
 interface Props {
@@ -33,7 +33,7 @@ const isCustomLineup = (l: any) => !!l && typeof l === "object" && !Array.isArra
 const idsOf = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
 const benchOf = (lineup: any) => idsOf(lineup?.Bench ?? lineup?.bench);
 
-function positionsOf(lineup: any, formatCode?: string | null) {
+function positionsOf(lineup: any, formatCode?: string | null, compact = false) {
   const out: { playerId: number; x: number; y: number; role: string; slot?: string }[] = [];
   if (!lineup) return out;
   const slotMap = slotMapOf(lineup);
@@ -53,7 +53,7 @@ function positionsOf(lineup: any, formatCode?: string | null) {
       out.push({ playerId: id, x, y: ROLE_Y[role], role });
     });
   });
-  return spreadOverlaps(out);
+  return spreadOverlaps(out, compact);
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -62,7 +62,9 @@ const MIN_DX = 22; // horizontal breathing room between avatars (%)
 const MIN_DY = 11; // vertical band that counts as "same row" (%)
 
 /** Dynamic collision prevention: fan out players sharing a slot, then resolve residual overlaps. */
-function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerId: number }>(list: T[]): T[] {
+function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerId: number }>(list: T[], compact = false): T[] {
+  const minDx = compact ? 15 : MIN_DX;
+  const minDy = compact ? 8 : MIN_DY;
   // 1) fan out identical slot coordinates (left / center / right, wrapping to a second row when crowded)
   const groups = new Map<string, T[]>();
   list.forEach(p => {
@@ -77,7 +79,7 @@ function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerI
       const row = Math.floor(i / perRow);
       const col = i % perRow;
       const inRow = Math.min(perRow, g.length - row * perRow);
-      const step = Math.min(MIN_DX, 84 / Math.max(1, inRow - 1 || 1));
+      const step = Math.min(minDx, 84 / Math.max(1, inRow - 1 || 1));
       p.x = clamp(p.x + (col - (inRow - 1) / 2) * step, 10, 90);
       if (rows > 1) p.y = clamp(p.y + (row - (rows - 1) / 2) * 12, 8, 92);
     });
@@ -90,9 +92,9 @@ function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerI
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
         const a = sorted[i], b = sorted[j];
-        if (Math.abs(a.y - b.y) >= MIN_DY) continue;
+        if (Math.abs(a.y - b.y) >= minDy) continue;
         const dx = b.x - a.x;
-        const overlap = MIN_DX - Math.abs(dx);
+        const overlap = minDx - Math.abs(dx);
         if (overlap <= 0) continue;
         const dir = dx === 0 ? (i % 2 === 0 ? 1 : -1) : Math.sign(dx);
         const shift = overlap / 2 + 0.5;
@@ -115,6 +117,15 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const pn = (id: number) => getPlayerName(players, id, lang);
   const avatar = (id: number) => players.find(p => p.id === id)?.profile_image_url ?? null;
   const kit = (id: number) => players.find(p => p.id === id)?.back_number ?? null;
+  const isSoccer = getFormat(formatCode ?? DEFAULT_FORMAT).sport === "soccer";
+  const S = {
+    avatar: isSoccer ? 42 : 68,
+    ring: isSoccer ? "ring-2" : "ring-[3px]",
+    name: isSoccer ? "text-[9px] max-w-[58px] px-1" : "text-[11px] max-w-[84px] px-1.5",
+    slot: isSoccer ? "text-[8px] px-1" : "text-[9px] px-1.5",
+    badge: isSoccer ? "text-[8px] px-1" : "text-[10px] px-1.5",
+    initial: isSoccer ? "text-[10px]" : "text-sm",
+  };
   const roleLabel = (role: string) =>
     isEn ? role : role === "GK" ? "골키퍼" : role === "DF" ? "수비수" : role === "MF" ? "미드필더" : role === "FW" ? "공격수" : role === "Bench" ? "벤치" : role;
 
@@ -180,7 +191,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
 
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
-    const positions = positionsOf(lineup, formatCode);
+    const positions = positionsOf(lineup, formatCode, isSoccer);
     const bench = benchOf(lineup);
     return (
       <div className="flex-1 min-w-0">
@@ -219,32 +230,35 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                   className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
                 >
                   <div className="relative">
-                    <div className={`relative h-[68px] w-[68px] overflow-hidden rounded-full bg-black/60 ring-[3px] ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}>
+                    <div
+                      className={`relative overflow-hidden rounded-full bg-black/60 ${S.ring} ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}
+                      style={{ height: S.avatar, width: S.avatar }}
+                    >
                       {img ? (
                         <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
                       ) : (
-                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-white">{p.role}</span>
+                        <span className={`flex h-full w-full items-center justify-center font-bold text-white ${S.initial}`}>{p.role}</span>
                       )}
                     </div>
-                    <span className={`absolute -right-2 -top-1.5 rounded-md px-1.5 py-px text-[10px] font-extrabold shadow ${ratingTone(matchRating(p.playerId))}`}>
+                    <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))}`}>
                       {matchRating(p.playerId).toFixed(1)}
                     </span>
                     {kit(p.playerId) != null && (
-                      <span className="absolute -left-2 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-md bg-black/75 px-1 text-[10px] font-bold text-white ring-1 ring-white/20">
+                      <span className={`absolute -left-2 -top-1.5 flex items-center justify-center rounded-md bg-black/75 px-1 font-bold text-white ring-1 ring-white/20 ${isSoccer ? "h-4 min-w-4 text-[8px]" : "h-5 min-w-5 text-[10px]"}`}>
                         {kit(p.playerId)}
                       </span>
                     )}
                   </div>
-                  <span className="mt-1 max-w-[84px] truncate rounded bg-black/55 px-1.5 py-px text-[11px] font-semibold text-white drop-shadow">
+                  <span className={`mt-1 truncate rounded bg-black/55 py-px font-semibold text-white drop-shadow ${S.name}`}>
                     {pn(p.playerId)}
                   </span>
                   {p.slot && (
-                    <span className="rounded bg-primary/80 px-1.5 py-px text-[9px] font-bold text-primary-foreground">
+                    <span className={`max-w-[76px] truncate rounded bg-primary/80 py-px font-bold text-primary-foreground ${S.slot}`}>
                       {slotLabel(p.slot, isEn, formatCode)}
                     </span>
                   )}
                   {(qs.goals > 0 || qs.assists > 0) && (
-                    <span className="flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-px text-[9px] font-bold text-white">
+                    <span className={`flex items-center gap-1 rounded-full bg-black/55 py-px font-bold text-white ${S.slot}`}>
                       {qs.goals > 0 && <span>⚽{qs.goals}</span>}
                       {qs.assists > 0 && <span className="text-primary">🅰{qs.assists}</span>}
                     </span>

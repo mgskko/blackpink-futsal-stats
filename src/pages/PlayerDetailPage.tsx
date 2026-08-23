@@ -641,7 +641,11 @@ const PlayerDetailPage = () => {
       {activeTab === "profile" && (
         <div className="mx-4">
           {/* Position: main / other + mini pitch */}
-          <PlayerPositionCard dist={positionDist} isEn={isEn} />
+          <PlayerPositionCard
+            dist={positionDist}
+            isEn={isEn}
+            formatCode={sport === "soccer" ? "s11" : sport === "futsal" ? "futsal6" : null}
+          />
 
           {/* Market Value — profile tab only */}
           {(() => {
