@@ -162,7 +162,7 @@ export function computeAllCourtMargins(
     .filter(p => p.quartersPlayed > 0);
 }
 
-// ─── Position distribution ───
+// ─── Position distribution (sport-scoped) ───
 export interface PositionDistribution {
   GK: number;
   DF: number;
@@ -170,13 +170,18 @@ export interface PositionDistribution {
   FW: number;
   total: number;
   slots: Record<string, number>;
+  /** Quarters whose stored slot code belongs to the other sport (excluded from `slots`). */
+  crossSportExcluded: number;
+  /** Quarters with no detailed slot assigned at all. */
+  unassigned: number;
 }
 
 export function getPlayerPositionDistribution(
   playerId: number,
-  allQuarters: MatchQuarter[]
+  allQuarters: MatchQuarter[],
+  sport: "futsal" | "soccer" | "all" = "all"
 ): PositionDistribution {
-  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0, slots: {} };
+  const dist: PositionDistribution = { GK: 0, DF: 0, MF: 0, FW: 0, total: 0, slots: {}, crossSportExcluded: 0, unassigned: 0 };
   allQuarters.forEach(q => {
     if (!q.lineup) return;
     const pos = getPlayerPosition(q.lineup, playerId);
@@ -188,11 +193,14 @@ export function getPlayerPositionDistribution(
       else if (pos === "FW") dist.FW++;
       const l: any = q.lineup;
       const code = slotOfPlayer(l, playerId) ?? slotOfPlayer(l?.teamA, playerId) ?? slotOfPlayer(l?.teamB, playerId);
-      if (code) dist.slots[code] = (dist.slots[code] || 0) + 1;
+      if (!code) { dist.unassigned++; return; }
+      if (!isSlotForSport(code, sport)) { dist.crossSportExcluded++; return; }
+      dist.slots[code] = (dist.slots[code] || 0) + 1;
     }
   });
   return dist;
 }
+
 
 export function getKillerQuarter(playerId: number, goalEvents: GoalEvent[]): { quarter: number; ap: number } | null {
   const qMap = new Map<number, number>();
