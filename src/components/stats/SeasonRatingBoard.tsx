@@ -114,11 +114,11 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
           <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-b border-border bg-secondary/30 px-4 text-[10px] leading-relaxed text-muted-foreground">
             <li className="pt-3">• {L("경기별 평점의 평균 (라인업/통계/프로필과 동일한 단일 엔진)", "Mean of per-match ratings — the same engine used everywhere")}</li>
-            <li>• {L("기본 6.0 · 종목별(축구/풋살) 가중치 분리", "Base 6.0 · separate soccer / futsal weightings")}</li>
+            <li>• {L("기본 6.5 · 종목별(축구/풋살) 가중치 분리", "Base 6.5 · separate soccer / futsal weightings")}</li>
             <li>• {L("축구: 공격P 없을 시 ST > 윙어 > MF 순 감점, 골은 DF/GK일수록 가산", "Soccer: blank-game penalty ST > W > MF, goals worth more for DF/GK")}</li>
             <li>• {L("무실점 시 GK +1.8 / DF +1.5 대형 보너스, 자책골 -1.0", "Clean sheet: GK +1.8 / DF +1.5, own goal -1.0")}</li>
-            <li>• {L("팀 결과 보정 승 +0.5 / 패 -0.5, MOM +1.0, 경고 -0.3 · 퇴장 -1.0", "Result modifier W +0.5 / L -0.5, MOM +1.0, YC -0.3 / RC -1.0")}</li>
-            <li className="pb-3">• {L("4.0 ~ 10.0점 · 벌금 1회당 -0.1 (2경기 이상 출전자)", "4.0 – 10.0 · -0.1 per fine · min 2 appearances")}</li>
+            <li>• {L("팀 결과 보정 승 +0.4 / 패 -0.3, 경고 -0.3 · 퇴장 -1.0 (MOM은 평점에 미반영)", "Result modifier W +0.4 / L -0.3, YC -0.3 / RC -1.0 (MOM does not affect rating)")}</li>
+            <li className="pb-3">• {L("5.0 ~ 10.0점 · 벌금 1회당 -0.1 (2경기 이상 출전자)", "5.0 – 10.0 · -0.1 per fine · min 2 appearances")}</li>
 
           </motion.ul>
         )}
