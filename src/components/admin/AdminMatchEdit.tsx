@@ -251,12 +251,43 @@ const AdminMatchEdit = () => {
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("rosters").delete().eq("id", rosterId);
+      const target = rosters.find(r => r.id === rosterId);
+      const { data, error } = await supabase.from("rosters").delete().eq("id", rosterId).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("삭제 권한이 없거나 이미 삭제된 선수입니다.");
+
+      // Also strip the player from every quarter lineup so it doesn't reappear
+      if (target && matchId) {
+        const { data: qs } = await (supabase as any).from("match_quarters").select("id, lineup").eq("match_id", matchId);
+        const strip = (unit: any) => {
+          if (!unit || typeof unit !== "object") return unit;
+          const next: any = { ...unit };
+          Object.keys(next).forEach(k => {
+            if (Array.isArray(next[k])) next[k] = next[k].filter((id: any) => Number(id) !== target.player_id);
+            else if (k === "_slot" && next[k] && typeof next[k] === "object") {
+              const slot = { ...next[k] };
+              delete slot[String(target.player_id)];
+              next[k] = slot;
+            }
+          });
+          return next;
+        };
+        for (const q of qs ?? []) {
+          const lineup: any = q.lineup;
+          if (!lineup || typeof lineup !== "object") continue;
+          const updated = lineup.teamA || lineup.teamB
+            ? { ...lineup, ...(lineup.teamA ? { teamA: strip(lineup.teamA) } : {}), ...(lineup.teamB ? { teamB: strip(lineup.teamB) } : {}) }
+            : strip(lineup);
+          await (supabase as any).from("match_quarters").update({ lineup: updated }).eq("id", q.id);
+        }
+      }
+
       invalidateAll();
+      queryClient.invalidateQueries({ queryKey: ["all_match_quarters"] });
+      queryClient.invalidateQueries({ queryKey: ["match_quarters"] });
       toast({ title: "선수가 명단에서 제거되었습니다" });
     } catch (err: any) {
-      toast({ title: "오류", description: err.message, variant: "destructive" });
+      toast({ title: "제거 실패", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
   };
 
