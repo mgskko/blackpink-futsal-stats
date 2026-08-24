@@ -450,7 +450,9 @@ const MatchDetailPage = () => {
             isAdmin={isAdmin}
             matchId={matchId}
             formatCode={match?.match_format}
+            ratings={ratingMap}
           />
+
         </div>
       )}
 
