@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlayerName } from "@/hooks/useFutsalData";
+import { ratingTone } from "@/lib/matchRating";
 import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
 import { DEFAULT_FORMAT, formatLabel, getFormat, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
@@ -18,6 +19,8 @@ interface Props {
   isAdmin?: boolean;
   matchId?: number;
   formatCode?: string | null;
+  /** unified rating source (see src/lib/matchRating.ts) */
+  ratings?: Map<number, { rating: number; isOverride?: boolean }> | null;
 }
 
 const ROLE_ORDER = ["GK", "DF", "MF", "FW"] as const;
@@ -108,7 +111,7 @@ function spreadOverlaps<T extends { x: number; y: number; slot?: string; playerI
   return list;
 }
 
-export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId, formatCode }: Props) {
+export default function QuarterPitchViewer({ quarters, players, goalEvents, matchTeams, courtMargins, isAdmin, matchId, formatCode, ratings }: Props) {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const lang = i18n.language ?? "ko";
@@ -180,15 +183,9 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
     assists: quarterGoals.filter(g => g.assist_player_id === pid).length,
   });
 
-  // Lightweight FotMob-style match rating (display only)
-  const matchRating = (pid: number) => {
-    const s = playerStats(pid);
-    const per = s.played > 0 ? s.played : 1;
-    const r = 6 + (s.goals * 0.9 + s.assists * 0.6) / Math.sqrt(per) + (s.margin ?? 0) * 0.12;
-    return Math.max(4, Math.min(10, Number.isFinite(r) ? r : 6));
-  };
-  const ratingTone = (r: number) =>
-    r >= 7.5 ? "bg-blue-500 text-white" : r >= 6.8 ? "bg-green-500 text-black" : r >= 6 ? "bg-orange-500 text-black" : "bg-red-500 text-white";
+  // Unified rating (src/lib/matchRating.ts) — identical everywhere in the app
+  const matchRating = (pid: number) => ratings?.get(pid)?.rating ?? 6;
+  const isOverridden = (pid: number) => !!ratings?.get(pid)?.isOverride;
 
   const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
     const positions = positionsOf(lineup, formatCode, isSoccer);
@@ -240,7 +237,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
                         <span className={`flex h-full w-full items-center justify-center font-bold text-white ${S.initial}`}>{p.role}</span>
                       )}
                     </div>
-                    <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))}`}>
+                    <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))} ${isOverridden(p.playerId) ? "ring-1 ring-white/80" : ""}`}>
                       {matchRating(p.playerId).toFixed(1)}
                     </span>
                     {kit(p.playerId) != null && (

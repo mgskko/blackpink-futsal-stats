@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Star, ChevronDown, Info, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { computeSeasonRatings, RATING_V2 } from "@/hooks/useSeasonRating";
+import { useKeyedOverrideMap } from "@/hooks/useMatchRatings";
 import { useFines } from "@/hooks/useFines";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerName } from "@/hooks/useFutsalData";
@@ -57,6 +58,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
     else { setSortKey(key); setSortDir("desc"); }
   };
 
+  const overrideKeyed = useKeyedOverrideMap();
   const fineCounts = useMemo(() => {
     const m = new Map<number, number>();
     (fines ?? []).forEach(f => { if (!f.is_waived) m.set(f.player_id, (m.get(f.player_id) ?? 0) + 1); });
@@ -64,9 +66,9 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
   }, [fines]);
 
   const baseRows = useMemo(
-    () => computeSeasonRatings(players ?? [], matches ?? [], rosters ?? [], goalEvents ?? [], quarters ?? [], fineCounts)
+    () => computeSeasonRatings(players ?? [], matches ?? [], rosters ?? [], goalEvents ?? [], quarters ?? [], fineCounts, overrideKeyed)
       .filter(r => r.appearances >= 2),
-    [players, matches, rosters, goalEvents, quarters, fineCounts]
+    [players, matches, rosters, goalEvents, quarters, fineCounts, overrideKeyed]
   );
 
   const rows = useMemo(() => {
@@ -111,12 +113,13 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
         {showFormula && (
           <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-b border-border bg-secondary/30 px-4 text-[10px] leading-relaxed text-muted-foreground">
-            <li className="pt-3">• {L(`기본 평점 ${RATING_V2.base.toFixed(1)}점`, `Base ${RATING_V2.base.toFixed(1)}`)}</li>
-            <li>• {L("경기당 공격 기여: (골×0.4 + 도움×0.3) ÷ 출전 경기", "Attack per match: (G×0.4 + A×0.3) ÷ appearances")}</li>
-            <li>• {L("수비 기여율: 무실점율×0.4 + 실점 억제율×0.3 + GK 비중×0.3", "Defense rates: CS rate×0.4 + suppression×0.3 + GK share×0.3")}</li>
-            <li>• {L("쿼터 평균 마진 × 0.15", "Avg quarter margin × 0.15")}</li>
-            <li>• {L("벌금 1회당 -0.2", "-0.2 per fine")}</li>
-            <li className="pb-3">• {L("1.0 ~ 10.0점으로 정규화 (2경기 이상 출전자)", "Normalized to 1.0 – 10.0 · min 2 appearances")}</li>
+            <li className="pt-3">• {L("경기별 평점의 평균 (라인업/통계/프로필과 동일한 단일 엔진)", "Mean of per-match ratings — the same engine used everywhere")}</li>
+            <li>• {L("기본 6.0 · 종목별(축구/풋살) 가중치 분리", "Base 6.0 · separate soccer / futsal weightings")}</li>
+            <li>• {L("축구: 공격P 없을 시 ST > 윙어 > MF 순 감점, 골은 DF/GK일수록 가산", "Soccer: blank-game penalty ST > W > MF, goals worth more for DF/GK")}</li>
+            <li>• {L("무실점 시 GK +1.8 / DF +1.5 대형 보너스, 자책골 -1.0", "Clean sheet: GK +1.8 / DF +1.5, own goal -1.0")}</li>
+            <li>• {L("팀 결과 보정 승 +0.5 / 패 -0.5, MOM +1.0, 경고 -0.3 · 퇴장 -1.0", "Result modifier W +0.5 / L -0.5, MOM +1.0, YC -0.3 / RC -1.0")}</li>
+            <li className="pb-3">• {L("4.0 ~ 10.0점 · 벌금 1회당 -0.1 (2경기 이상 출전자)", "4.0 – 10.0 · -0.1 per fine · min 2 appearances")}</li>
+
           </motion.ul>
         )}
       </AnimatePresence>

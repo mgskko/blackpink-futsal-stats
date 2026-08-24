@@ -288,6 +288,54 @@ export type Database = {
           },
         ]
       }
+      match_rating_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          match_id: number
+          note: string | null
+          player_id: number
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          match_id: number
+          note?: string | null
+          player_id: number
+          rating: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          match_id?: number
+          note?: string | null
+          player_id?: number
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_rating_overrides_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_rating_overrides_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           date: string

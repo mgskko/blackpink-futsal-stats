@@ -16,6 +16,7 @@ import HeadToHead from "@/components/match/HeadToHead";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
 import { useMatchAnalysis, computeDualDataMOM, scorePlayersForMatch } from "@/hooks/useMatchAnalysis";
+import { useMatchRatings, useSaveRatingOverride } from "@/hooks/useMatchRatings";
 import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
 import { useTranslation } from "react-i18next";
 import { translateTerm, resolveTeamName } from "@/lib/displayName";
@@ -87,6 +88,7 @@ const MatchDetailPage = () => {
   const pn = (id: number | null | undefined) => (id ? getPlayerName(players, id, lang) : "???");
   const tn = (name: string | null | undefined) => resolveTeamName(name ?? "", lang);
   const [attendance, setAttendance] = useState<Map<number, AttendanceStatus>>(new Map());
+  const saveOverride = useSaveRatingOverride();
   const [tab, setTab] = useState<"facts" | "ticker" | "lineup" | "stats" | "h2h">("lineup");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { data: matchQuarters } = useMatchQuarters(matchId);
@@ -112,6 +114,19 @@ const MatchDetailPage = () => {
   }, [matchQuarters, goalEvents, matchId, players]);
 
   const { dataMOM, dualDataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? [], lang);
+
+  // ── Unified match rating (single source of truth for every rating surface) ──
+  const currentMatch = useMemo(() => matches.find(m => m.id === matchId) ?? null, [matches, matchId]);
+  const matchGoalEventsAll = useMemo(() => goalEvents.filter(g => g.match_id === matchId), [goalEvents, matchId]);
+  const matchRostersAll = useMemo(() => rosters.filter(r => r.match_id === matchId), [rosters, matchId]);
+  const momIds = useMemo(() => {
+    const ids = [dualDataMOM?.teamA?.playerId, dualDataMOM?.teamB?.playerId, dataMOM?.playerId]
+      .filter((v): v is number => typeof v === "number");
+    return [...new Set(ids)];
+  }, [dataMOM, dualDataMOM]);
+  const ratingMap = useMatchRatings(currentMatch, matchQuarters ?? [], matchGoalEventsAll, matchRostersAll, momIds);
+
+
 
   // Compute total score from quarters
   const quarterTotalScore = useMemo(() => {
@@ -253,12 +268,22 @@ const MatchDetailPage = () => {
     return [...statsMap.entries()].map(([playerId, s]) => ({ playerId, ...s, ap: s.goals + s.assists })).sort((a, b) => b.ap - a.ap || b.goals - a.goals);
   };
 
-  // Per-match rating (derived from the Data MOM scoring engine, scaled to a 4.0–10.0 range)
-  const matchScores = scorePlayersForMatch(matchId, players, teams, goalEvents, matchQuarters ?? [], results);
-  const ratingMap = new Map<number, number>(
-    matchScores.map(s => [s.playerId, Math.max(4, Math.min(10, 6 + s.score * 0.25))])
-  );
-  const ratingOf = (pid: number) => ratingMap.get(pid) ?? 6;
+  // Per-match rating — single source of truth (shared with lineup pitch, profile & leaderboards)
+  const ratingOf = (pid: number) => ratingMap.get(pid)?.rating ?? 6;
+  const editRating = (pid: number) => {
+    const cur = ratingMap.get(pid);
+    const input = window.prompt(
+      L("평점 수동 보정 (0~10, 비우면 자동 계산으로 복구)", "Manual rating override (0-10, blank = back to auto)"),
+      cur?.isOverride ? String(cur.rating) : ""
+    );
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (trimmed === "") { saveOverride.mutate({ matchId, playerId: pid, rating: null }); return; }
+    const val = Number(trimmed);
+    if (!Number.isFinite(val) || val < 0 || val > 10) return;
+    saveOverride.mutate({ matchId, playerId: pid, rating: Math.round(val * 100) / 100 });
+  };
+
 
   const playerMatchStats = getPlayerMatchStats().sort(
     (a, b) => ratingOf(b.playerId) - ratingOf(a.playerId) || b.ap - a.ap || b.goals - a.goals
@@ -439,7 +464,9 @@ const MatchDetailPage = () => {
             isAdmin={isAdmin}
             matchId={matchId}
             formatCode={match?.match_format}
+            ratings={ratingMap}
           />
+
         </div>
       )}
 
@@ -522,15 +549,23 @@ const MatchDetailPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       {(() => {
+                        const d = ratingMap.get(p.playerId);
                         const r = ratingOf(p.playerId);
+                        const tip = d
+                          ? `${L("공격", "ATT")} ${d.attack} · ${L("수비", "DEF")} ${d.defense} · ${L("결과", "RES")} ${d.teamMod} · ${L("보너스", "BON")} ${d.bonus} · ${L("징계", "DIS")} ${d.discipline}`
+                          : L("평점", "Rating");
                         return (
-                          <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
-                            r >= 8 ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
-                            : r >= 7 ? "bg-primary/15 border border-primary/30 text-primary"
-                            : r >= 6 ? "bg-muted border border-border text-muted-foreground"
-                            : "bg-red-500/10 border border-red-500/30 text-red-400"
-                          }`} title={L("평점", "Rating")}>
-                            {r.toFixed(2)}
+                          <span
+                            onClick={isAdmin ? (e) => { e.stopPropagation(); editRating(p.playerId); } : undefined}
+                            className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${isAdmin ? "cursor-pointer" : ""} ${
+                              r >= 8 ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                              : r >= 7 ? "bg-primary/15 border border-primary/30 text-primary"
+                              : r >= 6 ? "bg-muted border border-border text-muted-foreground"
+                              : "bg-red-500/10 border border-red-500/30 text-red-400"
+                            } ${d?.isOverride ? "ring-1 ring-primary/60" : ""}`}
+                            title={tip}
+                          >
+                            {r.toFixed(2)}{d?.isOverride ? "*" : ""}
                           </span>
                         );
                       })()}

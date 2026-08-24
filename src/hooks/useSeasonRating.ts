@@ -1,6 +1,8 @@
 import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
+import { computeMatchRatings, RATING_BOUNDS } from "@/lib/matchRating";
+
 
 // ─── Season Rating v2.1 (per-match normalized, lineup-optional) ───
 // base 6.0
@@ -52,6 +54,8 @@ export function computeSeasonRatings(
   goalEventsInput: GoalEvent[] = [],
   quartersInput: MatchQuarter[] = [],
   fineCountByPlayer: Map<number, number> = new Map(),
+  /** admin overrides keyed `${matchId}:${playerId}` */
+  overrideKeyed: Map<string, number> = new Map(),
 ): RatingBreakdown[] {
   const players = Array.isArray(playersInput) ? playersInput.filter(Boolean) : [];
   const matches = Array.isArray(matchesInput) ? matchesInput.filter(m => m?.date) : [];
@@ -61,6 +65,27 @@ export function computeSeasonRatings(
   const today = new Date().toISOString().slice(0, 10);
   const played = matches.filter(m => m.date <= today);
   const playedIds = new Set(played.map(m => m.id));
+
+  // ── single source of truth: season rating = mean of per-match ratings ──
+  const matchRatingByPlayer = new Map<number, number[]>();
+  played.forEach(m => {
+    const overrides = new Map<number, number>();
+    overrideKeyed.forEach((v, k) => {
+      const [mid, pid] = k.split(":").map(Number);
+      if (mid === m.id) overrides.set(pid, v);
+    });
+    const ratings = computeMatchRatings({
+      match: m,
+      quarters: quarters.filter(q => q.match_id === m.id),
+      goalEvents: goalEvents.filter(g => g.match_id === m.id),
+      rosters: rosters.filter(r => r.match_id === m.id),
+      overrides,
+    });
+    ratings.forEach((d, pid) => {
+      matchRatingByPlayer.set(pid, [...(matchRatingByPlayer.get(pid) ?? []), d.rating]);
+    });
+  });
+
 
   return players.map(p => {
     const myRosters = rosters.filter(r => r.player_id === p.id && playedIds.has(r.match_id));
@@ -111,11 +136,18 @@ export function computeSeasonRatings(
     const penalty = fines * RATING_V2.finePenalty;
 
     const hasData = apps > 0;
-    const rawUnsafe = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
-    const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_V2.base;
+    // Season rating = mean of the unified per-match ratings (minus a light discipline tax)
+    const myMatchRatings = matchRatingByPlayer.get(p.id) ?? [];
+    const meanMatch = myMatchRatings.length > 0
+      ? myMatchRatings.reduce((a, b) => a + b, 0) / myMatchRatings.length
+      : RATING_BOUNDS.base;
+    const rawUnsafe = meanMatch - fines * 0.1;
+    const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_BOUNDS.base;
     const rating = hasData
-      ? Math.max(RATING_V2.min, Math.min(RATING_V2.max, Math.round(raw * 100) / 100))
+      ? Math.max(RATING_BOUNDS.min, Math.min(RATING_BOUNDS.max, Math.round(raw * 100) / 100))
       : 0;
+
+
 
     return {
       playerId: p.id,
