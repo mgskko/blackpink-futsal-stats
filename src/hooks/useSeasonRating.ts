@@ -136,11 +136,18 @@ export function computeSeasonRatings(
     const penalty = fines * RATING_V2.finePenalty;
 
     const hasData = apps > 0;
-    const rawUnsafe = RATING_V2.base + attackScore + defenseScore + marginScore - penalty;
-    const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_V2.base;
+    // Season rating = mean of the unified per-match ratings (minus a light discipline tax)
+    const myMatchRatings = matchRatingByPlayer.get(p.id) ?? [];
+    const meanMatch = myMatchRatings.length > 0
+      ? myMatchRatings.reduce((a, b) => a + b, 0) / myMatchRatings.length
+      : RATING_BOUNDS.base;
+    const rawUnsafe = meanMatch - fines * 0.1;
+    const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_BOUNDS.base;
     const rating = hasData
-      ? Math.max(RATING_V2.min, Math.min(RATING_V2.max, Math.round(raw * 100) / 100))
+      ? Math.max(RATING_BOUNDS.min, Math.min(RATING_BOUNDS.max, Math.round(raw * 100) / 100))
       : 0;
+
+
 
     return {
       playerId: p.id,
