@@ -44,7 +44,7 @@ export interface CardCount {
   red: number;
 }
 
-export const RATING_BOUNDS = { base: 6.0, min: 4.0, max: 10.0 };
+export const RATING_BOUNDS = { base: 6.5, min: 5.0, max: 10.0 };
 
 // ── tuning tables ─────────────────────────────────────────────
 // Soccer: goals are scarce, so a single goal must not dominate; position role
@@ -53,31 +53,32 @@ const SOCCER = {
   goal: { FW: 0.9, W: 1.0, MF: 1.15, DF: 1.5, GK: 2.0 },
   assist: { FW: 0.6, W: 0.7, MF: 0.8, DF: 1.0, GK: 1.4 },
   // blank-game penalty (no goal & no assist) — heaviest for strikers
-  blank: { FW: -0.8, W: -0.5, MF: -0.3, DF: 0, GK: 0 },
+  blank: { FW: -0.4, W: -0.25, MF: -0.15, DF: 0, GK: 0 },
   cleanSheet: { GK: 1.8, DF: 1.5, MF: 0.3, W: 0.1, FW: 0.1 },
   nearCleanSheet: { GK: 0.6, DF: 0.5, MF: 0.1, W: 0, FW: 0 }, // conceded <= 1
-  concededPer: { GK: -0.35, DF: -0.25, MF: -0.08, W: 0, FW: 0 },
-  margin: 0.09,
-  marginClamp: 0.8,
+  concededPer: { GK: -0.18, DF: -0.13, MF: -0.05, W: 0, FW: 0 },
+  margin: 0.07,
+  marginClamp: 0.6,
 };
 
 // Futsal: high scoring, fast transitions — keeps the legacy weighting feel.
 const FUTSAL = {
   goal: { FW: 0.5, W: 0.55, MF: 0.6, DF: 0.75, GK: 0.9 },
   assist: { FW: 0.35, W: 0.38, MF: 0.4, DF: 0.5, GK: 0.6 },
-  blank: { FW: -0.35, W: -0.25, MF: -0.15, DF: 0, GK: 0 },
+  blank: { FW: -0.18, W: -0.12, MF: -0.08, DF: 0, GK: 0 },
   cleanSheet: { GK: 0.9, DF: 0.7, MF: 0.2, W: 0.1, FW: 0.1 },
   nearCleanSheet: { GK: 0.3, DF: 0.25, MF: 0.05, W: 0, FW: 0 },
-  concededPer: { GK: -0.15, DF: -0.12, MF: -0.04, W: 0, FW: 0 },
-  margin: 0.13,
-  marginClamp: 1.2,
+  concededPer: { GK: -0.09, DF: -0.07, MF: -0.03, W: 0, FW: 0 },
+  margin: 0.10,
+  marginClamp: 0.9,
 };
 
 export const OWN_GOAL_PENALTY = -1.0;
-export const MOM_BONUS = 1.0;
+/** MOM no longer affects the rating (rating stays purely performance-derived). */
+export const MOM_BONUS = 0;
 export const YELLOW_PENALTY = -0.3;
 export const RED_PENALTY = -1.0;
-export const RESULT_MOD = { win: 0.5, draw: 0, loss: -0.5 };
+export const RESULT_MOD = { win: 0.4, draw: 0, loss: -0.3 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -122,7 +123,7 @@ export interface ComputeMatchRatingsInput {
   quarters: MatchQuarter[];
   goalEvents: GoalEvent[];
   rosters?: Roster[];
-  /** DataMOM / voted MOM winner(s) get a bonus */
+  /** @deprecated MOM no longer affects the rating — kept for call-site compatibility */
   momPlayerIds?: number[];
   /** admin manual override: playerId -> rating */
   overrides?: Map<number, number>;
@@ -138,7 +139,6 @@ export function computeMatchRatings({
   quarters,
   goalEvents,
   rosters = [],
-  momPlayerIds = [],
   overrides,
   cards,
 }: ComputeMatchRatingsInput): Map<number, MatchRatingDetail> {
@@ -234,7 +234,6 @@ export function computeMatchRatings({
   const totalFor = qs.reduce((a, q) => a + (q.score_for || 0), 0);
   const totalAgainst = qs.reduce((a, q) => a + (q.score_against || 0), 0);
 
-  const momSet = new Set(momPlayerIds.filter(Boolean));
 
   state.forEach((s, pid) => {
     const group = (Object.entries(s.roleCount) as [RatingGroup, number][])
@@ -271,7 +270,7 @@ export function computeMatchRatings({
     }
     const teamMod = RESULT_MOD[teamResult];
 
-    const bonus = momSet.has(pid) ? MOM_BONUS : 0;
+    const bonus = 0;
 
     const rawUnsafe = RATING_BOUNDS.base + attack + defense + discipline + teamMod + bonus;
     const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_BOUNDS.base;
