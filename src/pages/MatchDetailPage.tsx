@@ -15,7 +15,7 @@ import QuarterPitchViewer from "@/components/match/QuarterPitchViewer";
 import HeadToHead from "@/components/match/HeadToHead";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
-import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
+import { useMatchAnalysis, computeDualDataMOM, scorePlayersForMatch } from "@/hooks/useMatchAnalysis";
 import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
 import { useTranslation } from "react-i18next";
 import { translateTerm, resolveTeamName } from "@/lib/displayName";
