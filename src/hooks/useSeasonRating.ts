@@ -1,6 +1,8 @@
 import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
+import { computeMatchRatings, RATING_BOUNDS } from "@/lib/matchRating";
+
 
 // ─── Season Rating v2.1 (per-match normalized, lineup-optional) ───
 // base 6.0
