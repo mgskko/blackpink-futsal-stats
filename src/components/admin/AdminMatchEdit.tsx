@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
+import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
 import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
