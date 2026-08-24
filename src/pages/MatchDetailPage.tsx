@@ -253,7 +253,16 @@ const MatchDetailPage = () => {
     return [...statsMap.entries()].map(([playerId, s]) => ({ playerId, ...s, ap: s.goals + s.assists })).sort((a, b) => b.ap - a.ap || b.goals - a.goals);
   };
 
-  const playerMatchStats = getPlayerMatchStats();
+  // Per-match rating (derived from the Data MOM scoring engine, scaled to a 4.0–10.0 range)
+  const matchScores = scorePlayersForMatch(matchId, players, teams, goalEvents, matchQuarters ?? [], results);
+  const ratingMap = new Map<number, number>(
+    matchScores.map(s => [s.playerId, Math.max(4, Math.min(10, 6 + s.score * 0.25))])
+  );
+  const ratingOf = (pid: number) => ratingMap.get(pid) ?? 6;
+
+  const playerMatchStats = getPlayerMatchStats().sort(
+    (a, b) => ratingOf(b.playerId) - ratingOf(a.playerId) || b.ap - a.ap || b.goals - a.goals
+  );
   const attendingPlayers = players.filter(p => attendance.get(p.id) === "attending");
   const absentPlayers = players.filter(p => attendance.get(p.id) === "absent");
   const undecidedPlayers = players.filter(p => attendance.get(p.id) === "undecided");
