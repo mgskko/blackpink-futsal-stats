@@ -112,8 +112,8 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
       </div>
       <p className="text-[10px] text-muted-foreground">
         {isEnglish
-          ? "Top capsule = first choice. Tap a name to open the player profile."
-          : "맨 위 캡슐이 주전 옵션입니다. 이름을 탭하면 선수 프로필로 이동합니다."}
+          ? "Tap a name to open the player profile."
+          : "이름을 탭하면 선수 프로필로 이동합니다."}
       </p>
     </div>
   );
