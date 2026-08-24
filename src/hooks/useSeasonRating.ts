@@ -52,6 +52,8 @@ export function computeSeasonRatings(
   goalEventsInput: GoalEvent[] = [],
   quartersInput: MatchQuarter[] = [],
   fineCountByPlayer: Map<number, number> = new Map(),
+  /** admin overrides keyed `${matchId}:${playerId}` */
+  overrideKeyed: Map<string, number> = new Map(),
 ): RatingBreakdown[] {
   const players = Array.isArray(playersInput) ? playersInput.filter(Boolean) : [];
   const matches = Array.isArray(matchesInput) ? matchesInput.filter(m => m?.date) : [];
@@ -61,6 +63,27 @@ export function computeSeasonRatings(
   const today = new Date().toISOString().slice(0, 10);
   const played = matches.filter(m => m.date <= today);
   const playedIds = new Set(played.map(m => m.id));
+
+  // ── single source of truth: season rating = mean of per-match ratings ──
+  const matchRatingByPlayer = new Map<number, number[]>();
+  played.forEach(m => {
+    const overrides = new Map<number, number>();
+    overrideKeyed.forEach((v, k) => {
+      const [mid, pid] = k.split(":").map(Number);
+      if (mid === m.id) overrides.set(pid, v);
+    });
+    const ratings = computeMatchRatings({
+      match: m,
+      quarters: quarters.filter(q => q.match_id === m.id),
+      goalEvents: goalEvents.filter(g => g.match_id === m.id),
+      rosters: rosters.filter(r => r.match_id === m.id),
+      overrides,
+    });
+    ratings.forEach((d, pid) => {
+      matchRatingByPlayer.set(pid, [...(matchRatingByPlayer.get(pid) ?? []), d.rating]);
+    });
+  });
+
 
   return players.map(p => {
     const myRosters = rosters.filter(r => r.player_id === p.id && playedIds.has(r.match_id));
