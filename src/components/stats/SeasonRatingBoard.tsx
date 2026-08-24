@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Star, ChevronDown, Info, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { computeSeasonRatings, RATING_V2 } from "@/hooks/useSeasonRating";
+import { useKeyedOverrideMap } from "@/hooks/useMatchRatings";
 import { useFines } from "@/hooks/useFines";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
 import { getPlayerName } from "@/hooks/useFutsalData";
@@ -57,6 +58,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
     else { setSortKey(key); setSortDir("desc"); }
   };
 
+  const overrideKeyed = useKeyedOverrideMap();
   const fineCounts = useMemo(() => {
     const m = new Map<number, number>();
     (fines ?? []).forEach(f => { if (!f.is_waived) m.set(f.player_id, (m.get(f.player_id) ?? 0) + 1); });
@@ -64,9 +66,9 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
   }, [fines]);
 
   const baseRows = useMemo(
-    () => computeSeasonRatings(players ?? [], matches ?? [], rosters ?? [], goalEvents ?? [], quarters ?? [], fineCounts)
+    () => computeSeasonRatings(players ?? [], matches ?? [], rosters ?? [], goalEvents ?? [], quarters ?? [], fineCounts, overrideKeyed)
       .filter(r => r.appearances >= 2),
-    [players, matches, rosters, goalEvents, quarters, fineCounts]
+    [players, matches, rosters, goalEvents, quarters, fineCounts, overrideKeyed]
   );
 
   const rows = useMemo(() => {

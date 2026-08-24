@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { computeMatchAP } from "@/hooks/useFutsalData";
 import type { Match, Roster, GoalEvent, Result, MatchQuarter, Player } from "@/hooks/useFutsalData";
 import { computeSeasonRatings } from "@/hooks/useSeasonRating";
+import { useKeyedOverrideMap } from "@/hooks/useMatchRatings";
 
 export function computeRating(goals: number, assists: number, appearances: number, winRate: number) {
   if (appearances === 0) return 6.0;
@@ -38,6 +39,7 @@ export function buildSeasonRows(
   results: Result[] = [],
   quarters: MatchQuarter[] = [],
   fineCounts: Map<number, number> = new Map(),
+  overrideKeyed: Map<string, number> = new Map(),
 ): SeasonRow[] {
   const today = new Date().toISOString().slice(0, 10);
   const played = (matches ?? []).filter(m => m?.date && m.date <= today);
@@ -60,6 +62,7 @@ export function buildSeasonRows(
       goalEvents,
       safeQuarters.filter(q => yearIds.has(q?.match_id)),
       fineCounts,
+      overrideKeyed,
     );
     const me = entries.find(e => e.playerId === playerId);
     if (!me) return;
@@ -117,9 +120,10 @@ interface Props {
 
 export default function SeasonStatsTable({ isEn, playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts }: Props) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
+  const overrideKeyed = useKeyedOverrideMap();
   const rows = useMemo(
-    () => buildSeasonRows(playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts),
-    [playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts]
+    () => buildSeasonRows(playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts, overrideKeyed),
+    [playerId, players, matches, rosters, goalEvents, results, quarters, fineCounts, overrideKeyed]
   );
 
   if (rows.length === 0) return null;

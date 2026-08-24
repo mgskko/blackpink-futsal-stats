@@ -32,6 +32,7 @@ import PlayerTrophies from "@/components/player/PlayerTrophies";
 import PitchHeatmap from "@/components/player/PitchHeatmap";
 import PlayerCareerTab from "@/components/player/PlayerCareerTab";
 import { computeSeasonRatings } from "@/hooks/useSeasonRating";
+import { useKeyedOverrideMap } from "@/hooks/useMatchRatings";
 import { useFines } from "@/hooks/useFines";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
@@ -414,10 +415,11 @@ const PlayerDetailPage = () => {
   const soloVsTeam = useMemo(() => getSoloVsTeamGoals(playerId, filtered.goalEvents), [playerId, filtered.goalEvents]);
   const playerTraits = useMemo(() => computePlayerTraits(playerId, players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, filtered.quarters), [playerId, players, filtered]);
 
+  const overrideKeyed = useKeyedOverrideMap();
   const seasonRatingV2 = useMemo(() => {
-    const rows = computeSeasonRatings(players, filtered.matches, filtered.rosters, goalEvents, filtered.quarters, fineCounts);
+    const rows = computeSeasonRatings(players, filtered.matches, filtered.rosters, goalEvents, filtered.quarters, fineCounts, overrideKeyed);
     return rows.find(r => r.playerId === playerId)?.rating ?? 0;
-  }, [players, filtered, goalEvents, fineCounts, playerId]);
+  }, [players, filtered, goalEvents, fineCounts, playerId, overrideKeyed]);
 
   if (isLoading) return <SplashScreen />;
 
