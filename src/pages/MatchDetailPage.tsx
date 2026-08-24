@@ -113,6 +113,19 @@ const MatchDetailPage = () => {
 
   const { dataMOM, dualDataMOM, aiComments } = useMatchAnalysis(matchId, players, teams, results, goalEvents, matchQuarters ?? [], lang);
 
+  // ── Unified match rating (single source of truth for every rating surface) ──
+  const currentMatch = useMemo(() => matches.find(m => m.id === matchId) ?? null, [matches, matchId]);
+  const matchGoalEventsAll = useMemo(() => goalEvents.filter(g => g.match_id === matchId), [goalEvents, matchId]);
+  const matchRostersAll = useMemo(() => rosters.filter(r => r.match_id === matchId), [rosters, matchId]);
+  const momIds = useMemo(() => {
+    const ids = [dualDataMOM?.teamA?.playerId, dualDataMOM?.teamB?.playerId, dataMOM?.playerId]
+      .filter((v): v is number => typeof v === "number");
+    return [...new Set(ids)];
+  }, [dataMOM, dualDataMOM]);
+  const ratingMap = useMatchRatings(currentMatch, matchQuarters ?? [], matchGoalEventsAll, matchRostersAll, momIds);
+
+
+
   // Compute total score from quarters
   const quarterTotalScore = useMemo(() => {
     if (!matchQuarters || matchQuarters.length === 0) return null;
