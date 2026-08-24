@@ -15,7 +15,7 @@ import QuarterPitchViewer from "@/components/match/QuarterPitchViewer";
 import HeadToHead from "@/components/match/HeadToHead";
 import { useAuth } from "@/hooks/useAuth";
 import { computeMatchCourtMargins } from "@/hooks/useCourtStats";
-import { useMatchAnalysis, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
+import { useMatchAnalysis, computeDualDataMOM, scorePlayersForMatch } from "@/hooks/useMatchAnalysis";
 import type { DataMOMResult } from "@/hooks/useMatchAnalysis";
 import { useTranslation } from "react-i18next";
 import { translateTerm, resolveTeamName } from "@/lib/displayName";
@@ -253,7 +253,16 @@ const MatchDetailPage = () => {
     return [...statsMap.entries()].map(([playerId, s]) => ({ playerId, ...s, ap: s.goals + s.assists })).sort((a, b) => b.ap - a.ap || b.goals - a.goals);
   };
 
-  const playerMatchStats = getPlayerMatchStats();
+  // Per-match rating (derived from the Data MOM scoring engine, scaled to a 4.0–10.0 range)
+  const matchScores = scorePlayersForMatch(matchId, players, teams, goalEvents, matchQuarters ?? [], results);
+  const ratingMap = new Map<number, number>(
+    matchScores.map(s => [s.playerId, Math.max(4, Math.min(10, 6 + s.score * 0.25))])
+  );
+  const ratingOf = (pid: number) => ratingMap.get(pid) ?? 6;
+
+  const playerMatchStats = getPlayerMatchStats().sort(
+    (a, b) => ratingOf(b.playerId) - ratingOf(a.playerId) || b.ap - a.ap || b.goals - a.goals
+  );
   const attendingPlayers = players.filter(p => attendance.get(p.id) === "attending");
   const absentPlayers = players.filter(p => attendance.get(p.id) === "absent");
   const undecidedPlayers = players.filter(p => attendance.get(p.id) === "undecided");
@@ -434,8 +443,8 @@ const MatchDetailPage = () => {
         </div>
       )}
 
-      {/* YouTube */}
-      {tab === "facts" && youtubeId && (
+      {/* YouTube (moved into Ticker tab for timeline sync) */}
+      {tab === "ticker" && youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Youtube size={18} /> MATCH VIDEO</h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border">
@@ -512,6 +521,19 @@ const MatchDetailPage = () => {
                       {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 {L("슈퍼 서브", "Super Sub")}</span>}
                     </div>
                     <div className="flex items-center gap-3">
+                      {(() => {
+                        const r = ratingOf(p.playerId);
+                        return (
+                          <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                            r >= 8 ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                            : r >= 7 ? "bg-primary/15 border border-primary/30 text-primary"
+                            : r >= 6 ? "bg-muted border border-border text-muted-foreground"
+                            : "bg-red-500/10 border border-red-500/30 text-red-400"
+                          }`} title={L("평점", "Rating")}>
+                            {r.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                       {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
                       {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
                       {p.goals === 0 && p.assists === 0 && margin === null && <span className="text-xs text-muted-foreground">-</span>}

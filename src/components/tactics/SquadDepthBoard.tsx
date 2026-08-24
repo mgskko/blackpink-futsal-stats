@@ -100,11 +100,7 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
                     onClick={() => r.player_id && onPlayerClick?.(r.player_id)}
-                    className={`w-full truncate rounded-full px-2 py-1 text-center text-[11px] font-bold shadow-sm backdrop-blur-sm ${
-                      i === 0
-                        ? "bg-sky-400/85 text-slate-900"
-                        : "bg-sky-400/55 text-white"
-                    }`}
+                    className="w-full truncate rounded-full bg-sky-400/75 px-2 py-1 text-center text-[11px] font-bold text-slate-900 shadow-sm backdrop-blur-sm"
                   >
                     {playerNames.get(r.player_id!) ?? `#${r.player_id}`}
                   </motion.button>
@@ -116,8 +112,8 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
       </div>
       <p className="text-[10px] text-muted-foreground">
         {isEnglish
-          ? "Top capsule = first choice. Tap a name to open the player profile."
-          : "맨 위 캡슐이 주전 옵션입니다. 이름을 탭하면 선수 프로필로 이동합니다."}
+          ? "Tap a name to open the player profile."
+          : "이름을 탭하면 선수 프로필로 이동합니다."}
       </p>
     </div>
   );

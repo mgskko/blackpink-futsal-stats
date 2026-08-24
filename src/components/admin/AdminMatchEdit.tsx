@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star } from "lucide-react";
+import { Trash2, Edit, Plus, Save, AlertTriangle, UserPlus, Star, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CreatableSelect from "@/components/ui/creatable-select";
 import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
@@ -251,12 +251,43 @@ const AdminMatchEdit = () => {
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("rosters").delete().eq("id", rosterId);
+      const target = rosters.find(r => r.id === rosterId);
+      const { data, error } = await supabase.from("rosters").delete().eq("id", rosterId).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("삭제 권한이 없거나 이미 삭제된 선수입니다.");
+
+      // Also strip the player from every quarter lineup so it doesn't reappear
+      if (target && matchId) {
+        const { data: qs } = await (supabase as any).from("match_quarters").select("id, lineup").eq("match_id", matchId);
+        const strip = (unit: any) => {
+          if (!unit || typeof unit !== "object") return unit;
+          const next: any = { ...unit };
+          Object.keys(next).forEach(k => {
+            if (Array.isArray(next[k])) next[k] = next[k].filter((id: any) => Number(id) !== target.player_id);
+            else if (k === "_slot" && next[k] && typeof next[k] === "object") {
+              const slot = { ...next[k] };
+              delete slot[String(target.player_id)];
+              next[k] = slot;
+            }
+          });
+          return next;
+        };
+        for (const q of qs ?? []) {
+          const lineup: any = q.lineup;
+          if (!lineup || typeof lineup !== "object") continue;
+          const updated = lineup.teamA || lineup.teamB
+            ? { ...lineup, ...(lineup.teamA ? { teamA: strip(lineup.teamA) } : {}), ...(lineup.teamB ? { teamB: strip(lineup.teamB) } : {}) }
+            : strip(lineup);
+          await (supabase as any).from("match_quarters").update({ lineup: updated }).eq("id", q.id);
+        }
+      }
+
       invalidateAll();
+      queryClient.invalidateQueries({ queryKey: ["all_match_quarters"] });
+      queryClient.invalidateQueries({ queryKey: ["match_quarters"] });
       toast({ title: "선수가 명단에서 제거되었습니다" });
     } catch (err: any) {
-      toast({ title: "오류", description: err.message, variant: "destructive" });
+      toast({ title: "제거 실패", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
   };
 
@@ -506,9 +537,7 @@ const AdminMatchEdit = () => {
                         {teamRoster.map(r => (
                           <span key={r.id} className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-foreground">
                             {getPlayerName(players, r.player_id)}
-                            {showAddRoster && (
-                              <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
-                            )}
+                            <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} disabled={saving} className="ml-1 text-destructive hover:text-destructive/80 disabled:opacity-40" aria-label="명단에서 제거"><X size={11} /></button>
                           </span>
                         ))}
                         {teamRoster.length === 0 && <span className="text-[10px] text-muted-foreground">없음</span>}
@@ -523,9 +552,7 @@ const AdminMatchEdit = () => {
                 {matchRoster.map(r => (
                   <span key={r.id} className="group relative rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-foreground">
                     {getPlayerName(players, r.player_id)}
-                    {showAddRoster && (
-                      <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
-                    )}
+                    <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} disabled={saving} className="ml-1 text-destructive hover:text-destructive/80 disabled:opacity-40" aria-label="명단에서 제거"><X size={11} /></button>
                   </span>
                 ))}
               </div>

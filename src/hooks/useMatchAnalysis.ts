@@ -114,7 +114,7 @@ function getDFPlayersFromLineup(lineup: any): number[] {
 }
 
 // ─── Core scoring logic ───
-function scorePlayersForMatch(
+export function scorePlayersForMatch(
   matchId: number,
   players: Player[],
   teams: Team[],
