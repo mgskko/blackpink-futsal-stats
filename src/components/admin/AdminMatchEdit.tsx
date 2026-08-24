@@ -537,9 +537,7 @@ const AdminMatchEdit = () => {
                         {teamRoster.map(r => (
                           <span key={r.id} className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-foreground">
                             {getPlayerName(players, r.player_id)}
-                            {showAddRoster && (
-                              <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
-                            )}
+                            <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} disabled={saving} className="ml-1 text-destructive hover:text-destructive/80 disabled:opacity-40" aria-label="명단에서 제거"><X size={11} /></button>
                           </span>
                         ))}
                         {teamRoster.length === 0 && <span className="text-[10px] text-muted-foreground">없음</span>}
@@ -554,9 +552,7 @@ const AdminMatchEdit = () => {
                 {matchRoster.map(r => (
                   <span key={r.id} className="group relative rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-foreground">
                     {getPlayerName(players, r.player_id)}
-                    {showAddRoster && (
-                      <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} className="ml-1 text-destructive hover:text-destructive/80"><Trash2 size={10} /></button>
-                    )}
+                    <button onClick={() => setDeleteTarget({ type: "roster", id: r.id })} disabled={saving} className="ml-1 text-destructive hover:text-destructive/80 disabled:opacity-40" aria-label="명단에서 제거"><X size={11} /></button>
                   </span>
                 ))}
               </div>
