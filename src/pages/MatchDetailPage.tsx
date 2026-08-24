@@ -434,8 +434,8 @@ const MatchDetailPage = () => {
         </div>
       )}
 
-      {/* YouTube */}
-      {tab === "facts" && youtubeId && (
+      {/* YouTube (moved into Ticker tab for timeline sync) */}
+      {tab === "ticker" && youtubeId && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mx-4 mt-4">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Youtube size={18} /> MATCH VIDEO</h2>
           <div className="aspect-video overflow-hidden rounded-xl border border-border">
