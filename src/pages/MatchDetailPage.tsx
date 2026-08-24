@@ -521,6 +521,19 @@ const MatchDetailPage = () => {
                       {isSuperSub && <span className="rounded-full bg-orange-500/10 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">🔥 {L("슈퍼 서브", "Super Sub")}</span>}
                     </div>
                     <div className="flex items-center gap-3">
+                      {(() => {
+                        const r = ratingOf(p.playerId);
+                        return (
+                          <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                            r >= 8 ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                            : r >= 7 ? "bg-primary/15 border border-primary/30 text-primary"
+                            : r >= 6 ? "bg-muted border border-border text-muted-foreground"
+                            : "bg-red-500/10 border border-red-500/30 text-red-400"
+                          }`} title={L("평점", "Rating")}>
+                            {r.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                       {p.goals > 0 && <span className="text-sm text-primary">⚽ {p.goals}</span>}
                       {p.assists > 0 && <span className="text-sm text-muted-foreground">🅰️ {p.assists}</span>}
                       {p.goals === 0 && p.assists === 0 && margin === null && <span className="text-xs text-muted-foreground">-</span>}
