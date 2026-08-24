@@ -18,6 +18,8 @@ interface Props {
   isAdmin?: boolean;
   matchId?: number;
   formatCode?: string | null;
+  /** unified rating source (see src/lib/matchRating.ts) */
+  ratings?: Map<number, { rating: number; isOverride?: boolean }> | null;
 }
 
 const ROLE_ORDER = ["GK", "DF", "MF", "FW"] as const;
