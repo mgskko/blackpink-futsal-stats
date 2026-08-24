@@ -100,11 +100,7 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
                     onClick={() => r.player_id && onPlayerClick?.(r.player_id)}
-                    className={`w-full truncate rounded-full px-2 py-1 text-center text-[11px] font-bold shadow-sm backdrop-blur-sm ${
-                      i === 0
-                        ? "bg-sky-400/85 text-slate-900"
-                        : "bg-sky-400/55 text-white"
-                    }`}
+                    className="w-full truncate rounded-full bg-sky-400/75 px-2 py-1 text-center text-[11px] font-bold text-slate-900 shadow-sm backdrop-blur-sm"
                   >
                     {playerNames.get(r.player_id!) ?? `#${r.player_id}`}
                   </motion.button>
