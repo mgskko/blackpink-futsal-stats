@@ -297,6 +297,8 @@ const AdminMatchEdit = () => {
       toast({ title: "제거 실패", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
   };
+
+  const handleSetManualMOM = async () => {
     if (!matchId || !manualMOM) return;
     setSaving(true);
     try {
