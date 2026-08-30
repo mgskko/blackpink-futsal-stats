@@ -292,11 +292,11 @@ const AdminMatchEdit = () => {
       queryClient.invalidateQueries({ queryKey: ["match_quarters"] });
       toast({ title: "선수가 명단에서 제거되었습니다" });
     } catch (err: any) {
+      // Rollback optimistic removal on failure
+      if (prevRosters) queryClient.setQueryData(["rosters"], prevRosters);
       toast({ title: "제거 실패", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
   };
-
-  const handleSetManualMOM = async () => {
     if (!matchId || !manualMOM) return;
     setSaving(true);
     try {
