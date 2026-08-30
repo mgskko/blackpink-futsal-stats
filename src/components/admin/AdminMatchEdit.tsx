@@ -250,8 +250,13 @@ const AdminMatchEdit = () => {
 
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
+    const target = rosters.find(r => r.id === rosterId);
+    // Optimistic update: remove the chip from the UI immediately
+    const prevRosters = queryClient.getQueryData<any[]>(["rosters"]);
+    if (prevRosters) {
+      queryClient.setQueryData(["rosters"], prevRosters.filter(r => r.id !== rosterId));
+    }
     try {
-      const target = rosters.find(r => r.id === rosterId);
       const { data, error } = await supabase.from("rosters").delete().eq("id", rosterId).select("id");
       if (error) throw error;
       if (!data || data.length === 0) throw new Error("삭제 권한이 없거나 이미 삭제된 선수입니다.");
