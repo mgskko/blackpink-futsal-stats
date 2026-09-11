@@ -252,8 +252,10 @@ const AdminMatchEdit = () => {
 
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
+    setDeleteTarget(null);
     const target = rosters.find(r => r.id === rosterId);
-    // Optimistic update: remove the chip from the UI immediately
+    // Instant UI removal (local state) + cache optimistic update
+    setRemovedRosterIds(prev => new Set(prev).add(rosterId));
     const prevRosters = queryClient.getQueryData<any[]>(["rosters"]);
     if (prevRosters) {
       queryClient.setQueryData(["rosters"], prevRosters.filter(r => r.id !== rosterId));
