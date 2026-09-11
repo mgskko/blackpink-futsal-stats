@@ -24,6 +24,7 @@ import {
   BALANCE_KEY,
   formatKRW,
   recentMonths,
+  duesIncomeEntries,
 } from "@/hooks/useTreasury";
 import { useAllFutsalData } from "@/hooks/useFutsalData";
 
@@ -97,8 +98,16 @@ const TreasuryPage = () => {
     qc.invalidateQueries({ queryKey: ["monthly_dues_all"] });
   };
 
-  const totalIn = entries.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
-  const totalOut = entries.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
+  // Paid dues count as income in the ledger.
+  const ledger = useMemo(() => {
+    const names = new Map(players.map((p) => [p.id, p.name] as const));
+    return [...entries, ...duesIncomeEntries(dues, names, isEnglish)].sort((a, b) =>
+      (b.entry_date ?? "").localeCompare(a.entry_date ?? "")
+    );
+  }, [entries, dues, players, isEnglish]);
+
+  const totalIn = ledger.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
+  const totalOut = ledger.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
   const { data: manualBalance } = useClubSetting(BALANCE_KEY);
   const isManual = manualBalance != null && manualBalance !== "";
   const balance = isManual ? Number(manualBalance) : totalIn - totalOut;
@@ -112,12 +121,12 @@ const TreasuryPage = () => {
   }, [activePlayers, duesMap, selectedMonth]);
 
   const grouped = useMemo(() => {
-    const map = new Map<string, typeof entries>();
-    entries
+    const map = new Map<string, typeof ledger>();
+    ledger
       .filter((e) => (e.entry_date ?? "").slice(0, 7) === selectedMonth)
       .forEach((e) => map.set(e.entry_date, [...(map.get(e.entry_date) ?? []), e]));
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [entries, selectedMonth]);
+  }, [ledger, selectedMonth]);
 
   const pct = monthStat.target > 0 ? Math.round((monthStat.paidCount / monthStat.target) * 100) : 0;
 

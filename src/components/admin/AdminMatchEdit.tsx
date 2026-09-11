@@ -74,12 +74,14 @@ const AdminMatchEdit = () => {
   // Manual MOM
   const [showMOM, setShowMOM] = useState(false);
   const [manualMOM, setManualMOM] = useState("");
+  // Locally removed roster rows: hides chips instantly, independent of cache/refetch timing.
+  const [removedRosterIds, setRemovedRosterIds] = useState<Set<number>>(new Set());
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
   const matchTeams = matchId ? teams.filter(t => t.match_id === matchId) : [];
   const matchResults = matchId ? results.filter(r => r.match_id === matchId) : [];
-  const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
+  const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId && !removedRosterIds.has(r.id)) : [];
   const matchGoals = matchId ? goalEvents.filter(g => g.match_id === matchId).sort((a, b) => a.quarter - b.quarter) : [];
   const selectedMatch = matchId ? matches.find(m => m.id === matchId) : null;
   const isCustomMatch = selectedMatch?.is_custom ?? false;
@@ -102,6 +104,7 @@ const AdminMatchEdit = () => {
 
   const handleSelectMatch = (v: string) => {
     setSelectedMatchId(v);
+    setRemovedRosterIds(new Set());
     setEditingScore(false);
     setEditingGoalId(null);
     setShowAddGoal(false);
@@ -250,8 +253,10 @@ const AdminMatchEdit = () => {
 
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
+    setDeleteTarget(null);
     const target = rosters.find(r => r.id === rosterId);
-    // Optimistic update: remove the chip from the UI immediately
+    // Instant UI removal (local state) + cache optimistic update
+    setRemovedRosterIds(prev => new Set(prev).add(rosterId));
     const prevRosters = queryClient.getQueryData<any[]>(["rosters"]);
     if (prevRosters) {
       queryClient.setQueryData(["rosters"], prevRosters.filter(r => r.id !== rosterId));
@@ -294,8 +299,13 @@ const AdminMatchEdit = () => {
     } catch (err: any) {
       // Rollback optimistic removal on failure
       if (prevRosters) queryClient.setQueryData(["rosters"], prevRosters);
+      setRemovedRosterIds(prev => {
+        const next = new Set(prev);
+        next.delete(rosterId);
+        return next;
+      });
       toast({ title: "제거 실패", description: err.message, variant: "destructive" });
-    } finally { setSaving(false); setDeleteTarget(null); }
+    } finally { setSaving(false); }
   };
 
   const handleSetManualMOM = async () => {

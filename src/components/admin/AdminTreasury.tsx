@@ -8,6 +8,7 @@ import {
   useClubSetting,
   BALANCE_KEY,
   formatKRW,
+  duesIncomeEntries,
 } from "@/hooks/useTreasury";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,8 +148,16 @@ const AdminTreasury = () => {
     qc.invalidateQueries({ queryKey: ["monthly_dues_all"] });
   };
 
-  const totalIn = entries.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
-  const totalOut = entries.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
+  // Paid dues are derived income rows in the ledger.
+  const ledger = useMemo(() => {
+    const names = new Map(players.map((p) => [p.id, p.name] as const));
+    return [...entries, ...duesIncomeEntries(dues, names, isEnglish)].sort((a, b) =>
+      (b.entry_date ?? "").localeCompare(a.entry_date ?? "")
+    );
+  }, [entries, dues, players, isEnglish]);
+
+  const totalIn = ledger.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
+  const totalOut = ledger.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
 
   return (
     <div className="mt-4 space-y-6">
@@ -242,10 +251,10 @@ const AdminTreasury = () => {
       {/* Entries list */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-foreground">{isEnglish ? "Ledger" : "장부 내역"}</p>
-        {entries.length === 0 && (
+        {ledger.length === 0 && (
           <p className="text-xs text-muted-foreground">{isEnglish ? "No entries yet." : "등록된 내역이 없습니다."}</p>
         )}
-        {entries.map((e) => (
+        {ledger.map((e) => (
           <div key={e.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${e.direction === "in" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
               {e.direction === "in" ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
@@ -259,9 +268,13 @@ const AdminTreasury = () => {
             <span className={`text-sm font-bold ${e.direction === "in" ? "text-emerald-400" : "text-rose-400"}`}>
               {e.direction === "in" ? "+" : "-"}{formatKRW(e.amount)}
             </span>
-            <button onClick={() => deleteEntry(e.id)} className="text-muted-foreground hover:text-destructive">
-              <Trash2 size={14} />
-            </button>
+            {!(e as any).isDues ? (
+              <button onClick={() => deleteEntry(e.id)} className="text-muted-foreground hover:text-destructive">
+                <Trash2 size={14} />
+              </button>
+            ) : (
+              <span className="shrink-0 text-[10px] text-muted-foreground">{isEnglish ? "Dues" : "회비"}</span>
+            )}
           </div>
         ))}
       </div>

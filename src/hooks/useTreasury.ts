@@ -46,6 +46,28 @@ export const useMonthlyDues = () =>
 
 export const formatKRW = (n: number) => `${Math.round(n).toLocaleString("ko-KR")}원`;
 
+/**
+ * Paid monthly dues are treated as income entries in the club ledger.
+ * They are derived (not stored in treasury_entries), so a status change
+ * is reflected in the balance and the transaction feed immediately.
+ */
+export const duesIncomeEntries = (
+  dues: DuesRow[],
+  playerNames: Map<number, string>,
+  isEnglish = false
+): (TreasuryEntry & { isDues: true })[] =>
+  dues
+    .filter((d) => (d.status ?? (d.is_paid ? "paid" : "unpaid")) === "paid" && (d.amount ?? 0) > 0)
+    .map((d) => ({
+      id: `dues-${d.player_id}-${d.year_month}`,
+      entry_date: `${d.year_month}-01`,
+      direction: "in" as const,
+      amount: d.amount,
+      counterparty: playerNames.get(d.player_id) ?? null,
+      memo: isEnglish ? `Monthly dues ${d.year_month}` : `${d.year_month} 월 회비`,
+      isDues: true as const,
+    }));
+
 export const recentMonths = (count = 12) => {
   const now = new Date();
   const out: string[] = [];
