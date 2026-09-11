@@ -104,6 +104,7 @@ const AdminMatchEdit = () => {
 
   const handleSelectMatch = (v: string) => {
     setSelectedMatchId(v);
+    setRemovedRosterIds(new Set());
     setEditingScore(false);
     setEditingGoalId(null);
     setShowAddGoal(false);
