@@ -74,6 +74,8 @@ const AdminMatchEdit = () => {
   // Manual MOM
   const [showMOM, setShowMOM] = useState(false);
   const [manualMOM, setManualMOM] = useState("");
+  // Locally removed roster rows: hides chips instantly, independent of cache/refetch timing.
+  const [removedRosterIds, setRemovedRosterIds] = useState<Set<number>>(new Set());
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
