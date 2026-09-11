@@ -268,9 +268,13 @@ const AdminTreasury = () => {
             <span className={`text-sm font-bold ${e.direction === "in" ? "text-emerald-400" : "text-rose-400"}`}>
               {e.direction === "in" ? "+" : "-"}{formatKRW(e.amount)}
             </span>
-            <button onClick={() => deleteEntry(e.id)} className="text-muted-foreground hover:text-destructive">
-              <Trash2 size={14} />
-            </button>
+            {!(e as any).isDues ? (
+              <button onClick={() => deleteEntry(e.id)} className="text-muted-foreground hover:text-destructive">
+                <Trash2 size={14} />
+              </button>
+            ) : (
+              <span className="shrink-0 text-[10px] text-muted-foreground">{isEnglish ? "Dues" : "회비"}</span>
+            )}
           </div>
         ))}
       </div>
