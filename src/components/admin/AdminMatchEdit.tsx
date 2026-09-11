@@ -298,8 +298,13 @@ const AdminMatchEdit = () => {
     } catch (err: any) {
       // Rollback optimistic removal on failure
       if (prevRosters) queryClient.setQueryData(["rosters"], prevRosters);
+      setRemovedRosterIds(prev => {
+        const next = new Set(prev);
+        next.delete(rosterId);
+        return next;
+      });
       toast({ title: "제거 실패", description: err.message, variant: "destructive" });
-    } finally { setSaving(false); setDeleteTarget(null); }
+    } finally { setSaving(false); }
   };
 
   const handleSetManualMOM = async () => {
