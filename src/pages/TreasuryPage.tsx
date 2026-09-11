@@ -121,12 +121,12 @@ const TreasuryPage = () => {
   }, [activePlayers, duesMap, selectedMonth]);
 
   const grouped = useMemo(() => {
-    const map = new Map<string, typeof entries>();
-    entries
+    const map = new Map<string, typeof ledger>();
+    ledger
       .filter((e) => (e.entry_date ?? "").slice(0, 7) === selectedMonth)
       .forEach((e) => map.set(e.entry_date, [...(map.get(e.entry_date) ?? []), e]));
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [entries, selectedMonth]);
+  }, [ledger, selectedMonth]);
 
   const pct = monthStat.target > 0 ? Math.round((monthStat.paidCount / monthStat.target) * 100) : 0;
 
