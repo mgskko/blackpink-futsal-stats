@@ -147,8 +147,16 @@ const AdminTreasury = () => {
     qc.invalidateQueries({ queryKey: ["monthly_dues_all"] });
   };
 
-  const totalIn = entries.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
-  const totalOut = entries.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
+  // Paid dues are derived income rows in the ledger.
+  const ledger = useMemo(() => {
+    const names = new Map(players.map((p) => [p.id, p.name] as const));
+    return [...entries, ...duesIncomeEntries(dues, names, isEnglish)].sort((a, b) =>
+      (b.entry_date ?? "").localeCompare(a.entry_date ?? "")
+    );
+  }, [entries, dues, players, isEnglish]);
+
+  const totalIn = ledger.filter((e) => e.direction === "in").reduce((s, e) => s + e.amount, 0);
+  const totalOut = ledger.filter((e) => e.direction === "out").reduce((s, e) => s + e.amount, 0);
 
   return (
     <div className="mt-4 space-y-6">
