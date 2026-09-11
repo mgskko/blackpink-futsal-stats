@@ -251,10 +251,10 @@ const AdminTreasury = () => {
       {/* Entries list */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-foreground">{isEnglish ? "Ledger" : "장부 내역"}</p>
-        {entries.length === 0 && (
+        {ledger.length === 0 && (
           <p className="text-xs text-muted-foreground">{isEnglish ? "No entries yet." : "등록된 내역이 없습니다."}</p>
         )}
-        {entries.map((e) => (
+        {ledger.map((e) => (
           <div key={e.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${e.direction === "in" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
               {e.direction === "in" ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
