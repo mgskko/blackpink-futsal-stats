@@ -79,7 +79,7 @@ const AdminMatchEdit = () => {
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
   const matchTeams = matchId ? teams.filter(t => t.match_id === matchId) : [];
   const matchResults = matchId ? results.filter(r => r.match_id === matchId) : [];
-  const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId) : [];
+  const matchRoster = matchId ? rosters.filter(r => r.match_id === matchId && !removedRosterIds.has(r.id)) : [];
   const matchGoals = matchId ? goalEvents.filter(g => g.match_id === matchId).sort((a, b) => a.quarter - b.quarter) : [];
   const selectedMatch = matchId ? matches.find(m => m.id === matchId) : null;
   const isCustomMatch = selectedMatch?.is_custom ?? false;
