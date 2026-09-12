@@ -50,6 +50,27 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
   const teamAPlayers = players.filter(p => teamAPlayerIds.has(p.id));
   const teamBPlayers = players.filter(p => teamBPlayerIds.has(p.id));
 
+  // Only ids that are both on the roster and still exist as players
+  const validIds = new Set(players.filter(p => rosterPlayerIds.includes(p.id)).map(p => p.id));
+
+  const sanitizeTeam = (raw: any): TeamLineup => {
+    const base: any = emptyLineup();
+    if (!raw || typeof raw !== "object") return base;
+    if (raw.formation) base.formation = raw.formation;
+    Object.keys(base).forEach(k => {
+      if (!Array.isArray(base[k])) return;
+      base[k] = (Array.isArray(raw[k]) ? raw[k] : [])
+        .map((id: any) => Number(id))
+        .filter((id: number) => validIds.has(id));
+    });
+    return base;
+  };
+
+  const sanitizeQuarterLineup = (lineup: { teamA: TeamLineup; teamB: TeamLineup }) => ({
+    teamA: sanitizeTeam(lineup.teamA),
+    teamB: sanitizeTeam(lineup.teamB),
+  });
+
   useEffect(() => {
     if (!matchId) return;
     (async () => {
@@ -59,12 +80,12 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
           const raw = q.lineup || {};
           // Support both old format and new teamA/teamB format
           if (raw.teamA && raw.teamB) {
-            return { id: q.id, quarter: q.quarter, score_for: q.score_for || 0, score_against: q.score_against || 0, lineup: raw };
+            return { id: q.id, quarter: q.quarter, score_for: q.score_for || 0, score_against: q.score_against || 0, lineup: sanitizeQuarterLineup(raw) };
           }
           // Legacy: single lineup → put into teamA, leave teamB empty
           return {
             id: q.id, quarter: q.quarter, score_for: q.score_for || 0, score_against: q.score_against || 0,
-            lineup: { teamA: { ...emptyLineup(), ...raw }, teamB: emptyLineup() },
+            lineup: { teamA: sanitizeTeam(raw), teamB: emptyLineup() },
           };
         }));
       } else {
@@ -73,6 +94,12 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
       setLoaded(true);
     })();
   }, [matchId]);
+
+  // Prune lineups when the roster changes (player removed from the match)
+  useEffect(() => {
+    setQuarters(prev => prev.map(q => ({ ...q, lineup: sanitizeQuarterLineup(q.lineup) })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosterPlayerIds.join(","), players.length]);
 
   const addQuarter = () => {
     const nextQ = quarters.length > 0 ? Math.max(...quarters.map(q => q.quarter)) + 1 : 1;
