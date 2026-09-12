@@ -32,6 +32,21 @@ export default function AdminQuarterEditor({ matchId, rosterPlayerIds, players }
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  const rosterIdSet = new Set(rosterPlayerIds);
+  const validIds = new Set(players.filter(p => rosterIdSet.has(p.id)).map(p => p.id));
+
+  // Drop any player id that is no longer on the roster (deleted/removed players)
+  const sanitizeLineup = (raw: any) => {
+    const base: QuarterData["lineup"] = { GK: [], DF: [], MF: [], FW: [], Bench: [] };
+    if (!raw || typeof raw !== "object") return base;
+    POSITIONS.forEach(pos => {
+      base[pos] = (Array.isArray(raw[pos]) ? raw[pos] : [])
+        .map((id: any) => Number(id))
+        .filter((id: number) => validIds.has(id));
+    });
+    return base;
+  };
+
   useEffect(() => {
     if (!matchId) return;
     (async () => {
@@ -42,7 +57,7 @@ export default function AdminQuarterEditor({ matchId, rosterPlayerIds, players }
           quarter: q.quarter,
           score_for: q.score_for || 0,
           score_against: q.score_against || 0,
-          lineup: q.lineup || { GK: [], DF: [], MF: [], FW: [], Bench: [] },
+          lineup: sanitizeLineup(q.lineup),
         })));
       } else {
         setQuarters([]);
@@ -50,6 +65,23 @@ export default function AdminQuarterEditor({ matchId, rosterPlayerIds, players }
       setLoaded(true);
     })();
   }, [matchId]);
+
+  // Prune lineups whenever the roster shrinks (e.g. a player was removed above)
+  useEffect(() => {
+    setQuarters(prev => {
+      let changed = false;
+      const next = prev.map(q => {
+        const cleaned = sanitizeLineup(q.lineup);
+        if (POSITIONS.some(p => (cleaned[p] || []).length !== (q.lineup[p] || []).length)) {
+          changed = true;
+          return { ...q, lineup: cleaned };
+        }
+        return q;
+      });
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosterPlayerIds.join(","), players.length]);
 
   const addQuarter = () => {
     const nextQ = quarters.length > 0 ? Math.max(...quarters.map(q => q.quarter)) + 1 : 1;
