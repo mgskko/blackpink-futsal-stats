@@ -186,7 +186,7 @@ export default function AdminCustomQuarterEditor({ matchId, matchTeams, rosterPl
       await (supabase as any).from("match_quarters").delete().eq("match_id", matchId);
       if (quarters.length > 0) {
         const inserts = quarters.map(q => ({
-          match_id: matchId, quarter: q.quarter, score_for: q.score_for, score_against: q.score_against, lineup: q.lineup,
+          match_id: matchId, quarter: q.quarter, score_for: q.score_for, score_against: q.score_against, lineup: sanitizeQuarterLineup(q.lineup),
         }));
         const { error } = await (supabase as any).from("match_quarters").insert(inserts);
         if (error) throw error;
