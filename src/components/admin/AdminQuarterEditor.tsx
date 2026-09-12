@@ -142,7 +142,7 @@ export default function AdminQuarterEditor({ matchId, rosterPlayerIds, players }
           quarter: q.quarter,
           score_for: q.score_for,
           score_against: q.score_against,
-          lineup: q.lineup,
+          lineup: sanitizeLineup(q.lineup),
         }));
         const { error } = await (supabase as any).from("match_quarters").insert(inserts);
         if (error) throw error;
