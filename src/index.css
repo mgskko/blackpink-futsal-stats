@@ -136,8 +136,9 @@
    * Multi-layer inset specular highlights + heavier backdrop filter.
    * Use on hero containers, modals, and key stat panels.
    */
+  /* zero-specificity so utilities like `fixed`/`absolute` (dialogs, close buttons) win */
+  :where(.liquid-glass) { position: relative; }
   .liquid-glass {
-    position: relative;
     background: hsl(var(--glass-bg) / calc(var(--glass-bg-opacity) + 0.02));
     border: 1px solid hsl(var(--glass-border) / calc(var(--glass-border-opacity) + 0.08));
     backdrop-filter: blur(20px) contrast(80%) saturate(120%);
@@ -170,7 +171,7 @@
     mix-blend-mode: overlay;
     z-index: 0;
   }
-  .liquid-glass > * { position: relative; z-index: 1; }
+  :where(.liquid-glass) > :where(*) { position: relative; z-index: 1; }
 
   @media (max-width: 768px) {
     .liquid-glass {
