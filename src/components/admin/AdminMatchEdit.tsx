@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData, getPlayerName } from "@/hooks/useFutsalData";
@@ -76,6 +76,19 @@ const AdminMatchEdit = () => {
   const [manualMOM, setManualMOM] = useState("");
   // Locally removed roster rows: hides chips instantly, independent of cache/refetch timing.
   const [removedRosterIds, setRemovedRosterIds] = useState<Set<number>>(new Set());
+
+  // Safety net: Radix dialogs can leave `pointer-events: none` on <body> when the
+  // element that opened them disappears. Always restore interactivity once closed.
+  const unlockBody = () => {
+    if (typeof document === "undefined") return;
+    document.body.style.pointerEvents = "";
+    document.body.style.removeProperty("pointer-events");
+  };
+  useEffect(() => {
+    if (deleteTarget) return;
+    const t = setTimeout(unlockBody, 300);
+    return () => clearTimeout(t);
+  }, [deleteTarget]);
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
@@ -257,7 +270,6 @@ const AdminMatchEdit = () => {
 
   const handleRemoveFromRoster = async (rosterId: number) => {
     setSaving(true);
-    setDeleteTarget(null);
     const target = rosters.find(r => r.id === rosterId);
     // Instant UI removal (local state) + cache optimistic update
     setRemovedRosterIds(prev => new Set(prev).add(rosterId));
@@ -853,11 +865,16 @@ const AdminMatchEdit = () => {
             <Button variant="destructive" disabled={saving} onClick={() => {
               const target = deleteTarget;
               if (!target) return;
-              // Close dialog immediately for snappy UX; the action runs in background.
+              // Close the dialog first, then run the action after the close animation.
+              // Removing the chip (dialog trigger) while the dialog is still closing
+              // leaves the page locked (pointer-events: none) → "frozen" screen.
               setDeleteTarget(null);
-              if (target.type === "match") handleDeleteMatch(target.id);
-              else if (target.type === "goal") handleDeleteGoal(target.id);
-              else if (target.type === "roster") handleRemoveFromRoster(target.id);
+              setTimeout(() => {
+                unlockBody();
+                if (target.type === "match") handleDeleteMatch(target.id);
+                else if (target.type === "goal") handleDeleteGoal(target.id);
+                else if (target.type === "roster") handleRemoveFromRoster(target.id);
+              }, 250);
             }}>
               {saving ? "삭제 중..." : "삭제"}
             </Button>
