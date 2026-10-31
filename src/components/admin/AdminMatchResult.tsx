@@ -25,6 +25,7 @@ const AdminMatchResult = () => {
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [goalEntries, setGoalEntries] = useState<GoalEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
