@@ -202,6 +202,32 @@ const AdminMatchResult = () => {
           )}
         </>
       )}
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteIndex !== null} onOpenChange={() => setDeleteIndex(null)}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertTriangle className="text-destructive" size={18} /> 삭제 확인
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              이 골 이벤트를 삭제하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteIndex(null)} className="border-border">취소</Button>
+            <Button variant="destructive" onClick={() => {
+              const idx = deleteIndex;
+              // Close the dialog first, then remove after the close animation
+              // finishes — removing the entry mid-close freezes the page.
+              setDeleteIndex(null);
+              if (idx !== null) setTimeout(() => removeGoalEntry(idx), 250);
+            }}>
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
