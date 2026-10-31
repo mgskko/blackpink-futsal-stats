@@ -25,6 +25,7 @@ const AdminMatchResult = () => {
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [goalEntries, setGoalEntries] = useState<GoalEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
   const matchId = selectedMatchId ? Number(selectedMatchId) : null;
@@ -138,7 +139,7 @@ const AdminMatchResult = () => {
             <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-primary font-bold">골 #{i + 1}</span>
-                <button onClick={() => removeGoalEntry(i)} className="text-destructive"><Trash2 size={14} /></button>
+                <button onClick={() => setDeleteIndex(i)} className="text-destructive"><Trash2 size={14} /></button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -201,6 +202,32 @@ const AdminMatchResult = () => {
           )}
         </>
       )}
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteIndex !== null} onOpenChange={() => setDeleteIndex(null)}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertTriangle className="text-destructive" size={18} /> 삭제 확인
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              이 골 이벤트를 삭제하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteIndex(null)} className="border-border">취소</Button>
+            <Button variant="destructive" onClick={() => {
+              const idx = deleteIndex;
+              // Close the dialog first, then remove after the close animation
+              // finishes — removing the entry mid-close freezes the page.
+              setDeleteIndex(null);
+              if (idx !== null) setTimeout(() => removeGoalEntry(idx), 250);
+            }}>
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
