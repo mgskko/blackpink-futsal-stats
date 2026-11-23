@@ -59,13 +59,6 @@ const AdminMatchResult = () => {
     if (!matchId) return;
     setSaving(true);
     try {
-      const scoreMap: Record<number, number> = {};
-      matchTeams.forEach(t => { scoreMap[t.id] = 0; });
-
-      for (const entry of goalEntries) {
-        if (entry.teamId) scoreMap[entry.teamId] = (scoreMap[entry.teamId] || 0) + 1;
-      }
-
       if (goalEntries.length > 0) {
         const inserts = goalEntries.map(e => ({
           match_id: matchId,
@@ -79,19 +72,7 @@ const AdminMatchResult = () => {
         if (error) throw error;
       }
 
-      for (const team of matchTeams) {
-        const opponentTeam = matchTeams.find(t => t.id !== team.id);
-        const scoreFor = scoreMap[team.id] || 0;
-        const scoreAgainst = opponentTeam ? (scoreMap[opponentTeam.id] || 0) : 0;
-        const result = scoreFor > scoreAgainst ? "승" : scoreFor < scoreAgainst ? "패" : "무";
-
-        await supabase
-          .from("results")
-          .update({ score_for: scoreFor, score_against: scoreAgainst, result })
-          .eq("match_id", matchId)
-          .eq("team_id", team.id);
-      }
-
+      // 스코어는 덮어쓰지 않음 (기존 스코어 유지). 스코어 변경은 '경기 수정 > 스코어'에서만.
       await supabase.from("matches").update({ has_detail_log: true }).eq("id", matchId);
 
       queryClient.invalidateQueries({ queryKey: ["goal_events"] });
