@@ -1007,6 +1007,16 @@ export type Database = {
         Returns: boolean
       }
       is_club_member: { Args: { _user_id: string }; Returns: boolean }
+      list_linkable_players: {
+        Args: never
+        Returns: {
+          back_number: number
+          id: number
+          is_active: boolean
+          name: string
+          name_en: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"

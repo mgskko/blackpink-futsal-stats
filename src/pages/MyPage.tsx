@@ -34,6 +34,15 @@ const MyPage = () => {
     },
   });
 
+  const { data: linkablePlayers = [] } = useQuery({
+    queryKey: ["linkable_players", user?.id],
+    enabled: !!user && !profile?.player_id,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("list_linkable_players");
+      return (data ?? []) as { id: number; name: string; name_en: string | null; back_number: number | null; is_active: boolean }[];
+    },
+  });
+
   if (loading || isLoading) {
     return (
       <div className="relative z-10 flex min-h-[80vh] items-center justify-center">
@@ -55,13 +64,15 @@ const MyPage = () => {
 
   if (!linkedPlayer) {
     // Player linking screen
-    const activePlayers = players.filter(p => p.is_active);
-    const inactivePlayers = players.filter(p => !p.is_active);
+    const linkSource = (players.length ? players : linkablePlayers) as typeof players;
+    const activePlayers = linkSource.filter(p => p.is_active);
+    const inactivePlayers = linkSource.filter(p => !p.is_active);
 
     const handleLink = async (playerId: number) => {
       setLinking(true);
       await supabase.from("profiles").update({ player_id: playerId }).eq("id", user.id);
       await refreshProfile();
+      await queryClient.invalidateQueries();
       setLinking(false);
     };
 

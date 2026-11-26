@@ -29,6 +29,13 @@
       "when": 1795671319468,
       "tag": "0003_signed_in_can_read_players",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795671872897,
+      "tag": "0004_players_members_only_with_link_list",
+      "breakpoints": true
     }
   ]
 }
