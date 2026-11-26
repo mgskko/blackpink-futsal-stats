@@ -8,6 +8,13 @@
       "when": 1795067572731,
       "tag": "0000_tighten_select_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795669766095,
+      "tag": "0001_members_only_shared_reads",
+      "breakpoints": true
     }
   ]
 }
