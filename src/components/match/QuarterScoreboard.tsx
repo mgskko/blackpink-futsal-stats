@@ -35,7 +35,7 @@ export default function QuarterScoreboard({ quarters, ourTeamName, opponentTeamN
   const lossCount = quarterResults.filter(r => r === "L").length;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 1 }} className="rounded-xl border border-border bg-card overflow-hidden">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 1 }} className="surface rounded-2xl overflow-hidden">
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <h2 className="font-display text-sm tracking-wider text-primary">QUARTER SCORE</h2>
         <span className="text-[10px] text-muted-foreground">{L("세부 쿼터 단위 전적", "Per-Quarter Record")}</span>

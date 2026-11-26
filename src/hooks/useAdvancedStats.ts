@@ -259,7 +259,8 @@ export function getPlayerBadges(
     if (r) matchResultsMap.set(m.id, r.result);
   });
   const presentIds = new Set(rosters.filter(r => r.player_id === playerId && matchResultsMap.has(r.match_id)).map(r => r.match_id));
-  let pWins = 0, pTotal = presentIds.size;
+  let pWins = 0;
+  const pTotal = presentIds.size;
   presentIds.forEach(mid => { if (matchResultsMap.get(mid) === "승") pWins++; });
   let aWins = 0, aTotal = 0;
   [...matchResultsMap.keys()].forEach(mid => { if (!presentIds.has(mid)) { aTotal++; if (matchResultsMap.get(mid) === "승") aWins++; } });

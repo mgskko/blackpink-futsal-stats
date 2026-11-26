@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useState } from "react";
 import { usePlayers } from "@/hooks/useFutsalData";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +84,7 @@ const AdminPlayerManage = () => {
     // Get next available ID
     const maxId = players.length > 0 ? Math.max(...players.map(p => p.id)) : 0;
     const newId = maxId + 1;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localISODate();
     const { error } = await supabase.from("players").insert({
       id: newId,
       name,
@@ -254,7 +255,7 @@ const AdminPlayerManage = () => {
       setEditingProfile(prev => ({ ...prev, [pid]: { ...prof, ...(prev[pid] ?? {}), ...patch } }));
 
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-col gap-2 surface rounded-2xl p-3">
         <div className="flex items-center gap-3">
         {/* Profile Image */}
         <div className="relative flex-shrink-0">

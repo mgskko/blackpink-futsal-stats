@@ -59,7 +59,7 @@ const PlayersPage = () => {
       return allData;
     },
   });
-  const allQuarters = allQuartersRaw ?? [];
+  const allQuarters = useMemo(() => allQuartersRaw ?? [], [allQuartersRaw]);
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -101,7 +101,7 @@ const PlayersPage = () => {
   });
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
       <AvatarModal imageUrl={avatarPlayer?.url || null} name={avatarPlayer?.name || ""} open={!!avatarPlayer} onClose={() => setAvatarPlayer(null)} />
       <PageHeader title="PLAYERS" subtitle={`총 ${activePlayers.length}명`} />
       <div className="px-4 pb-3">

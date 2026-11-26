@@ -131,7 +131,7 @@ const AdminTeamHistory = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <div className="surface rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground">{isEditing ? "항목 수정" : "새 항목 추가"}</h3>
           {isEditing && (

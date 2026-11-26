@@ -55,7 +55,7 @@ export default function HeadToHead({ matches, teams, results, currentMatchId, op
 
   if (history.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+      <div className="surface rounded-2xl p-6 text-center text-sm text-muted-foreground">
         {L("이 상대와의 이전 맞대결 기록이 없습니다.", "No previous meetings against this opponent.")}
       </div>
     );
@@ -65,7 +65,7 @@ export default function HeadToHead({ matches, teams, results, currentMatchId, op
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="surface rounded-2xl p-4">
         <div className="mb-1 text-center text-xs font-bold tracking-wider text-primary">
           {L("상대 전적", "HEAD TO HEAD")} · {tn(opponentName)}
         </div>
@@ -88,7 +88,7 @@ export default function HeadToHead({ matches, teams, results, currentMatchId, op
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden surface rounded-2xl">
         {history.map((h, i) => (
           <button
             key={h.id}

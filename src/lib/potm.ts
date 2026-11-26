@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter, Team, Result } from "@/hooks/useFutsalData";
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
@@ -25,7 +26,7 @@ export function computePOTMWinners(
   goalEvents: GoalEvent[] = [],
   allQuarters: MatchQuarter[] = [],
 ): POTMWinner[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const memberPlayers = (players ?? []).filter(p => p && !(p as any).is_guest);
   const played = (matches ?? []).filter(m => m?.date && m.date <= today);
   const months = [...new Set(played.map(m => m.date.slice(0, 7)))].sort().reverse();

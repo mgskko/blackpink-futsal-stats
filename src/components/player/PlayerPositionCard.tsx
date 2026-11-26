@@ -84,7 +84,7 @@ export default function PlayerPositionCard({
   const pct = (n: number) => Math.round((n / denom) * 100);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
       <h3 className="mb-3 font-display text-lg text-primary">{L("포지션", "Position")}</h3>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-3">

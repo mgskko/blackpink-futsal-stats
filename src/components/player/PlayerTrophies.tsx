@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { Match, Roster, GoalEvent, Player, Team, Result, MatchQuarter } from "@/hooks/useFutsalData";
 import { computePOTMWinners } from "@/lib/potm";
@@ -25,7 +25,7 @@ const KIND_META: Record<TitleKind, { emoji: string; ko: string; en: string; unit
 };
 
 export default function PlayerTrophies({ playerId, players, matches, rosters, goalEvents, teams, results, quarters, isEn }: Props) {
-  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const L = useCallback((ko: string, en: string) => (isEn ? en : ko), [isEn]);
 
   const potmWinnersAll = useMemo(
     () => computePOTMWinners(players, matches, teams ?? [], results ?? [], rosters, goalEvents, quarters ?? []),
@@ -51,7 +51,7 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
       }
     });
     return rows;
-  }, [ballonDor, playerId, isEn]);
+  }, [ballonDor, playerId, L]);
 
   const titleRows = useMemo(() => {
     const all = computeSeasonTitles(players, matches, rosters, goalEvents).filter(t => t.playerId === playerId);
@@ -69,7 +69,7 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
           } as TrophyRow;
         });
     return { career: group("career"), year: group("year"), custom: group("custom") };
-  }, [playerId, players, matches, rosters, goalEvents, isEn]);
+  }, [players, matches, rosters, goalEvents, playerId, L]);
 
   const totalTitles = titleRows.career.length + titleRows.year.length + titleRows.custom.length;
   if (totalTitles === 0 && potmWins.length === 0 && mvpRows.length === 0) return null;
@@ -91,7 +91,7 @@ export default function PlayerTrophies({ playerId, players, matches, rosters, go
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
       <h3 className="mb-3 font-display text-lg text-primary">🏆 {L("트로피", "Trophies")}</h3>
 
       {mvpRows.length > 0 && (

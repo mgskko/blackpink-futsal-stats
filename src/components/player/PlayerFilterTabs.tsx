@@ -16,7 +16,7 @@ const PlayerFilterTabs = ({ filterMode, selectedYear, years, onFilterChange }: P
   return (
     <div className="mx-4 mt-4 space-y-2">
       {/* Primary filter tabs */}
-      <div className="flex rounded-lg border border-border bg-card overflow-hidden">
+      <div className="flex surface rounded-2xl overflow-hidden">
         {([
           ["all", isEn ? "All-time" : "종합"] as const,
           ["year", isEn ? "By Year" : "연도별"] as const,

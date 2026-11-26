@@ -39,11 +39,11 @@ const ClubhousePage = () => {
   const milestones = historyItems.filter(i => i.category === "milestone");
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
           <PageHeader title="CLUBHOUSE" subtitle={L("버니즈 클럽하우스", "Bunnies Clubhouse")} />
       <div className="px-4">
         {/* Section switcher */}
-        <div className="flex rounded-lg border border-border bg-card overflow-hidden mb-6">
+        <div className="flex surface rounded-2xl overflow-hidden mb-6">
           <button onClick={() => setActiveSection("guide")}
             className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeSection === "guide" ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             📖 {L("가이드", "Guide")}
@@ -66,7 +66,7 @@ const ClubhousePage = () => {
             {GUIDE_SECTIONS.map((section, si) => (
               <motion.div key={si} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: si * 0.03 }} className="mb-4">
                 <h2 className="font-display text-lg tracking-wider text-primary mb-2">{section.title}</h2>
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="surface rounded-2xl overflow-hidden">
                   <Accordion type="multiple">
                     {section.items.map((item, ii) => (
                       <AccordionItem key={ii} value={`${si}-${ii}`} className="border-b border-border last:border-b-0">
@@ -100,7 +100,7 @@ const ClubhousePage = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {logos.map(item => (
                     <motion.div key={item.id} whileHover={{ scale: 1.02 }}
-                      className="rounded-xl border border-border bg-card overflow-hidden">
+                      className="surface rounded-2xl overflow-hidden">
                       {item.image_url && (
                         <div className="aspect-square bg-secondary/30 flex items-center justify-center p-4 cursor-pointer"
                           onClick={() => setLightboxUrl(item.image_url)}>
@@ -127,7 +127,7 @@ const ClubhousePage = () => {
                 <div className="space-y-3">
                   {uniforms.map(item => (
                     <motion.div key={item.id} whileHover={{ scale: 1.01 }}
-                      className="flex rounded-xl border border-border bg-card overflow-hidden">
+                      className="flex surface rounded-2xl overflow-hidden">
                       {item.image_url && (
                         <div className="w-28 h-28 flex-shrink-0 bg-secondary/30 flex items-center justify-center p-2 cursor-pointer"
                           onClick={() => setLightboxUrl(item.image_url)}>

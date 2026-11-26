@@ -22,13 +22,14 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
         name: "Bunnies FC",
         short_name: "Bunnies",
         description: "Bunnies FC 공식 풋살 앱",
-        theme_color: "#000000",
-        background_color: "#000000",
+        theme_color: "#08080d",
+        background_color: "#08080d",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
@@ -53,6 +54,24 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  build: {
+    target: "es2020",
+    rollupOptions: {
+      output: {
+        // Stable vendor chunks: app deploys don't invalidate the (large, rarely changing) libraries.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          // Leaf libraries only depend on the shared vendor chunk, never the other way round,
+          // so there is no circular chunk import (which breaks React's init order).
+          if (/[\\/]three[\\/]/.test(id)) return "three";
+          if (/[\\/](recharts|d3-[a-z-]+|victory-vendor)[\\/]/.test(id)) return "charts";
+          if (/[\\/]@supabase[\\/]/.test(id)) return "supabase";
+          if (/html2canvas/.test(id)) return; // loaded on demand
+          return "vendor";
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

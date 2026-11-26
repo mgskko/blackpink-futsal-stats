@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { User, Download } from "lucide-react";
@@ -34,7 +35,7 @@ export default function POTMCard({ players, matches, teams, results, rosters, go
     const month = targetDate.getMonth() + 1;
     const prefix = `${year}-${String(month).padStart(2, "0")}`;
 
-    const monthMatches = matches.filter(m => m.date.startsWith(prefix) && m.date <= now.toISOString().slice(0, 10));
+    const monthMatches = matches.filter(m => m.date.startsWith(prefix) && m.date <= localISODate(now));
     if (monthMatches.length < 2) return null;
 
     const monthMatchIds = new Set(monthMatches.map(m => m.id));

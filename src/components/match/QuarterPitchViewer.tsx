@@ -148,6 +148,22 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
+  const [is3D, setIs3D] = useState(() => {
+    try {
+      return localStorage.getItem("pitch-view") !== "2d";
+    } catch {
+      return true;
+    }
+  });
+  const toggle3D = () =>
+    setIs3D(v => {
+      try {
+        localStorage.setItem("pitch-view", v ? "2d" : "3d");
+      } catch {
+        /* storage unavailable */
+      }
+      return !v;
+    });
 
   const safeIdx = Math.min(idx, Math.max(0, list.length - 1));
   const current = list[safeIdx];
@@ -155,11 +171,6 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   if (list.length === 0) return null;
   const custom = isCustomLineup(current.lineup);
   const quarterGoals = goalEvents.filter(g => g.quarter === current.quarter);
-
-  const storedPos = (unit: any, pid: number) => {
-    const p = unit?._pos?.[String(pid)];
-    return p && typeof p.x === "number" && typeof p.y === "number" ? p : null;
-  };
 
   const playerStats = (pid: number) => {
     let played = 0, bench = 0;
@@ -187,83 +198,136 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const matchRating = (pid: number) => ratings?.get(pid)?.rating ?? 6;
   const isOverridden = (pid: number) => !!ratings?.get(pid)?.isOverride;
 
-  const renderPitch = (lineup: any, unitKey: string, label?: string, accent?: string) => {
+  const TILT = isSoccer ? 38 : 44;
+  const tilt = is3D ? TILT : 0;
+
+  const renderPitch = (lineup: any, label?: string, accent?: string) => {
     const positions = positionsOf(lineup, formatCode, isSoccer);
     const bench = benchOf(lineup);
+    const av = is3D ? Math.round(S.avatar * 0.78) : S.avatar; // standing tokens need less footprint
     return (
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
-        <div
-          className="relative w-full overflow-hidden rounded-2xl border border-green-900/60 shadow-inner"
-          style={{
-            aspectRatio: "3/4",
-            backgroundColor: "#14471f",
-            backgroundImage:
-              "repeating-linear-gradient(180deg, rgba(255,255,255,0.045) 0 6.25%, rgba(0,0,0,0.045) 6.25% 12.5%), repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.10), transparent 60%)",
-          }}
-        >
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute left-0 right-0 top-1/2 h-px bg-white/20" />
-            <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
-            <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40" />
-            <div className="absolute left-1/2 top-0 h-[15%] w-1/2 -translate-x-1/2 rounded-b-lg border-b border-l border-r border-white/15" />
-            <div className="absolute left-1/2 top-0 h-[6%] w-1/4 -translate-x-1/2 rounded-b border-b border-l border-r border-white/15" />
-            <div className="absolute bottom-0 left-1/2 h-[15%] w-1/2 -translate-x-1/2 rounded-t-lg border-l border-r border-t border-white/15" />
-            <div className="absolute bottom-0 left-1/2 h-[6%] w-1/4 -translate-x-1/2 rounded-t border-l border-r border-t border-white/15" />
-            <div className="absolute inset-1 rounded-xl border border-white/10" />
-          </div>
-          {positions.map((p, i) => {
-            const img = avatar(p.playerId);
-            const qs = quarterStats(p.playerId);
-            const pos = { x: p.x, y: p.y };
-            return (
-              <motion.div
-                key={`${p.playerId}-${p.role}-${i}`}
-                className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+        <div className="relative w-full" style={{ perspective: 1100, perspectiveOrigin: "50% 10%" }}>
+          <motion.div
+            className="relative w-full"
+            initial={false}
+            animate={{ rotateX: tilt, scale: is3D ? 0.92 : 1, y: is3D ? -6 : 0 }}
+            transition={{ type: "spring", stiffness: 140, damping: 20 }}
+            style={{ aspectRatio: "3/4", transformStyle: "preserve-3d", transformOrigin: "50% 62%" }}
+          >
+            {/* slab thickness (visible in 3D) */}
+            <div className="absolute inset-0 rounded-2xl bg-[#0a2611]" style={{ transform: "translateZ(-14px)" }} aria-hidden />
+            {/* turf */}
+            <div
+              className="absolute inset-0 overflow-hidden rounded-2xl border border-white/10 shadow-[inset_0_0_40px_rgba(0,0,0,0.45)]"
+              style={{
+                backgroundColor: "#15501f",
+                backgroundImage:
+                  "repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 6.25%, rgba(0,0,0,0.05) 6.25% 12.5%), repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 5px), radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.14), transparent 60%), radial-gradient(90% 60% at 50% 110%, rgba(0,0,0,0.35), transparent 70%)",
+              }}
+            >
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/25" />
+                <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/25" />
+                <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/50" />
+                <div className="absolute left-1/2 top-0 h-[15%] w-1/2 -translate-x-1/2 rounded-b-lg border-b border-l border-r border-white/20" />
+                <div className="absolute left-1/2 top-0 h-[6%] w-1/4 -translate-x-1/2 rounded-b border-b border-l border-r border-white/20" />
+                <div className="absolute bottom-0 left-1/2 h-[15%] w-1/2 -translate-x-1/2 rounded-t-lg border-l border-r border-t border-white/20" />
+                <div className="absolute bottom-0 left-1/2 h-[6%] w-1/4 -translate-x-1/2 rounded-t border-l border-r border-t border-white/20" />
+                <div className="absolute inset-1 rounded-xl border border-white/15" />
+              </div>
+              {/* stadium light sweep */}
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.07)_45%,transparent_60%)]" />
+            </div>
+
+            {/* goals (stand up in 3D) */}
+            {[0, 100].map(top => (
+              <div
+                key={top}
+                aria-hidden
+                className="absolute left-1/2 h-0 w-[22%] -translate-x-1/2"
+                style={{ top: `${top}%`, transformStyle: "preserve-3d" }}
               >
-                <button
-                  onClick={() => setSel(p.playerId)}
-                  className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
+                <motion.div
+                  initial={false}
+                  animate={{ rotateX: -tilt, opacity: is3D ? 1 : 0 }}
+                  className="absolute bottom-0 left-0 h-5 w-full rounded-t-sm border-2 border-b-0 border-white/80 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.25)_0_1px,transparent_1px_5px),repeating-linear-gradient(0deg,rgba(255,255,255,0.25)_0_1px,transparent_1px_5px)]"
+                  style={{ transformOrigin: "50% 100%" }}
+                />
+              </div>
+            ))}
+
+            {positions.map((p, i) => {
+              const img = avatar(p.playerId);
+              const qs = quarterStats(p.playerId);
+              return (
+                <div
+                  key={`${p.playerId}-${p.role}-${i}`}
+                  className="absolute z-10 h-0 w-0"
+                  style={{ left: `${p.x}%`, top: `${p.y}%`, transformStyle: "preserve-3d" }}
                 >
-                  <div className="relative">
-                    <div
-                      className={`relative overflow-hidden rounded-full bg-black/60 ${S.ring} ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}
-                      style={{ height: S.avatar, width: S.avatar }}
+                  {/* contact shadow on the turf */}
+                  <motion.div
+                    aria-hidden
+                    initial={false}
+                    animate={{ opacity: is3D ? 0.65 : 0, scale: is3D ? 1 : 0.5, x: "-50%", y: "-50%", z: 1 }}
+                    className="absolute left-0 top-0 rounded-[50%] bg-black blur-[3px]"
+                    style={{ width: av * 0.95, height: av * 0.34 }}
+                  />
+                  <motion.div
+                    className="absolute left-0 top-0 flex flex-col items-center gap-1"
+                    initial={false}
+                    animate={{ rotateX: -tilt, x: "-50%", y: is3D ? "-100%" : "-50%" }}
+                    transition={{ type: "spring", stiffness: 140, damping: 20, delay: is3D ? i * 0.025 : 0 }}
+                    style={{ transformOrigin: "50% 100%" }}
+                  >
+                    <button
+                      onClick={() => setSel(p.playerId)}
+                      className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
                     >
-                      {img ? (
-                        <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
-                      ) : (
-                        <span className={`flex h-full w-full items-center justify-center font-bold text-white ${S.initial}`}>{p.role}</span>
-                      )}
-                    </div>
-                    <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))} ${isOverridden(p.playerId) ? "ring-1 ring-white/80" : ""}`}>
-                      {matchRating(p.playerId).toFixed(1)}
-                    </span>
-                    {kit(p.playerId) != null && (
-                      <span className={`absolute -left-2 -top-1.5 flex items-center justify-center rounded-md bg-black/75 px-1 font-bold text-white ring-1 ring-white/20 ${isSoccer ? "h-4 min-w-4 text-[8px]" : "h-5 min-w-5 text-[10px]"}`}>
-                        {kit(p.playerId)}
+                      <div className="relative">
+                        <div
+                          className={`relative overflow-hidden rounded-full bg-black/60 ${S.ring} ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}
+                          style={{ height: av, width: av }}
+                        >
+                          {img ? (
+                            <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
+                          ) : (
+                            <span className={`flex h-full w-full items-center justify-center bg-gradient-to-b from-white/15 to-black/40 font-bold text-white ${S.initial}`}>
+                              {kit(p.playerId) ?? p.role}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))} ${isOverridden(p.playerId) ? "ring-1 ring-white/80" : ""}`}>
+                          {matchRating(p.playerId).toFixed(1)}
+                        </span>
+                        {img && kit(p.playerId) != null && (
+                          <span className={`absolute -left-2 -top-1.5 flex items-center justify-center rounded-md bg-black/75 px-1 font-bold text-white ring-1 ring-white/20 ${isSoccer ? "h-4 min-w-4 text-[8px]" : "h-5 min-w-5 text-[10px]"}`}>
+                            {kit(p.playerId)}
+                          </span>
+                        )}
+                      </div>
+                      <span className={`mt-1 truncate rounded bg-black/60 py-px font-semibold text-white backdrop-blur-sm ${S.name}`}>
+                        {pn(p.playerId)}
                       </span>
-                    )}
-                  </div>
-                  <span className={`mt-1 truncate rounded bg-black/55 py-px font-semibold text-white drop-shadow ${S.name}`}>
-                    {pn(p.playerId)}
-                  </span>
-                  {p.slot && (
-                    <span className={`max-w-[76px] truncate rounded bg-primary/80 py-px font-bold text-primary-foreground ${S.slot}`}>
-                      {slotLabel(p.slot, isEn, formatCode)}
-                    </span>
-                  )}
-                  {(qs.goals > 0 || qs.assists > 0) && (
-                    <span className={`flex items-center gap-1 rounded-full bg-black/55 py-px font-bold text-white ${S.slot}`}>
-                      {qs.goals > 0 && <span>⚽{qs.goals}</span>}
-                      {qs.assists > 0 && <span className="text-primary">🅰{qs.assists}</span>}
-                    </span>
-                  )}
-                </button>
-              </motion.div>
-            );
-          })}
+                      {p.slot && !is3D && (
+                        <span className={`max-w-[76px] truncate rounded bg-primary/80 py-px font-bold text-primary-foreground ${S.slot}`}>
+                          {slotLabel(p.slot, isEn, formatCode)}
+                        </span>
+                      )}
+                      {(qs.goals > 0 || qs.assists > 0) && (
+                        <span className={`flex items-center gap-1 rounded-full bg-black/60 py-px font-bold text-white ${S.slot}`}>
+                          {qs.goals > 0 && <span>⚽{qs.goals}</span>}
+                          {qs.assists > 0 && <span className="text-primary">🅰{qs.assists}</span>}
+                        </span>
+                      )}
+                    </button>
+                  </motion.div>
+                </div>
+              );
+            })}
+          </motion.div>
         </div>
         {bench.length > 0 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -288,6 +352,23 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
           <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
           <p className="text-[10px] text-muted-foreground">{formatLabel(formatCode ?? DEFAULT_FORMAT, isEn)}</p>
         </div>
+        <div className="flex items-center gap-1.5">
+        <button
+          onClick={toggle3D}
+          aria-pressed={is3D}
+          className="segmented pressable !p-0.5 text-[11px] font-bold"
+          aria-label={L("2D / 3D 보기 전환", "Toggle 2D / 3D view")}
+        >
+          {(["2D", "3D"] as const).map(v => {
+            const on = (v === "3D") === is3D;
+            return (
+              <span key={v} className={`relative rounded-full px-2.5 py-1 transition-colors ${on ? "text-primary-foreground" : "text-muted-foreground"}`}>
+                {on && <motion.span layoutId="pitch-view-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                <span className="relative">{v}</span>
+              </span>
+            );
+          })}
+        </button>
         {isAdmin && (
           <button
             onClick={() => setEditing(e => !e)}
@@ -297,6 +378,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
             {editing ? L("닫기", "Close") : L("포지션 지정", "Positions")}
           </button>
         )}
+        </div>
       </div>
 
       {isAdmin && editing && matchId != null && (
@@ -319,7 +401,7 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
         ))}
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="surface rounded-3xl p-3">
         <div className="mb-2 flex items-center justify-between">
           <button
             onClick={() => setIdx(Math.max(0, safeIdx - 1))}
@@ -361,11 +443,11 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
           >
             {custom ? (
               <div className="grid grid-cols-2 gap-2">
-                {renderPitch((current.lineup as any).teamA, "A", `🅰️ ${matchTeams[0]?.name ?? L("A팀", "Team A")}`, "text-blue-400")}
-                {renderPitch((current.lineup as any).teamB, "B", `🅱️ ${matchTeams[1]?.name ?? L("B팀", "Team B")}`, "text-orange-400")}
+                {renderPitch((current.lineup as any).teamA, `🅰️ ${matchTeams[0]?.name ?? L("A팀", "Team A")}`, "text-blue-400")}
+                {renderPitch((current.lineup as any).teamB, `🅱️ ${matchTeams[1]?.name ?? L("B팀", "Team B")}`, "text-orange-400")}
               </div>
             ) : (
-              renderPitch(current.lineup, "M")
+              renderPitch(current.lineup)
             )}
           </motion.div>
         </AnimatePresence>

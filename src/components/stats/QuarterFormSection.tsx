@@ -65,7 +65,7 @@ const QuarterFormSection = ({ players, allQuarters }: { players: Player[]; allQu
         </Select>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="surface rounded-2xl overflow-hidden">
         {top10.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-6">{L("데이터가 부족합니다", "Not enough data")}</p>
         ) : top10.map((p, i) => {
@@ -115,7 +115,7 @@ const QuarterFormSection = ({ players, allQuarters }: { players: Player[]; allQu
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-3">
+              <div className="surface rounded-2xl p-3">
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />

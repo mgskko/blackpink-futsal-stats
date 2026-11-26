@@ -183,7 +183,7 @@ const TacticsPage = () => {
   );
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
       <PageHeader title="TACTICS" subtitle="감독의 작전판" />
 
       <div className="px-4 space-y-4">
@@ -241,7 +241,7 @@ const TacticsPage = () => {
                   <AnimatePresence>
                     {expanded === tactic.id && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="mt-2 rounded-xl border border-border bg-card p-5 space-y-5">
+                        <div className="mt-2 surface rounded-2xl p-5 space-y-5">
                           {tactic.roles.length > 0 && (
                             <div>
                               <h4 className="text-xs font-bold text-primary mb-2">👥 역할 분담</h4>

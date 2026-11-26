@@ -60,7 +60,7 @@ const PlayerComments = ({ playerId }: PlayerCommentsProps) => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 surface rounded-2xl p-4">
       <h3 className="mb-3 font-display text-lg text-primary flex items-center gap-2">
         <MessageCircle size={18} /> 방명록
       </h3>

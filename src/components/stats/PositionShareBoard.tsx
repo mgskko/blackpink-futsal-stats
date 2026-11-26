@@ -41,7 +41,7 @@ export default function PositionShareBoard({ players, quarters, sport }: Props) 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 rounded-2xl border border-border bg-card p-4"
+      className="mt-4 surface rounded-2xl p-4"
     >
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-primary">

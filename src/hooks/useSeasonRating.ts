@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { computeMatchAP } from "./useFutsalData";
 import type { Player, Match, Roster, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerPosition, getPlayerTeamInLineup } from "./useCourtStats";
@@ -62,7 +63,7 @@ export function computeSeasonRatings(
   const rosters = Array.isArray(rostersInput) ? rostersInput.filter(Boolean) : [];
   const goalEvents = Array.isArray(goalEventsInput) ? goalEventsInput.filter(Boolean) : [];
   const quarters = Array.isArray(quartersInput) ? quartersInput.filter(Boolean) : [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const played = matches.filter(m => m.date <= today);
   const playedIds = new Set(played.map(m => m.id));
 

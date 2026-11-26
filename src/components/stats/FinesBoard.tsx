@@ -38,28 +38,28 @@ const FinesBoard = ({ players }: { players: Player[] }) => {
       </h3>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("팀 누적 벌금", "Team Total")}</div>
           <div className="text-sm font-bold text-primary">{formatKRW(team.total, isEn)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("납부", "Paid")}</div>
           <div className="text-sm font-bold text-foreground">{formatKRW(team.paid, isEn)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("미납", "Unpaid")}</div>
           <div className="text-sm font-bold text-destructive">{formatKRW(team.unpaid, isEn)}</div>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-border bg-card p-4 text-center text-xs text-muted-foreground">
+        <p className="surface rounded-2xl p-4 text-center text-xs text-muted-foreground">
           {L("등록된 벌금 내역이 없습니다", "No fines recorded yet")}
         </p>
       ) : (
         <div className="space-y-2">
           {rows.map((r, i) => (
-            <div key={r.player.id} className="rounded-lg border border-border bg-card p-3">
+            <div key={r.player.id} className="surface rounded-2xl p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`font-display text-sm ${i === 0 ? "text-primary text-glow" : "text-muted-foreground"}`}>#{i + 1}</span>

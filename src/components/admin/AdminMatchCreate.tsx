@@ -328,7 +328,7 @@ const AdminMatchCreate = () => {
       )}
 
       {/* Score Override */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <div className="surface rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Checkbox checked={overrideScore} onCheckedChange={(c) => setOverrideScore(c === true)} className="border-primary" />
           <label className="text-sm text-foreground font-medium">스코어 직접 입력 (득점자 모를 때)</label>

@@ -1,69 +1,134 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Users, PenSquare, Calendar } from "lucide-react";
-import { useAllFutsalData, getMatchResult } from "@/hooks/useFutsalData";
+import { PenSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useAllFutsalData, getMatchResult, getMatchSides } from "@/hooks/useFutsalData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import SplashScreen from "@/components/SplashScreen";
-import { useTranslation } from "react-i18next";
-import { useTeamName } from "@/lib/displayName";
+import SignInHero from "@/components/SignInHero";
 import SportToggle from "@/components/SportToggle";
+import SeasonHero, { type ResultKind, type SeasonRecord } from "@/components/match/SeasonHero";
+import MatchCard, { type MatchStatus } from "@/components/match/MatchCard";
+import { useTeamName } from "@/lib/displayName";
+import { localISODate } from "@/lib/utils";
 import { filterMatchesBySport, sportOfMatch, sportLabel, sportEmoji, type SportFilter } from "@/lib/sport";
 
-const MatchesPage = () => {
-  const navigate = useNavigate();
-  const { matches: allSportMatches, venues, teams, results, isLoading } = useAllFutsalData();
-  const [sport, setSport] = useState<SportFilter>("all");
-  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
-  const { isAdmin } = useAuth();
-  const [attendanceCounts, setAttendanceCounts] = useState<Record<number, number>>({});
-  const { t, i18n } = useTranslation();
-  const isEn = (i18n.language ?? "ko").startsWith("en");
-  const teamName = useTeamName();
-
+/** Live attending-count per match (realtime). */
+function useAttendanceCounts(enabled: boolean) {
+  const [counts, setCounts] = useState<Record<number, number>>({});
   useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
     const fetchAttendance = async () => {
-      const { data } = await supabase
-        .from("match_attendance")
-        .select("match_id, status")
-        .eq("status", "attending");
-      if (data) {
-        const counts: Record<number, number> = {};
-        data.forEach((r: any) => {
-          counts[r.match_id] = (counts[r.match_id] || 0) + 1;
-        });
-        setAttendanceCounts(counts);
-      }
+      const { data } = await supabase.from("match_attendance").select("match_id, status").eq("status", "attending");
+      if (!alive || !data) return;
+      const next: Record<number, number> = {};
+      data.forEach((r: { match_id: number }) => {
+        next[r.match_id] = (next[r.match_id] || 0) + 1;
+      });
+      setCounts(next);
     };
     fetchAttendance();
     const channel = supabase
       .channel("attendance-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "match_attendance" }, () => {
-        fetchAttendance();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "match_attendance" }, fetchAttendance)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+    return () => {
+      alive = false;
+      supabase.removeChannel(channel);
+    };
+  }, [enabled]);
+  return counts;
+}
 
-  if (isLoading) return <SplashScreen />;
+const MatchesPage = () => {
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { matches: allSportMatches, venues, teams, results, isLoading } = useAllFutsalData();
+  const [sport, setSport] = useState<SportFilter>("all");
+  const attendanceCounts = useAttendanceCounts(!!user);
+  const { t, i18n } = useTranslation();
+  const isEn = (i18n.language ?? "ko").startsWith("en");
+  const teamName = useTeamName();
 
-  const today = new Date().toISOString().slice(0, 10);
-  const sortedMatches = [...matches].sort((a, b) => b.date.localeCompare(a.date));
+  const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
 
-  const getMatchStatus = (match: typeof matches[0]) => {
-    // Future matches are always "scheduled"
-    if (match.date > today) return "scheduled";
-    const mr = getMatchResult(teams, results, match.id);
-    // Past match with no result record at all → scheduled
-    if (!mr) return "scheduled";
-    // Past match with a result record → show the result even if score is null
-    return mr.ourResult.result === "승" ? "win" : mr.ourResult.result === "패" ? "loss" : "draw";
-  };
+  const rows = useMemo(() => {
+    const today = localISODate();
+    const venueName = new Map(venues.map(v => [v.id, v.name]));
+    return [...matches]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+      .map(match => {
+        const mr = getMatchResult(teams, results, match.id);
+        // Future → scheduled; past without a result record → scheduled; otherwise the result.
+        const status: MatchStatus =
+          match.date > today || !mr
+            ? "scheduled"
+            : mr.ourResult.result === "승"
+              ? "win"
+              : mr.ourResult.result === "패"
+                ? "loss"
+                : "draw";
+        const venue = venueName.get(match.venue_id);
+        const sides = getMatchSides(teams, match.id);
+        return { match, mr, sides, status, venue: venue ? `${venue}${match.sub_venue ? ` ${match.sub_venue}` : ""}` : undefined };
+      });
+  }, [matches, venues, teams, results]);
 
+  const { record, next } = useMemo(() => {
+    const rec: SeasonRecord = { played: 0, win: 0, draw: 0, loss: 0, goalsFor: 0, goalsAgainst: 0, form: [] };
+    rows.forEach(r => {
+      if (r.status === "scheduled" || r.match.is_custom) return; // intrasquad games don't count for the club record
+      rec.played++;
+      rec[r.status]++;
+      rec.goalsFor += r.mr?.ourResult.score_for ?? 0;
+      rec.goalsAgainst += r.mr?.ourResult.score_against ?? 0;
+      if (rec.form.length < 5) rec.form.push(r.status as ResultKind);
+    });
+    const today = localISODate();
+    const upcoming = rows.filter(r => r.match.date >= today && r.status === "scheduled").at(-1);
+    return {
+      record: rec,
+      next: upcoming
+        ? {
+            id: upcoming.match.id,
+            date: upcoming.match.date,
+            opponent: teamName(upcoming.sides.opponentTeam?.name) || t("matches.opponentFallback"),
+            venue: upcoming.venue,
+            attending: attendanceCounts[upcoming.match.id],
+          }
+        : null,
+    };
+  }, [rows, attendanceCounts, teamName, t]);
+
+  // Month sections
+  const sections = useMemo(() => {
+    const out: { key: string; label: string; items: typeof rows }[] = [];
+    rows.forEach(r => {
+      const key = r.match.date.slice(0, 7);
+      let sec = out[out.length - 1];
+      if (!sec || sec.key !== key) {
+        const [y, m] = key.split("-").map(Number);
+        const label = isEn ? new Date(y, m - 1, 1).toLocaleString("en", { month: "long", year: "numeric" }) : `${y}년 ${m}월`;
+        sec = { key, label, items: [] };
+        out.push(sec);
+      }
+      sec.items.push(r);
+    });
+    return out;
+  }, [rows, isEn]);
+
+  if (authLoading || (user && isLoading)) return <SplashScreen />;
+  if (!user) return <SignInHero />;
+
+  const statusLabel = (s: MatchStatus) =>
+    s === "win" ? t("matches.win") : s === "loss" ? t("matches.loss") : s === "draw" ? t("matches.draw") : t("matches.scheduled");
+
+  let idx = 0;
   return (
-    <div className="relative z-10 pb-28">
+    <div className="relative z-10">
       <PageHeader
         title={t("matches.title")}
         subtitle={t("matches.totalCount", { count: matches.length })}
@@ -71,7 +136,7 @@ const MatchesPage = () => {
           isAdmin ? (
             <button
               onClick={() => navigate("/admin")}
-              className="glass glass-hover flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-primary"
+              className="liquid-glass pressable flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-primary"
             >
               <PenSquare size={12} />
               {t("matches.manage")}
@@ -79,120 +144,51 @@ const MatchesPage = () => {
           ) : null
         }
       />
-      <div className="px-4 pb-3">
-        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full justify-between" />
+
+      <SeasonHero record={record} next={next} isEn={isEn} onOpenMatch={id => navigate(`/match/${id}`)} />
+
+      <div className="sticky top-0 z-30 px-4 pb-2 pt-4" style={{ top: "calc(env(safe-area-inset-top) + 4rem)" }}>
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full" />
       </div>
-      <div className="space-y-3 px-4">
-        {sortedMatches.map((match, i) => {
-          const venue = venues.find((v) => v.id === match.venue_id);
-          const mr = getMatchResult(teams, results, match.id);
-          const attendCount = attendanceCounts[match.id];
-          const status = getMatchStatus(match);
 
-          const stripColor = status === "win"
-            ? "bg-blue-500 shadow-[0_0_15px_hsl(217_91%_60%/0.5)]"
-            : status === "loss"
-            ? "bg-pink-500 shadow-[0_0_15px_hsl(330_100%_71%/0.5)]"
-            : status === "draw"
-            ? "bg-amber-400 shadow-[0_0_15px_hsl(45_100%_55%/0.5)]"
-            : "bg-muted-foreground/50";
-
-          const badgeStyle = status === "win"
-            ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-            : status === "loss"
-            ? "bg-pink-500/20 text-pink-400 border-pink-500/30"
-            : status === "draw"
-            ? "bg-amber-400/20 text-amber-400 border-amber-400/30"
-            : "bg-muted text-muted-foreground border-border";
-
-          return (
-            <motion.div
-              key={match.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.02 }}
-              onClick={() => navigate(`/match/${match.id}`)}
-              className="group relative cursor-pointer overflow-hidden rounded-3xl glass glass-hover active:scale-[0.98]"
-            >
-              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${stripColor}`} />
-              <div className="flex items-center justify-between p-5">
-                <div className="flex-1 min-w-0">
-                  {/* Date & venue row */}
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    <span>{match.date}</span>
-                    <span className="opacity-40">•</span>
-                    <span className="truncate">{venue?.name}{match.sub_venue ? ` ${match.sub_venue}` : ""}</span>
-                    <span className="opacity-40">•</span>
-                    <span className="rounded-full border border-border/70 bg-secondary/40 px-1.5 py-px text-[9px] font-bold tracking-normal text-foreground/80">
-                      {sportEmoji(sportOfMatch(match))} {sportLabel(sportOfMatch(match), isEn)}
-                    </span>
-                    {match.is_custom && (
-                      <>
-                        <span className="opacity-40">•</span>
-                        <span className="text-primary/80">{t("matches.selfMatch")}</span>
-                      </>
-                    )}
-                    {attendCount != null && attendCount > 0 && (
-                      <>
-                        <span className="opacity-40">•</span>
-                        <span className="flex items-center gap-0.5 text-primary font-medium">
-                          <Users size={10} /> {attendCount}
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Score row */}
-                  <div className="mt-2 flex items-center gap-3">
-                    <span className="text-sm font-bold text-foreground truncate max-w-[100px]">
-                      {teamName(mr?.ourTeam.name) || t("matches.ourTeamFallback")}
-                    </span>
-
-                    {status === "scheduled" ? (
-                      <div className="flex items-center gap-2">
-                        <span className="font-display text-xl text-muted-foreground">{t("matches.vs")}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 tabular-nums">
-                        <span className={`font-display text-2xl tracking-wider ${
-                          status === "win" ? "text-blue-400" : status === "loss" ? "text-red-400" : "text-muted-foreground"
-                        }`}>
-                          {mr?.ourResult.score_for ?? "-"}
-                        </span>
-                        <span className="text-muted-foreground text-lg">:</span>
-                        <span className={`font-display text-2xl tracking-wider ${
-                          status === "loss" ? "text-red-400" : "text-muted-foreground"
-                        }`}>
-                          {mr?.ourResult.score_against ?? "-"}
-                        </span>
-                      </div>
-                    )}
-
-                    <span className="text-sm font-bold text-foreground truncate max-w-[100px]">
-                      {teamName(mr?.opponentTeam.name) || t("matches.opponentFallback")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Result badge */}
-                <div className="flex flex-col items-end gap-1 ml-3 flex-shrink-0">
-                  {status === "scheduled" ? (
-                    <span className="flex items-center gap-1 rounded-full border border-muted bg-muted/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      <Calendar size={10} /> {t("matches.scheduled")}
-                    </span>
-                  ) : (
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${badgeStyle}`}>
-                      {status === "win" ? t("matches.win") : status === "loss" ? t("matches.loss") : t("matches.draw")}
-                    </span>
-                  )}
-                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                    {match.match_type}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+      <div className="px-4">
+        {sections.map(sec => (
+          <section key={sec.key} className="mt-3">
+            <h2 className="mb-2 flex items-center gap-2 px-1 text-[12px] font-bold tracking-wide text-muted-foreground" style={{ fontFamily: "inherit" }}>
+              {sec.label}
+              <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+              <span className="font-num text-[10px]">{sec.items.length}</span>
+            </h2>
+            <div className="space-y-2.5">
+              {sec.items.map(({ match, mr, sides, status, venue }) => (
+                <MatchCard
+                  key={match.id}
+                  index={idx++}
+                  isEn={isEn}
+                  date={match.date}
+                  venue={venue}
+                  sportBadge={`${sportEmoji(sportOfMatch(match))} ${sportLabel(sportOfMatch(match), isEn)}`}
+                  matchType={match.match_type}
+                  isCustom={match.is_custom}
+                  customLabel={t("matches.selfMatch")}
+                  ourName={teamName(sides.ourTeam?.name) || t("matches.ourTeamFallback")}
+                  oppName={teamName(sides.opponentTeam?.name) || t("matches.opponentFallback")}
+                  scoreFor={mr?.ourResult.score_for}
+                  scoreAgainst={mr?.ourResult.score_against}
+                  status={status}
+                  statusLabel={statusLabel(status)}
+                  attending={attendanceCounts[match.id]}
+                  onClick={() => navigate(`/match/${match.id}`)}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+        {rows.length === 0 && (
+          <div className="surface mt-4 rounded-3xl px-6 py-12 text-center text-sm text-muted-foreground">
+            {isEn ? "No matches yet." : "아직 등록된 경기가 없어요."}
+          </div>
+        )}
       </div>
     </div>
   );

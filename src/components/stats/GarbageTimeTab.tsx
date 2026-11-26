@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -31,7 +32,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
   const L = (ko: string, en: string) => (isEn ? en : ko);
 
   const ranking = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localISODate();
     const pastMatches = matches.filter(m => m.date <= today);
 
     // Per player: count unique match appearances
@@ -134,7 +135,7 @@ const GarbageTimeTab = ({ players, matches, results, rosters, goalEvents, allQua
       <p className="mb-2 text-[10px] text-muted-foreground">
         {L("팀이 위기일 땐 안 보이지만, 4점 차 이상 대승 경기나 이미 이기고 있는 가비지 타임에 귀신같이 나타나 스탯을 세탁하는 진정한 자본주의 에이스입니다.", "Invisible when the team is under pressure but magically racks up stats in 4+ point blowouts and garbage time — the true capitalist ace.")}
       </p>
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="surface rounded-2xl overflow-hidden">
         {ranking.map((d, i) => (
           <div key={d.id} onClick={() => navigate(`/player/${d.id}`)}
             className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < ranking.length - 1 ? "border-b border-border" : ""}`}>

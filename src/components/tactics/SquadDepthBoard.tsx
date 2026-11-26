@@ -5,15 +5,15 @@ import { motion } from "framer-motion";
 
 export const DEPTH_POSITIONS = [
   { code: "ST", ko: "스트라이커", en: "Striker", x: 50, y: 9 },
-  { code: "LW", ko: "왼쪽 윙어", en: "Left Wing", x: 18, y: 27 },
-  { code: "RW", ko: "오른쪽 윙어", en: "Right Wing", x: 82, y: 27 },
+  { code: "LW", ko: "왼쪽 윙어", en: "Left Wing", x: 16, y: 27 },
+  { code: "RW", ko: "오른쪽 윙어", en: "Right Wing", x: 84, y: 27 },
   { code: "LCM", ko: "좌측 중앙 미드필더", en: "Left Central Mid", x: 30, y: 45 },
   { code: "RCM", ko: "우측 중앙 미드필더", en: "Right Central Mid", x: 70, y: 45 },
   { code: "DM", ko: "수비형 미드필더", en: "Defensive Mid", x: 50, y: 64 },
-  { code: "LB", ko: "왼쪽 풀백", en: "Left Back", x: 18, y: 77 },
-  { code: "LCB", ko: "좌측 센터백", en: "Left Centre Back", x: 36, y: 85 },
-  { code: "RCB", ko: "우측 센터백", en: "Right Centre Back", x: 64, y: 85 },
-  { code: "RB", ko: "오른쪽 풀백", en: "Right Back", x: 82, y: 77 },
+  { code: "LB", ko: "왼쪽 풀백", en: "Left Back", x: 16, y: 74 },
+  { code: "LCB", ko: "좌측 센터백", en: "Left Centre Back", x: 33, y: 84 },
+  { code: "RCB", ko: "우측 센터백", en: "Right Centre Back", x: 67, y: 84 },
+  { code: "RB", ko: "오른쪽 풀백", en: "Right Back", x: 84, y: 74 },
   { code: "GK", ko: "골키퍼", en: "Goalkeeper", x: 50, y: 95 },
 ] as const;
 
@@ -82,7 +82,7 @@ const SquadDepthBoard = ({ playerNames, onPlayerClick }: Props) => {
           return (
             <div
               key={pos.code}
-              className="absolute flex w-[30%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+              className="absolute flex w-[27%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
             >
               <span className="rounded-full bg-black/45 px-1.5 py-px text-[8px] font-bold tracking-wider text-white/70">

@@ -71,7 +71,7 @@ const NicknameEditor = ({ currentNickname, currentTitle, badges, onUpdate }: Nic
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-border bg-card p-4 space-y-4"
+      className="surface rounded-2xl p-4 space-y-4"
     >
       <h3 className="font-display text-lg text-primary flex items-center gap-2">
         <Sparkles size={18} /> {L("닉네임 & 칭호", "Nickname & Title")}
