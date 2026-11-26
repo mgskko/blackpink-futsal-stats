@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -42,7 +42,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
   const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
   const isEn = lang.startsWith("en");
   const pn = (id: number) => getPlayerName(players, id, lang);
-  const L = (ko: string, en: string) => (isEn ? en : ko);
+  const L = useCallback((ko: string, en: string) => (isEn ? en : ko), [isEn]);
   const Q = (n: number) => (isEn ? `${n}Q` : `${n}쿼터`);
   const Times = (n: number) => (isEn ? `${n}x` : `${n}회`);
 
@@ -59,7 +59,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
   }, [rosters]);
 
   const validIds = useMemo(() => new Set(players.map(p => p.id)), [players]);
-  const has10Matches = (pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10;
+  const has10Matches = useCallback((pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10, [validIds, playerMatchCount]);
 
   // ─── GK Stats ───
   const gkStats = useMemo(() => {
@@ -101,7 +101,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), rate: Math.round((d.cleanSheet / d.total) * 100), cleanSheet: d.cleanSheet, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 10),
-  [gkStats, players, playerMatchCount]);
+  [gkStats, has10Matches, players, lang]);
 
   const openDoorRanking = useMemo(() =>
     [...gkStats.entries()]
@@ -109,7 +109,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgConceded: d.conceded / d.total, total: d.total }))
       .sort((a, b) => b.avgConceded - a.avgConceded)
       .slice(0, 5),
-  [gkStats, players, playerMatchCount]);
+  [gkStats, has10Matches, players, lang]);
 
   // ─── DF Stats ───
   const dfAssistRanking = useMemo(() => {
@@ -126,7 +126,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, count]) => ({ id: pid, name: getPlayerName(players, pid, lang), count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [goalEvents, allQuarters, players]);
+  }, [goalEvents, allQuarters, validIds, players, lang]);
 
   const dfWinRateRanking = useMemo(() => {
     const dfMap = new Map<number, { wins: number; total: number }>();
@@ -146,7 +146,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), winRate: Math.round((d.wins / d.total) * 100), wins: d.wins, total: d.total }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, players, playerMatchCount]);
+  }, [allQuarters, has10Matches, players, lang]);
 
   const cbPartnership = useMemo(() => computeBestDefenseLine(players, allQuarters, rosters, 5), [players, allQuarters, rosters]);
 
@@ -179,7 +179,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), goals: d.goals, assists: d.assists, quarters: d.quarters }))
       .sort((a, b) => (b.assists - b.goals) - (a.assists - a.goals))
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players, playerMatchCount]);
+  }, [allQuarters, goalEvents, has10Matches, players, lang]);
 
   const highUsageRanking = useMemo(() => {
     const fwGoalMap = new Map<number, { ownGoals: number; teamGoals: number; quarters: number }>();
@@ -208,7 +208,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), usage: Math.round((d.ownGoals / d.teamGoals) * 100), ownGoals: d.ownGoals, teamGoals: d.teamGoals }))
       .sort((a, b) => b.usage - a.usage)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players, playerMatchCount]);
+  }, [allQuarters, goalEvents, has10Matches, players, lang]);
 
   // ─── Bench / Physical Stats ───
   const gameChangerRanking = useMemo(() => {
@@ -239,7 +239,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgSwing: d.totalSwings / d.count, bestSwing: d.bestSwing, count: d.count }))
       .sort((a, b) => b.avgSwing - a.avgSwing)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, lang, players]);
 
   const ironManRanking = useMemo(() => {
     const playerStreaks = new Map<number, number>();
@@ -264,7 +264,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, streak]) => ({ id: pid, name: getPlayerName(players, pid, lang), streak }))
       .sort((a, b) => b.streak - a.streak)
       .slice(0, 5);
-  }, [allQuarters, players]);
+  }, [allQuarters, lang, players]);
 
   // ─── NEW: 6 spicy formation rankings ───
 
@@ -298,7 +298,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => b.concededPerQ - a.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players, playerMatchCount]);
+  }, [allQuarters, goalEvents, has10Matches, players, lang]);
 
   // 2. 수비형 공격수: FW AP ≈ 0 but lowest conceded
   const defensiveFWRanking = useMemo(() => {
@@ -330,7 +330,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), ap: d.ap, concededPerQ: d.conceded / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.concededPerQ - b.concededPerQ)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players, playerMatchCount]);
+  }, [allQuarters, goalEvents, has10Matches, players, lang]);
 
   // 3. 수트라이커: DF goals
   const strikerDFRanking = useMemo(() => {
@@ -358,7 +358,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), goals: d.goals, quarters: d.quarters }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players]);
+  }, [allQuarters, goalEvents, has10Matches, lang, players]);
 
   // 4. 무임승차 VIP: FW AP=0 but win rate 80%+
   const freeRiderRanking = useMemo(() => {
@@ -391,7 +391,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), winRate: Math.round((d.wins / d.quarters) * 100), wins: d.wins, quarters: d.quarters }))
       .sort((a, b) => b.winRate - a.winRate)
       .slice(0, 5);
-  }, [allQuarters, goalEvents, players, playerMatchCount]);
+  }, [allQuarters, goalEvents, has10Matches, players, lang]);
 
   // 5. 소년가장 키퍼: GK clean sheet when team scored 0-1
   const boyBreadwinnerRanking = useMemo(() => {
@@ -421,7 +421,7 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), saves: d.saves, quarters: d.quarters }))
       .sort((a, b) => b.saves - a.saves)
       .slice(0, 5);
-  }, [allQuarters, players, playerMatchCount]);
+  }, [allQuarters, has10Matches, players, lang]);
 
   // 6. 빙하기 메이커: lowest combined score when on field (FW/DF)
   const iceAgeRanking = useMemo(() => {
@@ -443,13 +443,13 @@ const FormationStatsTab = ({ players, matches, goalEvents, allQuarters, rosters 
       .map(([pid, d]) => ({ id: pid, name: getPlayerName(players, pid, lang), avgScore: d.totalScore / d.quarters, quarters: d.quarters }))
       .sort((a, b) => a.avgScore - b.avgScore)
       .slice(0, 5);
-  }, [allQuarters, players, playerMatchCount]);
+  }, [allQuarters, has10Matches, players, lang]);
 
   const RankingCard = ({ title, emoji, desc, children }: { title: string; emoji: string; desc: string; children: React.ReactNode }) => (
     <div className="mb-6">
       <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">{emoji} {title}</h3>
       <p className="mb-2 text-[10px] text-muted-foreground">{desc}</p>
-      <div className="rounded-lg border border-border bg-card overflow-hidden">{children}</div>
+      <div className="surface rounded-2xl overflow-hidden">{children}</div>
     </div>
   );
 

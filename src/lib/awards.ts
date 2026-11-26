@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import type { Player, Match, Roster, GoalEvent, Team, Result, MatchQuarter } from "@/hooks/useFutsalData";
 import { computeNonDuplicatedAP } from "@/hooks/useFutsalData";
 import { computePOTMWinners } from "@/lib/potm";
@@ -47,7 +48,7 @@ export function computeSeasonTitles(
   rosters: Roster[] = [],
   goalEvents: GoalEvent[] = [],
 ): SeasonTitle[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const played = (matches ?? []).filter(m => m?.date && m.date <= today);
   const elig = eligiblePlayers(players);
   const out: SeasonTitle[] = [];
@@ -111,7 +112,7 @@ export function computeBallonDor(
   goalEvents: GoalEvent[] = [],
   quarters: MatchQuarter[] = [],
 ): BallonDorSeason[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const played = (matches ?? []).filter(m => m?.date && m.date <= today);
   const elig = eligiblePlayers(players);
   const potmAll = computePOTMWinners(players, matches, teams, results, rosters, goalEvents, quarters);

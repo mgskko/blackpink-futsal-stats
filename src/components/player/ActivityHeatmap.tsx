@@ -1,3 +1,4 @@
+import { localISODate, parseLocalDate } from "@/lib/utils";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Match, Roster, GoalEvent } from "@/hooks/useFutsalData";
@@ -12,7 +13,7 @@ interface Props {
 }
 
 function getWeekDay(dateStr: string) {
-  return new Date(dateStr).getDay();
+  return parseLocalDate(dateStr).getDay();
 }
 
 function getAllDatesInYear(year: number): string[] {
@@ -20,7 +21,7 @@ function getAllDatesInYear(year: number): string[] {
   const start = new Date(year, 0, 1);
   const end = new Date(year, 11, 31);
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(localISODate(d));
   }
   return dates;
 }
@@ -81,7 +82,7 @@ export default function ActivityHeatmap({ playerId, matches, rosters, goalEvents
 
     // Calculate streak
     const sortedDates = [...map.keys()].sort();
-    let streak = 0, maxS = 0, prev = "";
+    let streak = 0, maxS = 0;
     // We count "consecutive match days" based on actual match availability
     const allMatchDates = yearMatches.map(m => m.date).sort();
     for (const d of allMatchDates) {
@@ -131,7 +132,7 @@ export default function ActivityHeatmap({ playerId, matches, rosters, goalEvents
   }, [weeks]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 surface rounded-2xl p-4">
       <h3 className="mb-1 font-display text-lg text-primary">🌿 ACTIVITY</h3>
       <p className="mb-3 text-[10px] text-muted-foreground">{displayYear}년 — {totalDays}일 활동 · 최대 {maxStreak}연속 출석</p>
       

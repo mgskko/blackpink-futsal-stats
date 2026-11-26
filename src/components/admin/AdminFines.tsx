@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ const AdminFines = () => {
   const activePlayers = players.filter(p => p.is_active);
   const [playerId, setPlayerId] = useState<string>("");
   const [fineType, setFineType] = useState<FineType>("late");
-  const [matchDate, setMatchDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [matchDate, setMatchDate] = useState<string>(localISODate());
   const [amount, setAmount] = useState<string>(String(FINE_AMOUNTS.late));
   const [isWaived, setIsWaived] = useState(false);
   const [note, setNote] = useState("");
@@ -100,22 +101,22 @@ const AdminFines = () => {
     <div className="space-y-4 mt-4">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("총 벌금", "Total Fines")}</div>
           <div className="text-sm font-bold text-primary">{formatKRW(totals.total, isEn)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("납부", "Paid")}</div>
           <div className="text-sm font-bold text-foreground">{formatKRW(totals.paid, isEn)}</div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <div className="text-[10px] text-muted-foreground">{L("미납", "Unpaid")}</div>
           <div className="text-sm font-bold text-destructive">{formatKRW(totals.unpaid, isEn)}</div>
         </div>
       </div>
 
       {/* Create */}
-      <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+      <div className="space-y-2 surface rounded-2xl p-3">
         <div className="flex items-center gap-2 text-sm font-bold text-primary">
           <Coins size={16} /> {L("벌금 부과", "Issue a Fine")}
         </div>
@@ -172,7 +173,7 @@ const AdminFines = () => {
           <p className="py-6 text-center text-xs text-muted-foreground">{L("등록된 벌금 내역이 없습니다", "No fines recorded yet")}</p>
         )}
         {fines.map(f => (
-          <div key={f.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+          <div key={f.id} className="flex items-center justify-between surface rounded-2xl p-3">
             <div className="min-w-0">
               <div className="text-sm font-medium text-foreground">
                 {playerName(f.player_id)}

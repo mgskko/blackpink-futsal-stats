@@ -99,15 +99,15 @@ const AdminAttendance = () => {
       {selectedMatchId && (
         <>
           <div className="flex gap-3 text-center">
-            <div className="flex-1 rounded-lg border border-border bg-card p-3">
+            <div className="flex-1 surface rounded-2xl p-3">
               <div className="text-lg font-bold text-primary">{attendingCount}</div>
               <div className="text-xs text-muted-foreground">참석</div>
             </div>
-            <div className="flex-1 rounded-lg border border-border bg-card p-3">
+            <div className="flex-1 surface rounded-2xl p-3">
               <div className="text-lg font-bold text-destructive">{absentCount}</div>
               <div className="text-xs text-muted-foreground">불참</div>
             </div>
-            <div className="flex-1 rounded-lg border border-border bg-card p-3">
+            <div className="flex-1 surface rounded-2xl p-3">
               <div className="text-lg font-bold text-muted-foreground">
                 {activePlayers.length - attendingCount - absentCount}
               </div>
@@ -119,7 +119,7 @@ const AdminAttendance = () => {
             {sortedPlayers.map(player => (
               <div
                 key={player.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                className="flex items-center justify-between surface rounded-2xl p-3"
               >
                 <span className="text-sm font-medium text-foreground">{player.name}</span>
                 <div className="flex gap-1">

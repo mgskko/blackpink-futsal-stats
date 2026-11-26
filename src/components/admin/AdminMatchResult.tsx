@@ -117,7 +117,7 @@ const AdminMatchResult = () => {
           </div>
 
           {goalEntries.map((entry, i) => (
-            <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
+            <div key={i} className="surface rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-primary font-bold">골 #{i + 1}</span>
                 <button onClick={() => setDeleteIndex(i)} className="text-destructive"><Trash2 size={14} /></button>

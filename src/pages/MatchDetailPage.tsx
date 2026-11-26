@@ -1,10 +1,13 @@
+import { localISODate } from "@/lib/utils";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Youtube, Check, X, HelpCircle, Users } from "lucide-react";
+import { Youtube, Check, X, HelpCircle, Users } from "lucide-react";
 import { useAllFutsalData, getMatchResult, getMatchTeams, getMatchRoster, getMatchGoalEvents, getPlayerName, useMatchQuarters } from "@/hooks/useFutsalData";
 import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
+import DetailHeader, { DETAIL_HEADER_OFFSET } from "@/components/DetailHeader";
+import Scoreboard from "@/components/match/Scoreboard";
 import MOMVoting from "@/components/MOMVoting";
 import WorstVoting from "@/components/match/WorstVoting";
 import FormationBuilder from "@/components/match/FormationBuilder";
@@ -216,7 +219,7 @@ const MatchDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const match = matches.find((m) => m.id === matchId);
-  if (!match) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">{L("경기를 찾을 수 없습니다", "Match not found")}</div>;
+  if (!match) return <div className="relative z-10 flex min-h-[70vh] items-center justify-center text-muted-foreground">{L("경기를 찾을 수 없습니다", "Match not found")}</div>;
 
   const venue = venues.find((v) => v.id === match.venue_id);
   const mr = getMatchResult(teams, results, matchId);
@@ -226,7 +229,7 @@ const MatchDetailPage = () => {
   const quarters = [...new Set(matchGoalEvents.map((g) => g.quarter))].sort((a, b) => a - b);
   const opponentTeam = matchTeams.find(t => !t.is_ours);
   const youtubeId = match.youtube_link ? extractYoutubeId(match.youtube_link) : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const isScheduled = match.date > today || (!mr || mr.ourResult.score_for === null);
 
   const seekTo = (timestamp: string) => {
@@ -294,60 +297,32 @@ const MatchDetailPage = () => {
   const hasAttendanceData = attendance.size > 0;
 
   return (
-    <div className="pb-20">
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-lg">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={() => navigate(-1)} className="text-primary"><ArrowLeft size={24} /></button>
-          <div>
-            <h1 className="font-display text-xl tracking-wider text-primary text-glow">MATCH DETAIL</h1>
-            <p className="text-xs text-muted-foreground">{match.date}</p>
-          </div>
-        </div>
-      </div>
+    <div className="relative z-10">
+      <DetailHeader title="MATCH DETAIL" subtitle={`${match.date} · ${tn(mr?.ourTeam.name ?? "버니즈")} vs ${tn(mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀")}`} />
+
+      <Scoreboard
+        isEn={isEn}
+        ourName={tn(mr?.ourTeam.name ?? "버니즈")}
+        oppName={tn(mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀")}
+        scoreFor={displayScoreFor}
+        scoreAgainst={displayScoreAgainst}
+        result={displayResult}
+        resultLabel={displayResultLabel}
+        scheduled={isScheduled}
+        date={match.date}
+        venue={venue ? `${venue.name}${match.sub_venue ? ` ${match.sub_venue}` : ""}` : undefined}
+        matchType={match.match_type}
+        isCustom={match.is_custom}
+        ageGroup={opponentTeam?.age_category ? opponentTeam.original_age_desc || opponentTeam.age_category : null}
+      />
 
       {isScheduled && (
         <div className="mx-4 mt-4"><MatchPrediction matchId={matchId} /></div>
       )}
 
-      {/* Score Card - uses quarter totals */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-6">
-        <div className="flex items-center justify-center gap-6">
-          <div className="text-center">
-            <div className="text-sm font-medium text-foreground">{tn(mr?.ourTeam.name ?? "버니즈")}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "승" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreFor ?? "-"}</div>
-          </div>
-          <div className="text-2xl text-muted-foreground">:</div>
-          <div className="text-center">
-            <div className="text-sm font-medium text-foreground">{tn(mr?.opponentTeam.name ?? opponentTeam?.name ?? "상대팀")}</div>
-            <div className={`mt-1 font-display text-5xl tracking-wider ${displayResult === "패" ? "text-primary text-glow" : "text-foreground"}`}>{displayScoreAgainst ?? "-"}</div>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted-foreground">
-          <span>{venue?.name}{match.sub_venue ? ` ${match.sub_venue}` : ""}</span>
-          <span className="text-primary/50">•</span>
-          <span>{match.match_type}</span>
-          {match.is_custom && (<><span className="text-primary/50">•</span><span className="text-primary">{L("자체전", "Intrasquad")}</span></>)}
-        </div>
-        {opponentTeam?.age_category && (
-          <div className="mt-2 flex justify-center">
-            <span className="text-[10px] text-muted-foreground">{L("상대 연령대", "Age Group")}: {opponentTeam.original_age_desc || opponentTeam.age_category}</span>
-          </div>
-        )}
-        {displayResultLabel && (
-          <div className="mt-3 flex justify-center">
-            <span className={`rounded-full px-4 py-1 text-sm font-bold ${displayResult === "승" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : displayResult === "패" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-muted text-muted-foreground border border-border"}`}>{displayResultLabel}</span>
-          </div>
-        )}
-        {isScheduled && !displayResult && (
-          <div className="mt-3 flex justify-center">
-            <span className="rounded-full border border-muted bg-muted/30 px-4 py-1 text-sm font-bold text-muted-foreground">{L("예정", "Scheduled")}</span>
-          </div>
-        )}
-      </motion.div>
-
       {/* Tab bar */}
-      <div className="sticky top-[57px] z-10 mt-3 border-b border-border bg-background/95 backdrop-blur-lg">
-        <div className="flex gap-1 overflow-x-auto px-4 py-2">
+      <div className="sticky z-20 mt-4 bg-gradient-to-b from-background via-background/85 to-transparent px-4 pb-3 pt-2" style={{ top: DETAIL_HEADER_OFFSET }}>
+        <div className="liquid-glass no-scrollbar flex gap-1 overflow-x-auto rounded-full p-1">
           {([
             ["facts", L("팩트", "Facts")],
             ["ticker", L("티커", "Ticker")],
@@ -358,11 +333,12 @@ const MatchDetailPage = () => {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-bold transition-all ${
-                tab === key ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-primary"
+              className={`relative flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors ${
+                tab === key ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {label}
+              {tab === key && <motion.span layoutId="match-tab-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+              <span className="relative">{label}</span>
             </button>
           ))}
         </div>
@@ -486,7 +462,7 @@ const MatchDetailPage = () => {
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">GOAL TIMELINE</h2>
           <div className="space-y-1">
             {quarters.map((q) => (
-              <div key={q} className="rounded-lg border border-border bg-card p-3">
+              <div key={q} className="surface rounded-2xl p-3">
                 <div className="mb-2 text-xs font-bold text-primary">{q}Q</div>
                 <div className="space-y-1.5">
                   {matchGoalEvents.filter((g) => g.quarter === q).map((g) => (
@@ -533,7 +509,7 @@ const MatchDetailPage = () => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mx-4 mt-4">
           <h2 className="mb-3 font-display text-lg tracking-wider text-primary">{match.has_detail_log ? L("종합 기록", "MATCH SUMMARY") : "MATCH SUMMARY"}</h2>
           {!match.has_detail_log && <p className="mb-3 text-xs text-muted-foreground">{L("쿼터별 상세 기록이 없는 경기입니다.", "No per-quarter detail log for this match.")}</p>}
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="surface rounded-2xl overflow-hidden">
             {playerMatchStats.map((p, i) => {
               const cm = courtMargins?.get(p.playerId);
               const margin = cm?.margin ?? null;
@@ -596,7 +572,7 @@ const MatchDetailPage = () => {
       )}
 
       {tab === "ticker" && !(match.has_detail_log && matchGoalEvents.length > 0) && (
-        <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        <div className="mx-4 mt-4 surface rounded-2xl p-6 text-center text-sm text-muted-foreground">
           {L("이 경기에는 타임라인 기록이 없습니다.", "No timeline events for this match.")}
         </div>
       )}
@@ -626,19 +602,19 @@ const MatchDetailPage = () => {
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary"><Users size={18} /> ATTENDANCE</h2>
           <div className="space-y-2">
             {attendingPlayers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-3">
+              <div className="surface rounded-2xl p-3">
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-green-400"><Check size={12} /> {L(`참석 (${attendingPlayers.length}명)`, `Attending (${attendingPlayers.length})`)}</div>
                 <div className="flex flex-wrap gap-1.5">{attendingPlayers.map(p => <span key={p.id} className="rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-0.5 text-xs text-green-400">{pn(p.id)}</span>)}</div>
               </div>
             )}
             {absentPlayers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-3">
+              <div className="surface rounded-2xl p-3">
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-red-400"><X size={12} /> {L(`불참 (${absentPlayers.length}명)`, `Absent (${absentPlayers.length})`)}</div>
                 <div className="flex flex-wrap gap-1.5">{absentPlayers.map(p => <span key={p.id} className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">{pn(p.id)}</span>)}</div>
               </div>
             )}
             {undecidedPlayers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-3">
+              <div className="surface rounded-2xl p-3">
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-yellow-400"><HelpCircle size={12} /> {L(`미정 (${undecidedPlayers.length}명)`, `Undecided (${undecidedPlayers.length})`)}</div>
                 <div className="flex flex-wrap gap-1.5">{undecidedPlayers.map(p => <span key={p.id} className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2.5 py-0.5 text-xs text-yellow-400">{pn(p.id)}</span>)}</div>
               </div>

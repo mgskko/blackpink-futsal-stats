@@ -15,7 +15,7 @@ export default function PitchHeatmap({ dist, isEn }: { dist: Dist; isEn: boolean
   const max = Math.max(dist.GK, dist.DF, dist.MF, dist.FW) || 1;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
       <h3 className="font-display text-lg text-primary">{L("히트맵", "Heatmap")}</h3>
       <p className="mb-3 text-[11px] text-muted-foreground">
         {L(`출전 쿼터: ${dist.total}`, `Quarters played: ${dist.total}`)}

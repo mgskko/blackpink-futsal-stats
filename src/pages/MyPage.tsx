@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAllFutsalData, getPlayerStats, getPlayerBestAPMatch, getPlayerName } from "@/hooks/useFutsalData";
 import { getPlayerBadges, getVarianceBadge } from "@/hooks/useAdvancedStats";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
+import SignInHero from "@/components/SignInHero";
 import PageHeader from "@/components/PageHeader";
 import NicknameEditor from "@/components/my/NicknameEditor";
 import burneesLogo from "@/assets/burnees-logo.png";
@@ -36,7 +36,7 @@ const MyPage = () => {
 
   if (loading || isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="relative z-10 flex min-h-[80vh] items-center justify-center">
         <motion.img
           src={burneesLogo}
           alt="Loading"
@@ -48,33 +48,7 @@ const MyPage = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 pb-20">
-        <motion.img
-          src={burneesLogo}
-          alt="Bunnies FC"
-          className="h-28 w-28 rounded-full box-glow"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-        />
-        <div className="text-center">
-          <h1 className="font-display text-3xl tracking-wider text-glow text-primary">BUNNIES FC</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{L("Google 계정으로 로그인하세요", "Sign in with your Google account")}</p>
-        </div>
-        <Button
-          onClick={async () => {
-            await lovable.auth.signInWithOAuth("google", {
-              redirect_uri: window.location.origin,
-            });
-          }}
-          className="w-full max-w-xs gradient-pink text-primary-foreground font-bold text-base py-6"
-        >
-          {L("Google로 로그인", "Sign in with Google")}
-        </Button>
-      </div>
-    );
-  }
+  if (!user) return <SignInHero />;
 
   // Linked player
   const linkedPlayer = profile?.player_id ? players.find(p => p.id === profile.player_id) : null;
@@ -92,7 +66,7 @@ const MyPage = () => {
     };
 
     return (
-      <div className="pb-20">
+      <div className="relative z-10">
         <PageHeader title={L("선수 연동", "Link Player")} subtitle={L("본인의 프로필을 선택해주세요", "Select your player profile")} />
         <div className="px-4 space-y-2">
           <p className="text-xs text-muted-foreground mb-3">{L("현재 활동 선수", "Active players")}</p>
@@ -101,7 +75,7 @@ const MyPage = () => {
               key={p.id}
               onClick={() => handleLink(p.id)}
               disabled={linking}
-              className="w-full rounded-lg border border-border bg-card p-3 text-left hover:border-primary transition-colors"
+              className="w-full surface rounded-2xl p-3 text-left hover:border-primary transition-colors"
             >
               <span className="font-medium text-foreground">{displayName(p)}</span>
               <span className="ml-2 text-xs text-primary">ACTIVE</span>
@@ -113,7 +87,7 @@ const MyPage = () => {
               key={p.id}
               onClick={() => handleLink(p.id)}
               disabled={linking}
-              className="w-full rounded-lg border border-border bg-card p-3 text-left hover:border-primary transition-colors"
+              className="w-full surface rounded-2xl p-3 text-left hover:border-primary transition-colors"
             >
               <span className="text-muted-foreground">{displayName(p)}</span>
             </button>
@@ -137,7 +111,7 @@ const MyPage = () => {
   })() : null;
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
       <PageHeader title="MY PAGE" subtitle={isEn ? `Welcome, ${displayName(linkedPlayer)}` : `${linkedPlayer.name}님, 환영합니다`} />
 
       <div className="px-4 space-y-4">
@@ -145,7 +119,7 @@ const MyPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border bg-card p-5"
+          className="surface rounded-2xl p-5"
         >
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full gradient-pink">
@@ -174,7 +148,7 @@ const MyPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="rounded-lg border border-border bg-card p-4 text-center"
+              className="surface rounded-2xl p-4 text-center"
             >
               <s.icon size={18} className={`mx-auto mb-1 ${s.color}`} />
               <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>

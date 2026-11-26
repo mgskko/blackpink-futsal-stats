@@ -93,7 +93,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      className="mb-6 overflow-hidden rounded-2xl border border-border bg-card">
+      className="mb-6 overflow-hidden surface rounded-2xl">
       <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
         <div>
           <h3 className="flex items-center gap-1.5 font-display text-lg text-primary">
@@ -166,7 +166,7 @@ export default function SeasonRatingBoard({ isEn, lang, players, matches, roster
                         [L("팀 마진", "Team margin"), `${r.marginScore >= 0 ? "+" : ""}${r.marginScore.toFixed(2)}`],
                         [L("벌금 감점", "Fine penalty"), `-${r.penalty.toFixed(2)}`],
                       ].map(([k, v]) => (
-                        <div key={k} className="rounded-lg border border-border bg-card/60 px-2 py-1.5">
+                        <div key={k} className="surface rounded-2xl/60 px-2 py-1.5">
                           <div className="text-muted-foreground">{k}</div>
                           <div className="font-display text-sm text-foreground">{v}</div>
                         </div>

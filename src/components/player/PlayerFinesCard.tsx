@@ -16,7 +16,7 @@ const PlayerFinesCard = ({ playerId }: { playerId: number }) => {
   const s = useMemo(() => summarizeFines(mine), [mine]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 rounded-xl border border-border bg-card p-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 surface rounded-2xl p-4">
       <h3 className="mb-3 flex items-center gap-2 font-display text-lg tracking-wider text-primary">
         <Coins size={16} /> {L("벌금 현황", "Fine Record")}
       </h3>

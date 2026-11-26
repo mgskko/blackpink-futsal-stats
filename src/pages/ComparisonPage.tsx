@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Swords } from "lucide-react";
+import { User, Swords } from "lucide-react";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend } from "recharts";
 import { useAllFutsalData, getPlayerStats } from "@/hooks/useFutsalData";
 import type { Match } from "@/hooks/useFutsalData";
 import { getMOMRanking } from "@/hooks/useAdvancedStats";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SplashScreen from "@/components/SplashScreen";
+import DetailHeader from "@/components/DetailHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,7 +17,6 @@ function getAvailableYears(matches: Match[]): string[] {
 }
 
 const ComparisonPage = () => {
-  const navigate = useNavigate();
   const { players, matches, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
   const [player1, setPlayer1] = useState("");
   const [player2, setPlayer2] = useState("");
@@ -77,13 +76,8 @@ const ComparisonPage = () => {
   ] : [];
 
   return (
-    <div className="pb-20">
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-lg">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={() => navigate(-1)} className="text-primary"><ArrowLeft size={24} /></button>
-          <h1 className="font-display text-xl tracking-wider text-primary text-glow">1:1 RIVAL COMPARE</h1>
-        </div>
-      </div>
+    <div className="relative z-10">
+      <DetailHeader title="1:1 RIVAL COMPARE" />
 
       {/* Year filter */}
       <div className="px-4 mt-4 mb-4">
@@ -142,7 +136,7 @@ const ComparisonPage = () => {
         )}
 
         {s1 && s2 && radarData.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-border bg-card p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="surface rounded-2xl p-4">
             <ResponsiveContainer width="100%" height={300}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="hsl(0 0% 20%)" />
@@ -157,7 +151,7 @@ const ComparisonPage = () => {
         )}
 
         {s1 && s2 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card overflow-hidden">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface rounded-2xl overflow-hidden">
             {[
               { label: "출전", v1: s1.appearances, v2: s2.appearances },
               { label: "골", v1: s1.goals, v2: s2.goals },

@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -164,6 +165,14 @@ export function getMatchResult(teams: Team[], results: Result[], matchId: number
   return { ourTeam, opponentTeam, ourResult, opponentResult };
 }
 
+/** Our side and the opponent for a match, whether or not a result was recorded yet. */
+export function getMatchSides(teams: Team[], matchId: number) {
+  const matchTeams = teams.filter(t => t.match_id === matchId);
+  const ourTeam = matchTeams.find(t => t.is_ours && t.name === "버니즈") || matchTeams.find(t => t.is_ours);
+  const opponentTeam = matchTeams.find(t => !t.is_ours) || matchTeams.find(t => t.id !== ourTeam?.id);
+  return { ourTeam, opponentTeam };
+}
+
 export function getMatchTeams(teams: Team[], matchId: number): Team[] {
   return teams.filter(t => t.match_id === matchId);
 }
@@ -177,7 +186,7 @@ export function getMatchGoalEvents(goalEvents: GoalEvent[], matchId: number): Go
 }
 
 export function getPlayerStats(players: Player[], matches: Match[], teams: Team[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], playerId: number) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   // Filter out scheduled (future) matches from stat calculations
   const playedMatches = matches.filter(m => m.date <= today);
   const playedMatchIds = new Set(playedMatches.map(m => m.id));

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift, Skull, Shield } from "lucide-react";
+import { User, Trophy, TrendingUp, TrendingDown, Minus, Sparkles, Gift, Skull, Shield } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
@@ -15,6 +15,8 @@ import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
 import { isPlayerInactive } from "@/hooks/useInactivePlayers";
 import SplashScreen from "@/components/SplashScreen";
+import DetailHeader from "@/components/DetailHeader";
+import Tilt3D from "@/components/fx/Tilt3D";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PlayerFilterTabs, { getAvailableYears, filterMatchesByMode, type FilterMode } from "@/components/player/PlayerFilterTabs";
@@ -371,7 +373,7 @@ const PlayerDetailPage = () => {
         }
         return { match: m, matchResult: mr, opponentName, goals: g, assists: a, playerResult, playerScoreFor, playerScoreAgainst };
       });
-  }, [filtered.matches, filtered.rosters, playerId, teams, results, goalEvents, rosters]);
+  }, [playerId, filtered.rosters, filtered.matches, teams, results, rosters, goalEvents, isEn]);
 
   const playerOpponentRecords = useMemo(() => {
     if (filterMode === "custom" || !playerId) return [];
@@ -424,7 +426,7 @@ const PlayerDetailPage = () => {
   if (isLoading) return <SplashScreen />;
 
   const player = players.find(p => p.id === playerId);
-  if (!player) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">{L("선수를 찾을 수 없습니다", "Player not found")}</div>;
+  if (!player) return <div className="relative z-10 flex min-h-[70vh] items-center justify-center text-muted-foreground">{L("선수를 찾을 수 없습니다", "Player not found")}</div>;
 
   const stats = getPlayerStats(players, filtered.matches, filtered.teams, filtered.results, filtered.rosters, filtered.goalEvents, playerId);
   const bestAP = getPlayerBestAPMatch(filtered.matches, filtered.rosters, filtered.goalEvents, playerId);
@@ -476,7 +478,7 @@ const PlayerDetailPage = () => {
 
   const PartnerList = ({ title, data, subLabel }: { title: string; data: { partnerId: number; count: number }[]; subLabel: string }) => (
     data.length > 0 ? (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-4 mt-4">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface rounded-2xl p-4 mt-4">
         <h3 className="mb-3 font-display text-lg text-primary">{title}</h3>
         <div className="space-y-2">
           {data.map(({ partnerId, count }, i) => (
@@ -495,22 +497,18 @@ const PlayerDetailPage = () => {
   );
 
   return (
-    <div className={`pb-20 ${isConcacaf ? "concacaf-bg" : ""}`}>
+    <div className={`relative z-10 ${isConcacaf ? "concacaf-bg" : ""}`}>
       <AvatarModal imageUrl={player.profile_image_url} name={player.name} open={avatarOpen} onClose={() => setAvatarOpen(false)} />
 
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-lg">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={() => navigate(-1)} className="text-primary"><ArrowLeft size={24} /></button>
-          <h1 className="font-display text-xl tracking-wider text-primary text-glow">PLAYER PROFILE</h1>
-        </div>
-      </div>
+      <DetailHeader title="PLAYER PROFILE" subtitle={displayName(player)} />
 
       {/* Profile Header Card */}
+      <Tilt3D max={9} wrapperClassName="mx-4 mt-4" className="rounded-3xl" holo={!inactive}>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        className={`mx-4 mt-4 rounded-xl border overflow-hidden ${inactive ? "opacity-60 grayscale" : ""} ${
+        className={`rounded-3xl border overflow-hidden ${inactive ? "opacity-60 grayscale" : ""} ${
           isConcacaf ? "border-emerald-500/50 bg-gradient-to-br from-emerald-900/30 via-card to-blue-900/20"
           : fireTier !== "none" ? `${FIRE_TIER_CONFIG[fireTier].cardClass} ${FIRE_TIER_CONFIG[fireTier].borderClass}`
-          : "border-primary/30 bg-card box-glow"
+          : "liquid-glass border-primary/30"
         }`}
       >
         <div className={`relative p-6 ${
@@ -595,6 +593,7 @@ const PlayerDetailPage = () => {
           </div>
         )}
       </motion.div>
+      </Tilt3D>
 
       {inactive && (
         <div className="mx-4 mt-3 rounded-xl border border-muted-foreground/30 bg-muted/30 px-4 py-3 text-center">
@@ -671,7 +670,7 @@ const PlayerDetailPage = () => {
 
       {/* 4-Tab System */}
       <div className="mx-4 mt-4">
-        <div className="flex rounded-lg border border-border bg-card overflow-hidden">
+        <div className="flex surface rounded-2xl overflow-hidden">
           {(["profile", "matches", "stats", "career"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs font-bold transition-all ${activeTab === tab ? "gradient-pink text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -822,7 +821,7 @@ const PlayerDetailPage = () => {
           </motion.div>
 
           {/* W/D/L */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
             <h3 className="mb-3 font-display text-lg text-primary">{L("전체 전적 요약", "Overall Record")}</h3>
             <div className="flex justify-around">
               <div className="text-center"><div className="font-display text-2xl text-primary text-glow">{stats.wins}</div><div className="text-xs text-muted-foreground">{L("승","W")}</div></div>
@@ -833,7 +832,7 @@ const PlayerDetailPage = () => {
 
           {/* Win Fairy */}
           {myFairy && filterMode !== "custom" && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-2 font-display text-lg text-primary flex items-center gap-2">
                 {myFairy.diff >= 15 ? "🧚" : myFairy.diff <= -15 ? "👻" : "📊"} {L("승리 요정 지수", "Win Fairy Index")}
               </h3>
@@ -911,7 +910,7 @@ const PlayerDetailPage = () => {
       {activeTab === "stats" && (
         <div className="mx-4">
           {/* Season selector */}
-          <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+          <div className="mt-4 flex items-center justify-between gap-2 surface rounded-2xl px-3 py-2.5">
             <span className="text-xs font-bold text-muted-foreground">{L("시즌 선택", "Season")}</span>
             <select
               value={filterMode === "year" ? selectedYear : filterMode}
@@ -931,7 +930,7 @@ const PlayerDetailPage = () => {
           </div>
 
           {/* Key stat grid (3x2) */}
-          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-border bg-card p-3 text-center">
+          <div className="mt-3 grid grid-cols-3 gap-2 surface rounded-2xl p-3 text-center">
             {[
               { v: stats.goals, l: L("득점", "Goals") },
               { v: stats.assists, l: L("어시스트", "Assists") },
@@ -992,7 +991,7 @@ const PlayerDetailPage = () => {
               </motion.div>
             )}
             {positionDist.total > 0 && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-border bg-card p-3">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface rounded-2xl p-3">
                 <div className="text-xs font-bold text-primary mb-2">📍 {L("포지션 분포","Position Distribution")}</div>
               <div className="space-y-1">
                   {(["GK", "DF", "MF", "FW"] as const).filter(pos => positionDist[pos] > 0).sort((a, b) => positionDist[b] - positionDist[a]).map(pos => (
@@ -1013,7 +1012,7 @@ const PlayerDetailPage = () => {
 
           {/* Defense Contribution */}
           {defenseCont.quartersWithPlayer >= 5 && defenseCont.quartersWithoutPlayer >= 3 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">🛡️ {L("수비 기여도","Defensive Contribution")}</h3>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
@@ -1039,7 +1038,7 @@ const PlayerDetailPage = () => {
 
           {/* Scoring Arsenal & Playmaking Style - Donut Charts */}
           {(goalTypeStats.length > 0 || assistTypeStats.length > 0) && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-3 font-display text-lg text-primary">🎯 {L("시그니처 무기","Signature Weapons")}</h3>
               <div className="grid grid-cols-2 gap-4">
                 {goalTypeStats.length > 0 && (
@@ -1086,7 +1085,7 @@ const PlayerDetailPage = () => {
 
           {/* Solo vs Team Goals */}
           {soloTeamData.length > 0 && soloVsTeam.total >= 3 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-2 font-display text-sm text-primary">🎯 {L("골 의존도","Goal Dependency")} (Solo vs Team)</h3>
               <ResponsiveContainer width="100%" height={50}>
                 <BarChart data={[{ solo: soloVsTeam.solo, team: soloVsTeam.team }]} layout="vertical">
@@ -1106,7 +1105,7 @@ const PlayerDetailPage = () => {
 
           {/* Best Partners */}
           {topDuos.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-3 font-display text-lg text-primary">BEST PARTNERS</h3>
               <div className="space-y-2">
                 {topDuos.map(([partnerId, count], i) => (
@@ -1128,7 +1127,7 @@ const PlayerDetailPage = () => {
 
           {/* Position Win Rate Comparison */}
           {positionDist.total >= 5 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-3 font-display text-sm text-primary flex items-center gap-2">📊 {L("포지션별 팀 승률","Team Win% by Position")}</h3>
               <div className="space-y-2">
                 {(["FW", "DF", "GK", "MF"] as const).map(pos => {
@@ -1161,7 +1160,7 @@ const PlayerDetailPage = () => {
 
           {/* Attacking Contribution */}
           {courtStats && courtStats.quartersPlayed >= 3 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-lg border border-border bg-card p-4">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 surface rounded-2xl p-4">
               <h3 className="mb-2 font-display text-sm text-primary flex items-center gap-2">⚔️ {L("공격 기여도","Attacking Contribution")}</h3>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>

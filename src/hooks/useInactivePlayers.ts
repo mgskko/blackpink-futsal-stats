@@ -1,9 +1,10 @@
+import { localISODate } from "@/lib/utils";
 import type { Match, Roster, Player } from "./useFutsalData";
 
 const INACTIVE_DAYS = 180;
 
 export function getLastMatchDate(playerId: number, matches: Match[], rosters: Roster[]): string | null {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const matchIds = new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id));
   const dates = matches.filter(m => matchIds.has(m.id) && m.date <= today).map(m => m.date).sort();
   return dates.length > 0 ? dates[dates.length - 1] : null;

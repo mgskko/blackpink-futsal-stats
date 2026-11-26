@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -14,8 +15,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['"Bebas Neue"', '"Noto Sans KR"', 'sans-serif'],
-        sans: ['"Noto Sans KR"', 'sans-serif'],
+        display: ['"Bebas Neue"', '"Pretendard Variable"', "Pretendard", "sans-serif"],
+        sans: ['"Pretendard Variable"', "Pretendard", "-apple-system", "BlinkMacSystemFont", '"Apple SD Gothic Neo"', '"Segoe UI"', "Roboto", '"Noto Sans KR"', "sans-serif"],
+        num: ['"Inter Tight"', '"Pretendard Variable"', "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -51,6 +53,9 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        win: "hsl(var(--win) / <alpha-value>)",
+        draw: "hsl(var(--draw) / <alpha-value>)",
+        loss: "hsl(var(--loss) / <alpha-value>)",
         pink: {
           glow: "hsl(var(--pink-glow))",
           soft: "hsl(var(--pink-soft))",
@@ -66,6 +71,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -85,13 +94,18 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-pink": "pulse-pink 2s ease-in-out infinite",
+        float: "float 4s ease-in-out infinite",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [animate],
 } satisfies Config;

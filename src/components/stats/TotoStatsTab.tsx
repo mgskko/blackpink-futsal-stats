@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -70,7 +71,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
   const quarterlyRankings = useMemo(() => {
     if (!predictions || predictions.length === 0) return [];
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localISODate();
 
     // Only count finished matches (past date with results)
     const finishedMatchMap = new Map<number, string>(); // matchId -> actual result ("win"|"draw"|"loss")
@@ -131,12 +132,12 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
     });
 
     return rankings;
-  }, [predictions, matches, teams, results, profileMap]);
+  }, [predictions, matches, teams, results, isEn, profileMap, anon]);
 
   // Underdog Master: predicted win/draw when majority predicted loss, and was correct
   const underdogMaster = useMemo(() => {
     if (!predictions || predictions.length === 0) return null;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localISODate();
 
     const finishedMatchMap = new Map<number, string>();
     matches.forEach(match => {
@@ -173,7 +174,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
     if (underdogCounts.size === 0) return null;
     const sorted = [...underdogCounts.entries()].sort((a, b) => b[1] - a[1]);
     return { userId: sorted[0][0], name: profileMap.get(sorted[0][0]) || anon, count: sorted[0][1] };
-  }, [predictions, matches, teams, results, profileMap]);
+  }, [predictions, matches, profileMap, anon, teams, results]);
 
   // Pele's Curse: lowest accuracy
   const peleCurse = useMemo(() => {
@@ -195,7 +196,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
       .sort((a, b) => a.rate - b.rate);
 
     return candidates.length > 0 ? candidates[0] : null;
-  }, [quarterlyRankings, profileMap]);
+  }, [quarterlyRankings, profileMap, anon]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -215,7 +216,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
           <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">
             <Crown size={18} /> {qr.label} {L("적중률 랭킹", "Accuracy Ranking")}
           </h3>
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="surface rounded-2xl overflow-hidden">
             {qr.users.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm text-muted-foreground">{L("아직 데이터가 없습니다", "No data yet")}</div>
             ) : (
@@ -253,7 +254,7 @@ const TotoStatsTab = ({ matches, teams, results }: TotoStatsTabProps) => {
       ))}
 
       {quarterlyRankings.length === 0 && (
-        <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+        <div className="surface rounded-2xl p-8 text-center text-muted-foreground">
           <p className="text-sm">{L("아직 승부 예측 데이터가 없습니다.", "No prediction data yet.")}</p>
           <p className="text-xs mt-1">{L("예정된 경기에서 예측을 남겨보세요! 🎯", "Cast a prediction on an upcoming match! 🎯")}</p>
         </div>

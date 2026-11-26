@@ -409,7 +409,7 @@ const AdminMatchEdit = () => {
       {matchId && (
         <>
           {/* Venue Edit */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">구장</h3>
               {!editingVenue ? (
@@ -455,7 +455,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* Match Format */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <h3 className="mb-2 text-sm font-bold text-primary">경기 포맷</h3>
             <Select
               value={editFormat}
@@ -477,7 +477,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* YouTube Link Edit */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
               {!editingYoutube ? (
@@ -503,7 +503,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* Score Edit */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">스코어</h3>
               {!editingScore ? (
@@ -548,7 +548,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* Roster with add/remove */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary">출전 선수 ({matchRoster.length}명)</h3>
               <Button size="sm" variant="outline" onClick={() => setShowAddRoster(!showAddRoster)} className="h-7 text-xs border-primary/30 text-primary">
@@ -635,7 +635,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* Goal Events */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary">골 이벤트 ({matchGoals.length}개)</h3>
               <Button size="sm" variant="outline" onClick={() => setShowAddGoal(!showAddGoal)} className="h-7 text-xs border-primary/30 text-primary">
@@ -786,7 +786,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* Manual MOM */}
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary flex items-center gap-1"><Star size={14} /> MOM 수동 지정</h3>
               <Button size="sm" variant="outline" onClick={() => setShowMOM(!showMOM)} className="h-7 text-xs border-primary/30 text-primary">
@@ -809,7 +809,7 @@ const AdminMatchEdit = () => {
             const oppTeam = matchTeams.find(t => !t.is_ours);
             if (!oppTeam) return null;
             return (
-              <div className="rounded-lg border border-border bg-card p-4">
+              <div className="surface rounded-2xl p-4">
                 <h3 className="text-sm font-bold text-primary mb-2">상대팀 연령대</h3>
                 <div className="flex gap-2">
                   <Select value={oppTeam.age_category || ""} onValueChange={async (v) => {

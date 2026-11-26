@@ -161,7 +161,7 @@ export default function AdminQuarterEditor({ matchId, rosterPlayerIds, players }
   const rosterPlayers = players.filter(p => rosterPlayerIds.includes(p.id));
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="surface rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-primary">쿼터별 스코어 & 라인업</h3>
         <div className="flex gap-2">

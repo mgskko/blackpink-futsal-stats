@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowDownLeft,
@@ -71,8 +71,10 @@ const TreasuryPage = () => {
     return m;
   }, [dues]);
 
-  const getDue = (playerId: number, ym: string) =>
-    duesMap.get(`${playerId}|${ym}`) ?? { status: "unpaid", amount: 0 };
+  const getDue = useCallback(
+    (playerId: number, ym: string) => duesMap.get(`${playerId}|${ym}`) ?? { status: "unpaid", amount: 0 },
+    [duesMap]
+  );
 
   const toggleDue = async (playerId: number, ym: string) => {
     if (!isAdmin) return;
@@ -118,7 +120,7 @@ const TreasuryPage = () => {
     const target = activePlayers.length - exempt.length;
     const collected = paid.reduce((s, p) => s + (getDue(p.id, selectedMonth).amount || MONTHLY_FEE), 0);
     return { paidCount: paid.length, target, collected, exemptCount: exempt.length };
-  }, [activePlayers, duesMap, selectedMonth]);
+  }, [activePlayers, getDue, selectedMonth]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof ledger>();
@@ -137,7 +139,7 @@ const TreasuryPage = () => {
   ];
 
   return (
-    <div className="pb-28">
+    <div className="relative z-10">
       <PageHeader title="TREASURY" subtitle={isEnglish ? "Club ledger" : "구단 회비 장부"} />
       <div className="space-y-5 px-4">
         {/* Balance card */}
@@ -168,7 +170,7 @@ const TreasuryPage = () => {
         </motion.div>
 
         {/* Tabs */}
-        <div className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-card p-1">
+        <div className="grid grid-cols-3 gap-1 surface rounded-2xl p-1">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -202,7 +204,7 @@ const TreasuryPage = () => {
             </div>
 
             {/* Collection progress */}
-            <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="surface rounded-2xl p-4">
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-bold text-foreground">{monthLabel(selectedMonth, isEnglish)}</p>
                 <p className="text-xs text-muted-foreground">
@@ -289,7 +291,7 @@ const TreasuryPage = () => {
               {grouped.map(([day, list]) => (
                 <div key={day} className="space-y-1.5">
                   <p className="px-1 text-[11px] text-muted-foreground">{day}</p>
-                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                  <div className="overflow-hidden surface rounded-2xl">
                     {list.map((e) => (
                       <div key={e.id} className="flex items-center gap-3 border-b border-border/50 p-3 last:border-0">
                         <div
@@ -365,7 +367,7 @@ const TreasuryPage = () => {
                 {isEnglish ? "Select a member to see their payment history." : "멤버를 선택하면 월별 납부 내역이 표시됩니다."}
               </p>
             ) : (
-              <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
+              <div className="space-y-2 surface rounded-2xl p-3">
                 {months.map((m) => {
                   const d = getDue(selectedPlayer, m);
                   return (
@@ -405,7 +407,7 @@ const TreasuryPage = () => {
 
         {tab === "rules" && (
           <div className="space-y-3">
-            <section className="rounded-2xl border border-border bg-card p-4">
+            <section className="surface rounded-2xl p-4">
               <h3 className="text-sm font-bold text-primary">
                 {isEnglish ? "Late & no-show fines" : "지각 · 노쇼 벌금제"}
               </h3>
@@ -428,7 +430,7 @@ const TreasuryPage = () => {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4">
+            <section className="surface rounded-2xl p-4">
               <h3 className="text-sm font-bold text-primary">
                 {isEnglish ? "Monthly dues & guest fees" : "회비 및 용병비 규칙"}
               </h3>
@@ -451,7 +453,7 @@ const TreasuryPage = () => {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4">
+            <section className="surface rounded-2xl p-4">
               <h3 className="text-sm font-bold text-primary">
                 {isEnglish ? "Water & drinks settlement" : "물 · 음료 정산"}
               </h3>

@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,7 +51,10 @@ const AdminTreasury = () => {
   const [month, setMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const selectedYm = `${year}-${month}`;
   const years = useMemo(
-    () => Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 3 + i)),
+    () => {
+      const y = new Date().getFullYear();
+      return Array.from({ length: 5 }, (_, i) => String(y - 3 + i));
+    },
     []
   );
   const monthOptions = useMemo(
@@ -89,7 +93,7 @@ const AdminTreasury = () => {
     toast({ title: isEnglish ? "Reverted to auto balance" : "자동 계산 잔액으로 되돌렸습니다" });
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const [date, setDate] = useState(today);
   const [direction, setDirection] = useState<"in" | "out">("out");
   const [amount, setAmount] = useState("");
@@ -163,11 +167,11 @@ const AdminTreasury = () => {
     <div className="mt-4 space-y-6">
       {/* Balance summary */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <p className="text-[10px] text-muted-foreground">{isEnglish ? "Income" : "입금"}</p>
           <p className="mt-1 text-sm font-bold text-emerald-400">{formatKRW(totalIn)}</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-3 text-center">
+        <div className="surface rounded-2xl p-3 text-center">
           <p className="text-[10px] text-muted-foreground">{isEnglish ? "Expense" : "출금"}</p>
           <p className="mt-1 text-sm font-bold text-rose-400">{formatKRW(totalOut)}</p>
         </div>
@@ -212,7 +216,7 @@ const AdminTreasury = () => {
 
 
       {/* Entry form */}
-      <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+      <div className="space-y-2 surface rounded-2xl p-3">
         <p className="text-xs font-bold text-foreground">{isEnglish ? "Add ledger entry" : "입출금 내역 추가"}</p>
         <div className="grid grid-cols-2 gap-2">
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-background" />
@@ -255,7 +259,7 @@ const AdminTreasury = () => {
           <p className="text-xs text-muted-foreground">{isEnglish ? "No entries yet." : "등록된 내역이 없습니다."}</p>
         )}
         {ledger.map((e) => (
-          <div key={e.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div key={e.id} className="flex items-center gap-3 surface rounded-2xl p-3">
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${e.direction === "in" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
               {e.direction === "in" ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
             </div>

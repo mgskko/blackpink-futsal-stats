@@ -75,7 +75,7 @@ export default function PlayerCareerTab({ isEn, playerId, players, matches, rost
           fineCounts={fineCounts}
         />
       ) : (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 overflow-hidden surface rounded-2xl">
           <div className="flex items-center border-b border-border px-3 py-2 text-[11px] font-bold text-muted-foreground">
             <span className="flex-1">{L("1군 경력", "Senior Career")}</span>
             <span className="w-12 text-right">{L("경기", "MP")}</span>

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { Player, Match, Team, Result, Roster, GoalEvent, MatchQuarter } from "@/hooks/useFutsalData";
@@ -30,8 +30,8 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
   const { i18n } = useTranslation();
   const lang = i18n.language ?? "ko";
   const isEn = lang.startsWith("en");
-  const L = (ko: string, en: string) => (isEn ? en : ko);
-  const nm = (id: number) => getPlayerName(players, id, lang);
+  const L = useCallback((ko: string, en: string) => (isEn ? en : ko), [isEn]);
+  const nm = useCallback((id: number) => getPlayerName(players, id, lang), [players, lang]);
 
   // Global 10-match filter
   const playerMatchCount = useMemo(() => {
@@ -46,7 +46,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
   }, [rosters]);
 
   const validIds = useMemo(() => new Set(players.map(p => p.id)), [players]);
-  const has10Matches = (pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10;
+  const has10Matches = useCallback((pid: number) => validIds.has(pid) && (playerMatchCount.get(pid) || 0) >= 10, [validIds, playerMatchCount]);
 
   // 1. 유산소의 신: 15Q+, AP 극히 적고, margin <= 0
   const cardioRanking = useMemo(() => {
@@ -55,7 +55,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       .filter(p => has10Matches(p.playerId) && p.quartersPlayed >= 15 && p.ap <= 2 && p.margin <= 0)
       .sort((a, b) => b.quartersPlayed - a.quartersPlayed || a.margin - b.margin)
       .slice(0, 5);
-  }, [players, matches, allQuarters, goalEvents, playerMatchCount]);
+  }, [players, matches, allQuarters, goalEvents, has10Matches]);
 
   // 2. 전술적 희생양: FW margin top tier but overall margin hurt by DF/GK
   const tacticalVictim = useMemo(() => {
@@ -81,7 +81,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       }
     });
     return playerData.sort((a, b) => b.diff - a.diff).slice(0, 5);
-  }, [players, allQuarters]);
+  }, [players, allQuarters, has10Matches]);
 
   // 3. 얼리버드 vs 슬로우스타터
   const earlyLateRanking = useMemo(() => {
@@ -101,7 +101,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     const earlyBirds = [...earlyMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: nm(pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
     const slowStarters = [...lateMap.entries()].filter(([pid]) => has10Matches(pid)).map(([pid, count]) => ({ id: pid, name: nm(pid), count })).sort((a, b) => b.count - a.count).slice(0, 3);
     return { earlyBirds, slowStarters };
-  }, [goalEvents, players, playerMatchCount, lang]);
+  }, [goalEvents, has10Matches, nm]);
 
   // 4. 패배 요정: AP를 올린 경기의 팀 승률이 가장 낮은
   const jinxRanking = useMemo(() => {
@@ -130,7 +130,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       ranking.push({ id: pid, name: nm(pid), winRate: Math.round((wins / matchIds.size) * 100), wins, total: matchIds.size });
     });
     return ranking.sort((a, b) => a.winRate - b.winRate).slice(0, 5);
-  }, [goalEvents, rosters, results, players, lang]);
+  }, [goalEvents, has10Matches, nm, rosters, results]);
 
   // 5. 낭만 원툴: 고난도 골 비율
   const highlightRanking = useMemo(() => {
@@ -148,7 +148,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
       .map(([pid, d]) => ({ id: pid, name: nm(pid), rate: Math.round((d.hard / d.total) * 100), hard: d.hard, total: d.total }))
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
-  }, [goalEvents, players, playerMatchCount, lang]);
+  }, [goalEvents, has10Matches, nm]);
 
   const RankItem = ({ i, name, id, value, sub, total }: { i: number; name: string; id: number; value: string; sub?: string; total?: number }) => (
     <div onClick={() => navigate(`/player/${id}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${total !== undefined && i < total - 1 ? "border-b border-border" : ""}`}>
@@ -167,7 +167,7 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
     <div className="mb-6">
       <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">{emoji} {title}</h3>
       <p className="mb-2 text-[10px] text-muted-foreground">{desc}</p>
-      <div className="rounded-lg border border-border bg-card overflow-hidden">{children}</div>
+      <div className="surface rounded-2xl overflow-hidden">{children}</div>
     </div>
   );
 
@@ -194,13 +194,13 @@ const FunStatsTab = ({ players, matches, teams, results, rosters, goalEvents, al
         <h3 className="mb-2 flex items-center gap-2 font-display text-lg tracking-wider text-primary">⏱️ {L("얼리버드 vs 슬로우 스타터", "Early Bird vs Slow Starter")}</h3>
         <p className="mb-2 text-[10px] text-muted-foreground">{L("1~3쿼터 vs 6~8쿼터 공격포인트 집중도", "Attack point concentration in 1–3Q vs 6–8Q")}</p>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="surface rounded-2xl overflow-hidden">
             <div className="bg-primary/10 px-3 py-1.5 text-[10px] font-bold text-primary text-center">🌅 {L("얼리버드", "Early Bird")} (1~3Q)</div>
             {earlyLateRanking.earlyBirds.map((d, i) => (
               <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.count}AP`} total={earlyLateRanking.earlyBirds.length} />
             ))}
           </div>
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="surface rounded-2xl overflow-hidden">
             <div className="bg-destructive/10 px-3 py-1.5 text-[10px] font-bold text-destructive text-center">🌙 {L("슬로우스타터", "Slow Starter")} (6~8Q)</div>
             {earlyLateRanking.slowStarters.map((d, i) => (
               <RankItem key={d.id} i={i} name={d.name} id={d.id} value={`${d.count}AP`} total={earlyLateRanking.slowStarters.length} />

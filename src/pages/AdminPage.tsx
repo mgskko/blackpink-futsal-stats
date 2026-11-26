@@ -22,7 +22,7 @@ const AdminPage = () => {
 
   if (!user || !isAdmin) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 pb-20">
+      <div className="relative z-10 flex min-h-[80vh] flex-col items-center justify-center gap-4">
         <Shield size={48} className="text-muted-foreground" />
         <p className="text-muted-foreground">관리자 권한이 필요합니다</p>
       </div>
@@ -30,7 +30,7 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
       <PageHeader title="ADMIN" subtitle="관리자 패널" />
       <div className="px-4">
         <Tabs defaultValue="attendance" className="w-full">

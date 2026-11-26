@@ -55,7 +55,7 @@ const AdminSquadDepth = () => {
       {DEPTH_POSITIONS.map((pos) => {
         const list = rows.filter((r) => r.position_code === pos.code);
         return (
-          <div key={pos.code} className="rounded-xl border border-border bg-card p-3">
+          <div key={pos.code} className="surface rounded-2xl p-3">
             <div className="mb-2 flex items-center gap-2">
               <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">{pos.code}</span>
               <span className="text-xs text-muted-foreground">{isEnglish ? pos.en : pos.ko}</span>

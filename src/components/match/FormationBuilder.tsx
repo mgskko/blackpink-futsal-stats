@@ -94,7 +94,7 @@ export default function FormationBuilder({ matchId, players, roster, matchTeams,
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card overflow-hidden">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h3 className="font-display text-lg text-primary">⚽ FORMATION BUILDER</h3>
         <div className="flex gap-2">

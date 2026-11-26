@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { localISODate } from "@/lib/utils";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -40,7 +41,7 @@ function getAvailableYears(matches: Match[]): string[] {
 }
 
 function getFilteredPlayerStats(playerId: number, matches: Match[], results: Result[], rosters: Roster[], goalEvents: GoalEvent[], filter: FilterType) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   let filteredMatches = matches.filter(m => m.date <= today); // exclude scheduled
   if (filter === "custom") filteredMatches = filteredMatches.filter(m => m.is_custom);
   else if (filter !== "all") filteredMatches = filteredMatches.filter(m => m.date.startsWith(filter));
@@ -75,12 +76,12 @@ const StatisticsPage = () => {
   const { i18n } = useTranslation();
   const isEn = (i18n.language ?? i18n.resolvedLanguage ?? "ko").startsWith("en");
   const lang = i18n.language ?? i18n.resolvedLanguage ?? "ko";
-  const nm = (id: number) => getPlayerName(players, id, lang);
   // UI-only bilingual helper. NEVER use for values compared against DB (e.g. "승"/"무"/"패").
   const L = (ko: string, en: string) => (isEn ? en : ko);
   // Result label mapper: DB stores Korean; we only translate the display.
   const resultLabel = (r: string) => (isEn ? (r === "승" ? "W" : r === "패" ? "L" : r === "무" ? "D" : r) : r);
   const { players, matches: allSportMatches, venues, teams, results, rosters, goalEvents, isLoading } = useAllFutsalData();
+  const nm = useCallback((id: number) => getPlayerName(players, id, lang), [players, lang]);
   const [sport, setSport] = useState<SportFilter>("all");
   const matches = useMemo(() => filterMatchesBySport(allSportMatches, sport), [allSportMatches, sport]);
   const sportMatchIds = useMemo(() => new Set(matches.map(m => m.id)), [matches]);
@@ -166,7 +167,7 @@ const StatisticsPage = () => {
       id: pid, name: players.find(p => p.id === pid)?.name || `#${pid}`, count
     })).filter(d => !inactiveIds.has(d.id)).sort((a, b) => b.count - a.count).slice(0, 10)
       .map(d => ({ ...d, name: nm(d.id) }));
-  }, [filteredQuarters, players, teams, matches, goalEvents, allQuarters, results, inactiveIds]);
+  }, [filteredQuarters, matches, players, teams, goalEvents, allQuarters, results, inactiveIds, nm]);
 
   if (isLoading) return <SplashScreen />;
 
@@ -237,7 +238,7 @@ const StatisticsPage = () => {
   const tooltipStyle = { backgroundColor: "hsl(0 0% 7%)", border: "1px solid hsl(330 100% 71% / 0.3)", borderRadius: "8px", color: "hsl(0 0% 95%)" };
 
   const GenericRanking = ({ data, valueLabel, valueFn }: { data: { id: number; name: string }[]; valueLabel: string; valueFn: (d: any) => string | number }) => (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="surface rounded-2xl overflow-hidden">
       {data.map((p, i) => (
         <div key={p.id} onClick={() => navigate(`/player/${p.id}`)}
           className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < data.length - 1 ? "border-b border-border" : ""}`}>
@@ -254,7 +255,7 @@ const StatisticsPage = () => {
   const RecordTable = ({ title, icon, data }: { title: string; icon: React.ReactNode; data: { name: string; wins: number; draws: number; losses: number; matches: number; winRate: number }[] }) => (
     <div className="mb-6">
       <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">{icon} {title}</h3>
-      <div className="rounded-lg border border-border bg-card overflow-hidden overflow-x-auto">
+      <div className="surface rounded-2xl overflow-hidden overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="border-b border-border text-muted-foreground"><th className="px-3 py-2 text-left font-medium">{L("이름", "Name")}</th><th className="px-2 py-2 text-center font-medium">{L("경기", "GP")}</th><th className="px-2 py-2 text-center font-medium">{L("승", "W")}</th><th className="px-2 py-2 text-center font-medium">{L("무", "D")}</th><th className="px-2 py-2 text-center font-medium">{L("패", "L")}</th><th className="px-2 py-2 text-center font-medium">{L("승률", "Win%")}</th></tr></thead>
           <tbody>
@@ -310,7 +311,7 @@ const StatisticsPage = () => {
   };
 
   return (
-    <div className="pb-20">
+    <div className="relative z-10">
       <PageHeader title="STATISTICS" subtitle={L("버니즈 통계", "Bunnies Stats")} />
 
       {/* Sport toggle (Football / Futsal) */}
@@ -336,7 +337,7 @@ const StatisticsPage = () => {
 
       {/* Tab switcher */}
       <div className="px-4 mb-6">
-        <div className="flex rounded-lg border border-border bg-card overflow-hidden">
+        <div className="flex surface rounded-2xl overflow-hidden">
           {([
             ["player", `👤 ${L("개인", "Player")}`] as const,
             ...(!isCustomFilter ? [["team", `⚔️ ${L("팀", "Team")}`] as const] : []),
@@ -406,7 +407,7 @@ const StatisticsPage = () => {
             {/* AP Chart */}
             <div className="mb-6">
               <h3 className="mb-3 font-display text-xl tracking-wider text-primary">{L("TOP 5 공격포인트", "TOP 5 Attack Points")}</h3>
-              <div className="rounded-lg border border-border bg-card p-4">
+              <div className="surface rounded-2xl p-4">
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={apChartData} layout="vertical">
                     <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={11} />
@@ -422,7 +423,7 @@ const StatisticsPage = () => {
             {/* Quarter trend */}
             <div className="mb-6">
               <h3 className="mb-3 font-display text-xl tracking-wider text-primary">{L("쿼터별 득점/실점 추이", "Goals Scored / Conceded by Quarter")}</h3>
-              <div className="rounded-lg border border-border bg-card p-4">
+              <div className="surface rounded-2xl p-4">
                 <ResponsiveContainer width="100%" height={220}>
                   <ComposedChart data={quarterData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
@@ -458,7 +459,7 @@ const StatisticsPage = () => {
             </div>
 
             {/* Ranking Select + List wrapped in Card */}
-            <div className="mb-6 rounded-lg border border-border bg-card p-4">
+            <div className="mb-6 surface rounded-2xl p-4">
               <h3 className="mb-3 font-display text-lg tracking-wider text-primary">{L("랭킹", "Rankings")}</h3>
               <div className="mb-4">
                 <Select value={selectedRanking} onValueChange={(v) => setSelectedRanking(v as RankingOption)}>
@@ -503,7 +504,7 @@ const StatisticsPage = () => {
               <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Target size={18} /> {L("연령대별 승률", "Win Rate by Age Group")}</h3>
               <div className="space-y-2">
                 {ageRecords.map(r => (
-                  <div key={r.category} className="rounded-lg border border-border bg-card p-3">
+                  <div key={r.category} className="surface rounded-2xl p-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-foreground">{r.category}</span>
                       <span className={`font-display text-lg ${r.winRate >= 50 ? "text-primary text-glow" : "text-muted-foreground"}`}>{r.winRate}%</span>
@@ -553,7 +554,7 @@ const StatisticsPage = () => {
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🤝 {L("환상의 짝꿍 TOP 10", "Perfect Combo TOP 10")}</h3>
                   <p className="mb-2 text-xs text-muted-foreground">{L("A의 패스를 받아 B가 골을 넣은 횟수 (10경기 이상 함께 출전)", "Goals scored by B assisted by A (min. 10 shared matches)")}</p>
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="surface rounded-2xl overflow-hidden">
                     {passNet.map((d, i) => (
                       <div key={`${d.assisterId}-${d.scorerId}`} className={`flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < passNet.length - 1 ? "border-b border-border" : ""}`}>
                         <div className="flex items-center gap-2 text-sm">
@@ -668,7 +669,7 @@ const StatisticsPage = () => {
                 <div className="mb-6">
                   <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary">🫥 WITHOUT YOU</h3>
                   <p className="mb-2 text-xs text-muted-foreground">{L("선수가 벤치에 앉을 때 팀 마진 변화", "How team margin changes when the player is on the bench")}</p>
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="surface rounded-2xl overflow-hidden">
                     {withoutYou.map((d, i) => (
                       <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < withoutYou.length - 1 ? "border-b border-border" : ""}`}>
                         <div className="flex items-center gap-3">
@@ -896,7 +897,7 @@ const StatisticsPage = () => {
             <div className="mb-6">
               <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Clock size={18} /> {L("극장골 장인", "Clutch Finisher")}</h3>
               <p className="mb-2 text-xs text-muted-foreground">{L("경기 마지막 쿼터 최다 득점자", "Most goals scored in the final quarter")}</p>
-              <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="surface rounded-2xl overflow-hidden">
                 {lastQSpecialists.map((d, i) => (
                   <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < lastQSpecialists.length - 1 ? "border-b border-border" : ""}`}>
                     <div className="flex items-center gap-3"><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "gradient-pink text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{i + 1}</span><span className="text-sm font-medium text-foreground">{d.name}</span></div>
@@ -939,7 +940,7 @@ const StatisticsPage = () => {
             {ownGoals.length > 0 && (
               <div className="mb-6">
                 <h3 className="mb-3 flex items-center gap-2 font-display text-xl tracking-wider text-primary"><Skull size={18} /> {L("X맨 / 자책골 랭킹", "X-Man / Own-Goal Ranking")}</h3>
-                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                <div className="surface rounded-2xl overflow-hidden">
                   {ownGoals.map((d, i) => (
                     <div key={d.playerId} onClick={() => navigate(`/player/${d.playerId}`)} className={`flex cursor-pointer items-center justify-between px-4 py-2.5 transition-colors hover:bg-secondary ${i < ownGoals.length - 1 ? "border-b border-border" : ""}`}>
                       <div className="flex items-center gap-3"><span className="text-lg">💀</span><span className="text-sm font-medium text-foreground">{d.name}</span></div>

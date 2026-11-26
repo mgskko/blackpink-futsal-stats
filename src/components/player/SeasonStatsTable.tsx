@@ -1,3 +1,4 @@
+import { localISODate } from "@/lib/utils";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { computeMatchAP } from "@/hooks/useFutsalData";
@@ -41,7 +42,7 @@ export function buildSeasonRows(
   fineCounts: Map<number, number> = new Map(),
   overrideKeyed: Map<string, number> = new Map(),
 ): SeasonRow[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   const played = (matches ?? []).filter(m => m?.date && m.date <= today);
   const eligible = (players ?? []).filter(p => p?.name && !/^용병\d*$/.test(p.name));
   const safeRosters = rosters ?? [];
@@ -142,7 +143,7 @@ export default function SeasonStatsTable({ isEn, playerId, players, matches, ros
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+      className="mt-4 overflow-hidden surface rounded-2xl">
       <div className="border-b border-border px-4 py-3">
         <h3 className="font-display text-lg text-primary">📅 {L("시즌별 기록", "Season Stats")}</h3>
         <p className="mt-0.5 text-[10px] text-muted-foreground">

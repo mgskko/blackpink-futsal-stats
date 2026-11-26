@@ -84,7 +84,7 @@ const MatchPrediction = ({ matchId }: MatchPredictionProps) => {
   const counts = { win: winCount, draw: drawCount, loss: lossCount };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface rounded-2xl p-5">
       <h3 className="mb-4 flex items-center gap-2 font-display text-lg tracking-wider text-primary">
         <TrendingUp size={18} /> {L("승부 예측 토토", "Match Prediction Toto")}
       </h3>
