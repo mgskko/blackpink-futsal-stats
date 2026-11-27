@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
+        // Reloads open windows when a new version activates (see public/sw-update.js)
+        importScripts: ["sw-update.js"],
       },
       manifest: {
         name: "Bunnies FC",
