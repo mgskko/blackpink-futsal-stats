@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { getPlayerName } from "@/hooks/useFutsalData";
 import { ratingTone } from "@/lib/matchRating";
 import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
-import { DEFAULT_FORMAT, formatLabel, getFormat, getSlot, slotMapOf, slotLabel } from "@/lib/positions";
+import { DEFAULT_FORMAT, formatLabel, getFormat, getSlot, slotMapOf, slotLabel, autoSlots, shapeOf } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
 
 interface Props {
@@ -39,7 +39,9 @@ const benchOf = (lineup: any) => idsOf(lineup?.Bench ?? lineup?.bench);
 function positionsOf(lineup: any, formatCode?: string | null, compact = false) {
   const out: { playerId: number; x: number; y: number; role: string; slot?: string }[] = [];
   if (!lineup) return out;
-  const slotMap = slotMapOf(lineup);
+  // No stored slots → lay the quarter out as a real formation instead of stacking a line on one spot.
+  const stored = slotMapOf(lineup);
+  const slotMap = Object.keys(stored).length ? stored : autoSlots(lineup, formatCode);
   const mapped = new Set<number>();
   Object.entries(slotMap).forEach(([pid, code]) => {
     const sl = getSlot(code, formatCode);
@@ -239,6 +241,13 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
               </div>
               {/* stadium light sweep */}
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.07)_45%,transparent_60%)]" />
+              {/* formation label */}
+              {(() => {
+                const shape = shapeOf(Object.fromEntries(positions.filter(p => p.slot).map(p => [String(p.playerId), p.slot!])), formatCode);
+                return shape && shape !== "0-0" ? (
+                  <span className="absolute bottom-2 left-2 rounded-md bg-black/45 px-1.5 py-0.5 font-num text-[11px] font-extrabold tracking-wide text-white/90 backdrop-blur-sm">{shape}</span>
+                ) : null;
+              })()}
             </div>
 
             {/* goals (stand up in 3D) */}

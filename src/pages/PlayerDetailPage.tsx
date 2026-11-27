@@ -11,10 +11,10 @@ import { getPlayerBadges, getWinFairyData, getPlayerFormGuide, getDeepScoutingRe
 import { useOnFirePlayers, FIRE_TIER_CONFIG, type FireTier } from "@/hooks/useOnFirePlayers";
 import { computeAllCourtMargins, getPlayerPositionDistribution, getKillerQuarter, getDefenseContribution, getOwnGoalInducerCount, getSoloVsTeamGoals, computePlayerTraits, getPlayerPosition, getPlayerTeamInLineup } from "@/hooks/useCourtStats";
 import { useMarketValue, computeMarketValue } from "@/hooks/useMarketValue";
-import { computeDataMOM, computeDualDataMOM } from "@/hooks/useMatchAnalysis";
 import { getPlayerCondition } from "@/hooks/useConditionArrow";
 import { isPlayerInactive } from "@/hooks/useInactivePlayers";
 import SplashScreen from "@/components/SplashScreen";
+import { getConcacafBadges, type ConcacafBadge } from "@/lib/concacaf";
 import DetailHeader, { DETAIL_HEADER_OFFSET } from "@/components/DetailHeader";
 import RatingBadge from "@/components/player/RatingBadge";
 import RecentRatings from "@/components/player/RecentRatings";
@@ -47,203 +47,7 @@ import { translateBadgeLabel, translateScoutingLabel, translateScoutingComment, 
 import { UTIL_CODE, prefLabel, ageFromBirthYear } from "@/lib/positions";
 
 // Concacaf country label → EN translation
-const CONCACAF_COUNTRY_EN: Record<string, string> = {
-  "🇧🇷 브라질": "🇧🇷 Brazil",
-  "🇫🇷 프랑스": "🇫🇷 France",
-  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England",
-  "🇰🇷 한국": "🇰🇷 Korea",
-  "🇪🇸 스페인": "🇪🇸 Spain",
-  "🇩🇪 독일": "🇩🇪 Germany",
-  "🇮🇹 이탈리아": "🇮🇹 Italy",
-  "🇦🇷 아르헨티나": "🇦🇷 Argentina",
-  "🇳🇱 네덜란드": "🇳🇱 Netherlands",
-  "🇪🇸 스페인의 티키타카": "🇪🇸 Spain's Tiki-Taka",
-  "🇲🇦 모로코의 철벽": "🇲🇦 Morocco's Iron Wall",
-  "🇰🇷 홍명보의 강림": "🇰🇷 Hong Myung-Bo Alert",
-  "🇨🇻 카보베르데의 벽": "🇨🇻 Cape Verde Wall",
-};
 // Concacaf badge text → EN
-const CONCACAF_TEXT_EN: Record<string, string> = {
-  "🇧🇷 브라질": "Samba-level form! 30+ AP over the last 10 matches — dominating the league.",
-  "🇫🇷 프랑스": "Art football reborn — 10+ assists across the last 5 matches, the maestro is here.",
-  "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드": "England's hurricane! 10+ personal goals across the last 5 — Premier League Golden Boot form.",
-  "🇰🇷 한국": "National-team grit — pressing and interceptions turning into 5+ AP over the last 5 matches.",
-  "🇪🇸 스페인": "Armada-grade passing — 5+ kill-pass / pass-play assists carving defences apart.",
-  "🇩🇪 독일": "Unrelenting gegenpress — 30+ quarters over the last 5 at 50%+ win rate. Iron heart.",
-  "🇮🇹 이탈리아": "Catenaccio incarnate — 12 clean-sheet quarters over the last 5 matches. The wall.",
-  "🇦🇷 아르헨티나": "Tango-squad ace — 2+ Data MOM awards in the last 5 matches, hard-carrying the side.",
-  "🇳🇱 네덜란드": "Total football textbook — dominating both boxes as an all-pitch multi-tool.",
-  "🇪🇸 스페인의 티키타카": "An AP in each of the last 10 matches — unstoppable creative rhythm.",
-  "🇲🇦 모로코의 철벽": "Positive combined +/- across the last 10 DF quarters — Moroccan-defence stability.",
-  "🇰🇷 홍명보의 강림": "The data cold-reads a slump — heavy losses or a 70%+ on-pitch losing streak.",
-  "🇨🇻 카보베르데의 벽": "Elite GK form — under 1.0 goals conceded per GK quarter across the last 5 matches.",
-};
-
-export type ConcacafBadge = { country: string; text: string };
-export function getConcacafMode(playerId: number, matches: Match[], rosters: Roster[], goalEvents: GoalEvent[], allQuarters: MatchQuarter[], teams: Team[], results: Result[], momVotes?: { match_id: number; voted_player_id: number }[], players?: any[]): ConcacafBadge[] {
-  // Get last 5 matches this player appeared in
-  const playerMatchIds = [...new Set(rosters.filter(r => r.player_id === playerId).map(r => r.match_id))];
-  const sortedMatches = matches.filter(m => playerMatchIds.includes(m.id)).sort((a, b) => b.date.localeCompare(a.date));
-  const recent5 = sortedMatches.slice(0, 5);
-  if (recent5.length < 5) return [];
-  const r5Ids = new Set(recent5.map(m => m.id));
-  const r5Goals = goalEvents.filter(g => r5Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal);
-  const r5Assists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId);
-  const r5AP = r5Goals.length + r5Assists.length;
-  const r5Quarters = allQuarters.filter(q => r5Ids.has(q.match_id) && q.lineup && getPlayerPosition(q.lineup, playerId) && getPlayerPosition(q.lineup, playerId) !== "Bench");
-  let r5Margin = 0;
-  r5Quarters.forEach(q => {
-    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
-    const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
-    r5Margin += pTeam === "teamB" ? -baseDiff : baseDiff;
-  });
-
-  const out: ConcacafBadge[] = [];
-
-  // 🇧🇷 Brazil: AP >= 30 in last 10 matches
-  const recent10 = sortedMatches.slice(0, 10);
-  if (recent10.length >= 10) {
-    const r10Ids = new Set(recent10.map(m => m.id));
-    const r10Goals = goalEvents.filter(g => r10Ids.has(g.match_id) && g.goal_player_id === playerId && !g.is_own_goal);
-    const r10Assists = goalEvents.filter(g => r10Ids.has(g.match_id) && g.assist_player_id === playerId);
-    const r10AP = r10Goals.length + r10Assists.length;
-    if (r10AP >= 30) out.push({ country: "🇧🇷 브라질", text: "브라질 삼바 축구급 폼! 최근 10경기 공포 30개 이상으로 팀을 지배 중입니다." });
-  }
-
-  // 🇫🇷 France: Assists >= 10
-  if (r5Assists.length >= 10) out.push({ country: "🇫🇷 프랑스", text: "프랑스 아트 사커의 재림! 최근 5경기 10도움 이상을 기록한 마에스트로입니다." });
-
-  // ENG England: 10+ goals in last 5 matches
-  if (r5Goals.length >= 10) out.push({ country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드", text: "잉글랜드의 허리케인 강림! 최근 5경기 10골 이상을 폭격하며 프리미어리그 득점왕급 폼을 보여줍니다." });
-
-  // 🇰🇷 Korea: pressing/intercept AP >= 5
-  const pressAP = goalEvents.filter(g => r5Ids.has(g.match_id) && !g.is_own_goal && (g.build_up_process === "압박" || g.build_up_process === "패스 차단") && (g.goal_player_id === playerId || g.assist_player_id === playerId)).length;
-  if (pressAP >= 5) out.push({ country: "🇰🇷 한국", text: "대한민국 국대급 꺾이지 않는 투혼! 미친 활동량과 압박으로 상대를 질식시킵니다." });
-
-  // 🇪🇸 Spain: kill pass / pass play assists >= 5
-  const passAssists = goalEvents.filter(g => r5Ids.has(g.match_id) && g.assist_player_id === playerId && (g.assist_type === "킬패스" || g.assist_type === "패스 플레이")).length;
-  if (passAssists >= 5) out.push({ country: "🇪🇸 스페인", text: "스페인 무적함대급 패스워크! 최근 5경기 무자비한 킬패스로 수비진을 붕괴시켰습니다." });
-
-  // 🇩🇪 Germany: 30+ quarters in last 5 matches AND team win rate >= 50% in those 5 matches
-  if (r5Quarters.length >= 30) {
-    let teamWins = 0, teamCounted = 0;
-    recent5.forEach(m => {
-      const playerRosterTeams = rosters.filter(r => r.match_id === m.id && r.player_id === playerId).map(r => r.team_id);
-      playerRosterTeams.forEach(tid => {
-        const res = results.find(r => r.match_id === m.id && r.team_id === tid);
-        if (res) { teamCounted++; if (res.result === "승") teamWins++; }
-      });
-    });
-    if (teamCounted > 0 && teamWins / teamCounted >= 0.5) {
-      out.push({ country: "🇩🇪 독일", text: "지치지 않는 게겐프레싱! 최근 5경기 30쿼터 이상 출전 & 승률 50%를 달성한 철의 심장!" });
-    }
-  }
-
-  // 🇮🇹 Italy: 12+ clean sheet quarters as DF/GK
-  const csQuarters = r5Quarters.filter(q => {
-    const pos = getPlayerPosition(q.lineup, playerId);
-    return (pos === "DF" || pos === "GK") && (q.score_against || 0) === 0;
-  }).length;
-  if (csQuarters >= 12) out.push({ country: "🇮🇹 이탈리아", text: "이탈리아의 카테나치오 강림! 최근 5경기 12번의 무실점 쿼터를 만들어낸 통곡의 벽!" });
-
-  // 🇦🇷 Argentina: Official Data MOM 2+ times in last 5
-  {
-    let momCount = 0;
-    recent5.forEach(m => {
-      const isCustomMatch = allQuarters.some(q => q.match_id === m.id && q.lineup && typeof q.lineup === "object" && !Array.isArray(q.lineup) && (q.lineup as any).teamA);
-      
-      if (isCustomMatch) {
-        // Custom match: dual Data MOM (one per team)
-        const dual = computeDualDataMOM(m.id, players || [], teams, goalEvents, allQuarters, results);
-        if ((dual.teamA && dual.teamA.playerId === playerId) || (dual.teamB && dual.teamB.playerId === playerId)) {
-          momCount++;
-        }
-      } else {
-        // Normal match: single Data MOM
-        const mom = computeDataMOM(m.id, players || [], teams, goalEvents, allQuarters, results);
-        if (mom && mom.playerId === playerId) {
-          momCount++;
-        }
-      }
-    });
-    if (momCount >= 2) out.push({ country: "🇦🇷 아르헨티나", text: "아르헨티나 탱고 군단의 에이스! 최근 5경기 Data MOM 2회 선정으로 팀을 하드캐리!" });
-  }
-
-  // 🇳🇱 Netherlands: FW 8+ quarters & DF 8+ quarters, both margins +3
-  const fwQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "FW");
-  const dfQ = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
-  if (fwQ.length >= 8 && dfQ.length >= 8) {
-    const fwMargin = fwQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
-    const dfMargin = dfQ.reduce((s, q) => { const d = (q.score_for || 0) - (q.score_against || 0); return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d); }, 0);
-    if (fwMargin >= 3 && dfMargin >= 3) out.push({ country: "🇳🇱 네덜란드", text: "네덜란드 토탈 사커의 교과서! 전후방 가리지 않고 필드 전역을 지배하는 멀티 플레이어!" });
-  }
-
-  // 🇪🇸 스페인의 티키타카: 최근 10경기 연속 AP(골+도움) 1 이상
-  {
-    const recent10 = sortedMatches.slice(0, 10);
-    if (recent10.length >= 10) {
-      const streakOk = recent10.every(m => {
-        const g = goalEvents.filter(ge => ge.match_id === m.id && ge.goal_player_id === playerId && !ge.is_own_goal).length;
-        const a = goalEvents.filter(ge => ge.match_id === m.id && ge.assist_player_id === playerId).length;
-        return (g + a) >= 1;
-      });
-      if (streakOk) out.push({ country: "🇪🇸 스페인의 티키타카", text: "최근 10경기 연속으로 공격포인트를 기록 중! 멈추지 않는 지배력의 화신입니다." });
-    }
-  }
-
-  // 🇲🇦 모로코의 철벽: 최근 5경기 중 DF로 투입된 10쿼터 합산 골득실 > 0
-  {
-    const dfQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "DF");
-    if (dfQs.length >= 10) {
-      const margin = dfQs.reduce((s, q) => {
-        const d = (q.score_for || 0) - (q.score_against || 0);
-        return s + (getPlayerTeamInLineup(q.lineup, playerId) === "teamB" ? -d : d);
-      }, 0);
-      if (margin > 0) out.push({ country: "🇲🇦 모로코의 철벽", text: `수비수(DF)로 투입된 최근 10쿼터 합산 골득실 +${margin}! 모로코 디펜스급 안정감입니다.` });
-    }
-  }
-
-
-  // 🇰🇷 홍명보의 강림: 최근 5경기 4패 이상 OR 본인 출전 쿼터 패배율 70% 이상
-  {
-    let teamLosses = 0, teamCounted = 0;
-    recent5.forEach(m => {
-      const playerRosterTeams = rosters.filter(r => r.match_id === m.id && r.player_id === playerId).map(r => r.team_id);
-      playerRosterTeams.forEach(tid => {
-        const res = results.find(r => r.match_id === m.id && r.team_id === tid);
-        if (res) { teamCounted++; if (res.result === "패") teamLosses++; }
-      });
-    });
-    let qLosses = 0, qCounted = 0;
-    r5Quarters.forEach(q => {
-      const baseDiff = (q.score_for || 0) - (q.score_against || 0);
-      const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
-      const diff = pTeam === "teamB" ? -baseDiff : baseDiff;
-      qCounted++;
-      if (diff < 0) qLosses++;
-    });
-    const qLossRate = qCounted > 0 ? qLosses / qCounted : 0;
-    if (teamLosses >= 4 || qLossRate >= 0.7) {
-      out.push({ country: "🇰🇷 홍명보의 강림", text: `최근 5경기 ${teamLosses}패 / 출전 쿼터 패배율 ${Math.round(qLossRate * 100)}%. 데이터가 냉정하게 알려주는 부진 시그널입니다.` });
-    }
-  }
-
-  // 🇨🇻 카보베르데의 벽: 최근 5경기 GK 출전 시 쿼터당 실점 1.0 미만
-  {
-    const gkQs = r5Quarters.filter(q => getPlayerPosition(q.lineup, playerId) === "GK");
-    if (gkQs.length >= 5) {
-      const conceded = gkQs.reduce((s, q) => {
-        const pTeam = getPlayerTeamInLineup(q.lineup, playerId);
-        const ga = pTeam === "teamB" ? (q.score_for || 0) : (q.score_against || 0);
-        return s + ga;
-      }, 0);
-      const rate = conceded / gkQs.length;
-      if (rate < 1.0) out.push({ country: "🇨🇻 카보베르데의 벽", text: `최근 5경기 GK 출전 ${gkQs.length}쿼터, 쿼터당 실점 ${rate.toFixed(2)}. 1.0 미만의 압도적인 골키퍼 퍼포먼스!` });
-    }
-  }
-
-  return out;
-}
 
 const CHART_COLORS = ["hsl(330, 100%, 71%)", "hsl(210, 100%, 60%)", "hsl(150, 80%, 50%)", "hsl(45, 100%, 60%)", "hsl(280, 80%, 60%)", "hsl(0, 80%, 60%)", "hsl(180, 70%, 50%)"];
 
@@ -276,12 +80,6 @@ const PlayerDetailPage = () => {
   const isEn = lang.startsWith("en");
   const pn = (id: number) => getPlayerName(players, id, lang);
   const L = (ko: string, en: string) => (isEn ? en : ko);
-  const trCountry = (c: string) => (isEn ? (CONCACAF_COUNTRY_EN[c] ?? c) : c);
-  const trConcacafText = (c: string, text: string) => {
-    if (!isEn) return text;
-    // If dynamic (like Morocco with margin), keep raw text unless in dict
-    return CONCACAF_TEXT_EN[c] ?? text;
-  };
 
   const { data: momVotes } = useQuery({
     queryKey: ["mom_votes_all"],
@@ -472,8 +270,8 @@ const PlayerDetailPage = () => {
   const goalsPerGame = stats.appearances > 0 ? (stats.goals / stats.appearances).toFixed(2) : "0";
   const bestAPResult = bestAP ? getMatchResult(teams, results, bestAP.matchId) : null;
 
-  const concacafBadges = getConcacafMode(playerId, matches, rosters, goalEvents, allQuarters, teams, results, momVotes, players);
-  const isConcacaf = concacafBadges.length > 0;
+  const concacafBadges = getConcacafBadges(playerId, { matches, rosters, goalEvents, quarters: allQuarters, teams, results, players, overrideKeyed }).slice(0, 2);
+  const isConcacaf = concacafBadges.some(b => !b.negative);
   const inactive = isPlayerInactive(playerId, matches, rosters);
 
   const playerDuos = new Map<number, number>();
@@ -566,7 +364,7 @@ const PlayerDetailPage = () => {
                 {fireTier !== "none" && <span className="text-lg sparkle-anim">{FIRE_TIER_CONFIG[fireTier].emoji}</span>}
                 <PlayerTierBadge tier={tier} size="md" />
               </div>
-              {isConcacaf && (
+              {concacafBadges.length > 0 && (
                 <div className="mt-1 space-y-2">
                   {concacafBadges.map((b, i) => (
                     <div key={i} className="space-y-1">
@@ -575,13 +373,13 @@ const PlayerDetailPage = () => {
                         onClick={() => setOpenConcacaf(b)}
                         className="block text-left"
                       >
-                        <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 sparkle-anim shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-emerald-500/20 transition">
-                          🏆 {L("북중미모드", "Concacaf Mode")} — {trCountry(b.country)} 🏆
+                        <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] transition ${b.negative ? "border-border bg-muted/50 text-muted-foreground" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 sparkle-anim hover:bg-emerald-500/20"}`}>
+                          🏆 {L("북중미모드", "Concacaf Mode")} — {(isEn ? b.country_en : b.country)} 🏆
                         </div>
                       </button>
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-300/90 backdrop-blur-sm">
-                        <p className="font-semibold text-emerald-300 mb-0.5">{trCountry(b.country)}</p>
-                        <p className="text-emerald-300/80">{trConcacafText(b.country, b.text)}</p>
+                        <p className="font-semibold text-emerald-300 mb-0.5">{(isEn ? b.country_en : b.country)}</p>
+                        <p className="text-emerald-300/80">{(isEn ? b.text_en : b.text)}</p>
                       </div>
                     </div>
                   ))}
@@ -875,9 +673,9 @@ const PlayerDetailPage = () => {
       <Dialog open={!!openConcacaf} onOpenChange={(o) => !o && setOpenConcacaf(null)}>
         <DialogContent className="border-emerald-500/40 bg-card/80 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="text-emerald-400">🏆 {L("북중미모드","Concacaf Mode")} — {openConcacaf ? trCountry(openConcacaf.country) : ""}</DialogTitle>
+            <DialogTitle className="text-emerald-400">🏆 {L("북중미모드","Concacaf Mode")} — {openConcacaf ? (isEn ? openConcacaf.country_en : openConcacaf.country) : ""}</DialogTitle>
             <DialogDescription className="text-foreground/90 leading-relaxed pt-2">
-              {openConcacaf ? trConcacafText(openConcacaf.country, openConcacaf.text) : ""}
+              {openConcacaf ? (isEn ? openConcacaf.text_en : openConcacaf.text) : ""}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

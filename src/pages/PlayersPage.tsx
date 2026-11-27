@@ -15,6 +15,11 @@ import RatingBadge from "@/components/player/RatingBadge";
 import { useDisplayName } from "@/lib/displayName";
 import { filterMatchesBySport, type SportFilter } from "@/lib/sport";
 import type { RoleKey } from "@/lib/positions";
+import { useSquadDepth, DEPTH_POSITIONS } from "@/components/tactics/SquadDepthBoard";
+
+/** Squad-depth slot → line. The club's depth chart is the source of truth for squad groups. */
+const DEPTH_ROLE: Record<string, RoleKey> = { GK: "GK", LB: "DF", LCB: "DF", RCB: "DF", RB: "DF", DM: "MF", LCM: "MF", RCM: "MF", LW: "FW", RW: "FW", ST: "FW" };
+const DEPTH_ORDER = DEPTH_POSITIONS.map(p => p.code as string);
 
 type SortKey = "position" | "rating" | "ap" | "apps";
 
@@ -43,6 +48,27 @@ const PlayersPage = () => {
   const matches = useMemo(() => filterMatchesBySport(allMatches, sport), [allMatches, sport]);
   const fireMap = useOnFirePlayers(matches, rosters);
   const { rows } = useSquadTable(data, matches);
+  const { data: depthRows = [] } = useSquadDepth();
+
+  // Each player's best (lowest sort_order) depth-chart slot.
+  const depthOf = useMemo(() => {
+    const byPos = new Map<string, typeof depthRows>();
+    depthRows.forEach(r => byPos.set(r.position_code, [...(byPos.get(r.position_code) ?? []), r]));
+    const best = new Map<number, { code: string; rank: number }>();
+    byPos.forEach((list, code) => {
+      [...list].sort((a, b) => a.sort_order - b.sort_order).forEach((r, i) => {
+        if (r.player_id == null) return;
+        const cur = best.get(r.player_id);
+        const better = !cur || i < cur.rank || (i === cur.rank && DEPTH_ORDER.indexOf(code) < DEPTH_ORDER.indexOf(cur.code));
+        if (better) best.set(r.player_id, { code, rank: i });
+      });
+    });
+    return best;
+  }, [depthRows]);
+  const roleOf = (r: SquadRow): RoleKey | null => {
+    const d = depthOf.get(r.player.id);
+    return d ? DEPTH_ROLE[d.code] ?? r.role : r.role;
+  };
 
   const { active, inactive } = useMemo(() => {
     const visible = rows.filter(r => {
@@ -63,12 +89,21 @@ const PlayersPage = () => {
     : sort === "apps" ? b.apps - a.apps
     : (a.player.back_number ?? 999) - (b.player.back_number ?? 999);
 
+  // inside a line: depth slot order (GK, LB, LCB, …) then depth rank; players not in the chart last
+  const depthSorter = (a: SquadRow, b: SquadRow) => {
+    const da = depthOf.get(a.player.id), db = depthOf.get(b.player.id);
+    if (da && db) return DEPTH_ORDER.indexOf(da.code) - DEPTH_ORDER.indexOf(db.code) || da.rank - db.rank;
+    if (da) return -1;
+    if (db) return 1;
+    return sorter(a, b);
+  };
+
   const groups: { key: string; title: string; rows: SquadRow[] }[] =
     sort === "position"
       ? ROLE_ORDER.map(role => ({
           key: role,
           title: L(...ROLE_LABEL[role]),
-          rows: active.filter(r => (r.role ?? "ETC") === role).sort(sorter),
+          rows: active.filter(r => (roleOf(r) ?? "ETC") === role).sort(depthSorter),
         })).filter(g => g.rows.length)
       : [{ key: "all", title: L("전체", "All players"), rows: [...active].sort(sorter) }];
   if (inactive.length) groups.push({ key: "inactive", title: L("비활동", "Inactive"), rows: [...inactive].sort(sorter) });
@@ -120,7 +155,10 @@ const PlayersPage = () => {
         {groups.map(g => (
           <section key={g.key}>
             <h2 className="mb-1.5 flex items-center justify-between px-1 text-[12px] font-bold text-muted-foreground" style={{ fontFamily: "inherit" }}>
-              {g.title}
+              <span>
+                {g.title}
+                {g.key === groups[0]?.key && sort === "position" && <span className="ml-1.5 text-[10px] font-medium opacity-70">{L("· 클럽 스쿼드 뎁스 기준", "· from the club depth chart")}</span>}
+              </span>
               <span className="font-num text-[10px]">{g.rows.length}</span>
             </h2>
             <div className={`surface divide-y divide-white/[0.05] overflow-hidden rounded-2xl ${g.key === "inactive" ? "opacity-60" : ""}`}>
@@ -146,6 +184,12 @@ const PlayersPage = () => {
                         )}
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 font-num text-[11px] text-muted-foreground">
+                        {depthOf.get(r.player.id) && (
+                          <span className="rounded bg-primary/15 px-1 font-bold text-primary">
+                            {depthOf.get(r.player.id)!.code}
+                            {depthOf.get(r.player.id)!.rank > 0 ? ` ${depthOf.get(r.player.id)!.rank + 1}${L("순위", "")}` : ""}
+                          </span>
+                        )}
                         <span>{r.apps}{L("경기", " apps")}</span>
                         <span>⚽ {r.goals}</span>
                         <span>🅰 {r.assists}</span>

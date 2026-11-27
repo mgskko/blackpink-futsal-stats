@@ -1,3 +1,4 @@
+import { ratingTextTone } from "@/lib/matchRating";
 import { localISODate } from "@/lib/utils";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
@@ -176,7 +177,7 @@ export default function SeasonStatsTable({ isEn, playerId, players, matches, ros
                 <td className="px-2 py-2.5 text-foreground">{r.cleanSheets}</td>
                 <td className="px-2 py-2.5 text-muted-foreground">{r.wins}-{r.draws}-{r.losses}</td>
                 <td className="px-2 py-2.5">
-                  <span className={`font-display text-base ${r.rating >= 7.5 ? "text-green-400" : r.rating >= 6.8 ? "text-primary" : "text-foreground"}`}>
+                  <span className={`font-display text-base ${ratingTextTone(r.rating)}`}>
                     {r.rating.toFixed(2)}
                   </span>
                 </td>

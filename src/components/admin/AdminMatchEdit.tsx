@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllFutsalData, getPlayerName } from "@/hooks/useFutsalData";
@@ -14,6 +14,8 @@ import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
 import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
 import AdminStep, { Chip } from "@/components/admin/AdminStep";
+import YouTubePlayer, { type YouTubeHandle } from "@/components/media/YouTubePlayer";
+import { extractYoutubeId, formatSeconds, parseTimestamp } from "@/lib/youtube";
 
 const AGE_CATEGORIES = [
   "20대 초반", "20대 중반", "20대 후반",
@@ -178,6 +180,25 @@ const AdminMatchEdit = ({ fixedMatchId, onDeleted }: AdminMatchEditProps = {}) =
     return Array.from({ length: Math.min(10, used + 1) }, (_, i) => i + 1);
   })();
 
+  // ── video-synced logging ──
+  const ytRef = useRef<YouTubeHandle>(null);
+  const ytId = extractYoutubeId(selectedMatch?.youtube_link ?? null);
+  /** Pause the video, stamp the current time and guess the quarter from earlier stamped goals. */
+  const captureMoment = () => {
+    const t = ytRef.current?.time() ?? 0;
+    ytRef.current?.pause();
+    setAddTimestamp(formatSeconds(t));
+    const before = matchGoals
+      .map(g => ({ q: g.quarter, s: parseTimestamp(g.video_timestamp) }))
+      .filter((x): x is { q: number; s: number } => x.s != null && x.s <= t)
+      .sort((a, b) => b.s - a.s)[0];
+    if (before) setAddQuarter(before.q);
+    setAddIsOwnGoal(false);
+    setAddGoalPlayerId("");
+    setAddAssistPlayerId("");
+    setShowAddGoal(true);
+  };
+
   const handleSaveBasic = async () => {
     if (!matchId) return;
     if (!editDate) {
@@ -329,7 +350,8 @@ const AdminMatchEdit = ({ fixedMatchId, onDeleted }: AdminMatchEditProps = {}) =
       invalidateAll();
       toast({ title: `${addQuarter}Q 골 기록 추가 ✅` });
       // keep the quarter selected for fast consecutive entry
-      setAddIsOwnGoal(false); setAddGoalPlayerId(""); setAddAssistPlayerId("");
+      setAddIsOwnGoal(false); setAddGoalPlayerId(""); setAddAssistPlayerId(""); setAddTimestamp("");
+      if (ytId) { setShowAddGoal(false); ytRef.current?.play(); }
       setAddTimestamp(""); setAddGoalType(""); setAddAssistType(""); setAddBuildUp("");
     } catch (err: any) {
       toast({ title: "오류", description: err.message, variant: "destructive" });
@@ -747,6 +769,15 @@ const AdminMatchEdit = ({ fixedMatchId, onDeleted }: AdminMatchEditProps = {}) =
             summary={matchGoals.length ? `${matchGoals.length}골 · ${[...new Set(matchGoals.filter(g => !g.is_own_goal && g.goal_player_id).map(g => getPlayerName(players, g.goal_player_id!)))].slice(0, 3).join(", ")}` : "득점·도움 기록"}>
           {/* Goal Events */}
           <div>
+            {ytId && (
+              <div className="mb-3 space-y-2">
+                <YouTubePlayer ref={ytRef} videoId={ytId} />
+                <Button onClick={captureMoment} className="h-11 w-full gradient-pink text-sm font-black text-primary-foreground">
+                  ⏱ 지금 장면 골 기록 (영상 일시정지 + 시간 자동 입력)
+                </Button>
+                {addTimestamp && showAddGoal && <p className="text-center text-[11px] text-muted-foreground">영상 {addTimestamp} 시점 · 쿼터는 직전 기록 기준으로 추정했어요</p>}
+              </div>
+            )}
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">우리 팀 득점만 기록합니다. 실점은 쿼터 스코어에 반영하세요.</span>
               <Button size="sm" variant={showAddGoal ? "outline" : "default"} onClick={() => setShowAddGoal(!showAddGoal)} className={`h-8 shrink-0 text-xs ${showAddGoal ? "border-border" : "gradient-pink text-primary-foreground"}`}>
@@ -890,6 +921,15 @@ const AdminMatchEdit = ({ fixedMatchId, onDeleted }: AdminMatchEditProps = {}) =
                     <div className="flex items-center justify-between rounded-md bg-secondary/50 px-3 py-2">
                       <div className="flex items-center gap-2 text-xs flex-wrap">
                         <span className="font-bold text-primary">{g.quarter}Q</span>
+                        {g.video_timestamp && parseTimestamp(g.video_timestamp) != null && (
+                          <button
+                            onClick={() => ytRef.current?.seek(parseTimestamp(g.video_timestamp)!)}
+                            disabled={!ytId}
+                            className="rounded bg-primary/15 px-1.5 py-px font-mono text-[10px] font-bold text-primary disabled:opacity-60"
+                          >
+                            ▶ {formatSeconds(parseTimestamp(g.video_timestamp)!)}
+                          </button>
+                        )}
                         {g.is_own_goal ? (
                           <span className="text-destructive">자책골</span>
                         ) : (

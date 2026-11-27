@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // Bunnies FC — Unified Match Rating Engine (single source of truth)
-// FotMob-style 4.0 ~ 10.0 rating, differentiated by sport & position.
+// FotMob-style 3.0 ~ 10.0 rating (v3), differentiated by sport & position.
 //
 // Every rating surface in the app (match lineup pitch, match stats table,
 // player profile, season leaderboard) MUST read from this module so the same
@@ -21,6 +21,10 @@ export interface MatchRatingDetail {
   discipline: number;
   teamMod: number;
   bonus: number;
+  /** on-pitch goal-difference component */
+  impact: number;
+  /** share of the match's quarters played (1 when no lineup log) */
+  share: number;
   goals: number;
   assists: number;
   ownGoals: number;
@@ -44,41 +48,68 @@ export interface CardCount {
   red: number;
 }
 
-export const RATING_BOUNDS = { base: 6.5, min: 5.0, max: 10.0 };
+export const RATING_BOUNDS = { base: 6.25, min: 3.0, max: 10.0 };
 
-// ── tuning tables ─────────────────────────────────────────────
-// Soccer: goals are scarce, so a single goal must not dominate; position role
-// expectation drives the penalty for a blank game instead.
-const SOCCER = {
-  goal: { FW: 0.9, W: 1.0, MF: 1.15, DF: 1.5, GK: 2.0 },
-  assist: { FW: 0.6, W: 0.7, MF: 0.8, DF: 1.0, GK: 1.4 },
-  // blank-game penalty (no goal & no assist) — heaviest for strikers
-  blank: { FW: -0.4, W: -0.25, MF: -0.15, DF: 0, GK: 0 },
-  cleanSheet: { GK: 1.8, DF: 1.5, MF: 0.3, W: 0.1, FW: 0.1 },
-  nearCleanSheet: { GK: 0.6, DF: 0.5, MF: 0.1, W: 0, FW: 0 }, // conceded <= 1
-  concededPer: { GK: -0.18, DF: -0.13, MF: -0.05, W: 0, FW: 0 },
-  margin: 0.07,
-  marginClamp: 0.6,
+// ── Rating v3 tuning ──────────────────────────────────────────
+// Every component is a *rate* or a *relative* measure, so playing more
+// quarters is never penalised and a short cameo can't produce extremes.
+interface SportTuning {
+  goal: Record<RatingGroup, number>;
+  assist: Record<RatingGroup, number>;
+  /** no goal & no assist after playing ≥ half the match */
+  blank: Record<RatingGroup, number>;
+  /** on-pitch goal difference per quarter → rating */
+  impactPerGoal: number;
+  impactClamp: number;
+  /** baseline goals conceded per quarter for this sport */
+  concededBaseline: number;
+  /** weight of (expected − actual conceded per quarter) by position */
+  defense: Record<RatingGroup, number>;
+  defenseClamp: number;
+  /** per clean-sheet quarter on the pitch */
+  cleanQuarter: Record<RatingGroup, number>;
+  cleanQuarterCap: number;
+  /** whole-match clean sheet (played ≥ half) */
+  cleanSheet: Record<RatingGroup, number>;
+}
+
+const SOCCER: SportTuning = {
+  goal: { FW: 0.8, W: 0.9, MF: 1.0, DF: 1.25, GK: 1.7 },
+  assist: { FW: 0.55, W: 0.6, MF: 0.7, DF: 0.85, GK: 1.1 },
+  blank: { FW: -0.35, W: -0.2, MF: -0.05, DF: 0, GK: 0 },
+  impactPerGoal: 0.32,
+  impactClamp: 0.85,
+  concededBaseline: 0.6,
+  defense: { GK: 1.0, DF: 0.75, MF: 0.22, W: 0.08, FW: 0.04 },
+  defenseClamp: 0.85,
+  cleanQuarter: { GK: 0.22, DF: 0.16, MF: 0.05, W: 0.02, FW: 0 },
+  cleanQuarterCap: 0.8,
+  cleanSheet: { GK: 0.7, DF: 0.5, MF: 0.1, W: 0, FW: 0 },
 };
 
-// Futsal: high scoring, fast transitions — keeps the legacy weighting feel.
-const FUTSAL = {
-  goal: { FW: 0.5, W: 0.55, MF: 0.6, DF: 0.75, GK: 0.9 },
-  assist: { FW: 0.35, W: 0.38, MF: 0.4, DF: 0.5, GK: 0.6 },
-  blank: { FW: -0.18, W: -0.12, MF: -0.08, DF: 0, GK: 0 },
-  cleanSheet: { GK: 0.9, DF: 0.7, MF: 0.2, W: 0.1, FW: 0.1 },
-  nearCleanSheet: { GK: 0.3, DF: 0.25, MF: 0.05, W: 0, FW: 0 },
-  concededPer: { GK: -0.09, DF: -0.07, MF: -0.03, W: 0, FW: 0 },
-  margin: 0.10,
-  marginClamp: 0.9,
+const FUTSAL: SportTuning = {
+  goal: { FW: 0.42, W: 0.46, MF: 0.5, DF: 0.65, GK: 0.85 },
+  assist: { FW: 0.28, W: 0.3, MF: 0.33, DF: 0.42, GK: 0.55 },
+  blank: { FW: -0.25, W: -0.15, MF: -0.05, DF: 0, GK: 0 },
+  impactPerGoal: 0.15,
+  impactClamp: 0.8,
+  concededBaseline: 1.1,
+  defense: { GK: 0.55, DF: 0.4, MF: 0.14, W: 0.06, FW: 0.03 },
+  defenseClamp: 0.75,
+  cleanQuarter: { GK: 0.12, DF: 0.08, MF: 0.03, W: 0.01, FW: 0 },
+  cleanQuarterCap: 0.6,
+  cleanSheet: { GK: 0.4, DF: 0.3, MF: 0.08, W: 0, FW: 0 },
 };
 
-export const OWN_GOAL_PENALTY = -1.0;
+export const OWN_GOAL_PENALTY = -0.8;
 /** MOM no longer affects the rating (rating stays purely performance-derived). */
 export const MOM_BONUS = 0;
 export const YELLOW_PENALTY = -0.3;
 export const RED_PENALTY = -1.0;
-export const RESULT_MOD = { win: 0.4, draw: 0, loss: -0.3 };
+export const RESULT_MOD = { win: 0.25, draw: 0, loss: -0.25 };
+/** later goals in the same match are worth a bit less (hat-trick ≠ +3 flat) */
+const GOAL_DECAY = 0.88;
+const ATTACK_CAP = 3.2;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -128,6 +159,8 @@ export interface ComputeMatchRatingsInput {
   /** admin manual override: playerId -> rating */
   overrides?: Map<number, number>;
   cards?: Map<number, CardCount>;
+  /** our result when there is no quarter log (from the results table) */
+  result?: "win" | "draw" | "loss" | null;
 }
 
 /**
@@ -141,6 +174,7 @@ export function computeMatchRatings({
   rosters = [],
   overrides,
   cards,
+  result: resultLabel = null,
 }: ComputeMatchRatingsInput): Map<number, MatchRatingDetail> {
   const out = new Map<number, MatchRatingDetail>();
   if (!match) return out;
@@ -164,6 +198,8 @@ export function computeMatchRatings({
     goalsFor: number;
     margin: number;
     defQuarters: number;
+    cleanQuarters: number;
+    team: "teamA" | "teamB" | null;
   }
   const state = new Map<number, Acc>();
   const init = (pid: number): Acc => {
@@ -179,6 +215,8 @@ export function computeMatchRatings({
         goalsFor: 0,
         margin: 0,
         defQuarters: 0,
+        cleanQuarters: 0,
+        team: null,
       });
     }
     return state.get(pid)!;
@@ -204,6 +242,9 @@ export function computeMatchRatings({
           s.goalsFor += gf;
           s.conceded += ga;
           s.margin += gf - ga;
+          if (ga === 0) s.cleanQuarters += 1;
+          if (isB) s.team = "teamB";
+          else if (isCustomLineup(lineup)) s.team = "teamA";
           s.roleCount[groupOf(role, slot)] += 1;
           if (role === "GK" || role === "DF") s.defQuarters += 1;
         });
@@ -230,49 +271,73 @@ export function computeMatchRatings({
     }
   });
 
-  // 4) team-result modifier (our team's result for this match)
+  // 4) match context
+  const lineupQuarters = qs.filter(q => q.lineup && typeof q.lineup === "object" && unitsOf(q.lineup).some(u => ROLES.some(r => idsOf(u?.[r]).length)));
+  const T = lineupQuarters.length;
   const totalFor = qs.reduce((a, q) => a + (q.score_for || 0), 0);
   const totalAgainst = qs.reduce((a, q) => a + (q.score_against || 0), 0);
-
+  const teamGAperQ = T > 0 ? totalAgainst / T : W.concededBaseline;
+  // expected conceded per quarter: half this match's average, half the sport baseline
+  const expectedGA = 0.5 * teamGAperQ + 0.5 * W.concededBaseline;
 
   state.forEach((s, pid) => {
-    const group = (Object.entries(s.roleCount) as [RatingGroup, number][])
-      .sort((a, b) => b[1] - a[1])[0];
-    const g: RatingGroup = group && group[1] > 0 ? group[0] : "MF";
-
     const played = s.quartersPlayed;
-    const hasLineup = played > 0;
+    const hasLineup = T > 0;
+    // In a lineup-logged match, roster-only players never stepped on the pitch: no rating
+    // (unless the log says they scored/assisted, i.e. the lineup is incomplete).
+    if (hasLineup && played === 0 && s.goals + s.assists + s.ownGoals === 0) return;
 
-    // attack
-    let attack = s.goals * W.goal[g] + s.assists * W.assist[g];
-    if (s.goals === 0 && s.assists === 0) attack += W.blank[g];
-    attack += s.ownGoals * OWN_GOAL_PENALTY;
+    const group = (Object.entries(s.roleCount) as [RatingGroup, number][]).sort((a, b) => b[1] - a[1])[0];
+    const g: RatingGroup = group && group[1] > 0 ? group[0] : "MF";
+    const share = hasLineup ? Math.min(1, played / T) : 1;
+    // short cameos keep their goals but context terms are shrunk toward neutral
+    const weight = hasLineup ? 0.5 + 0.5 * Math.min(1, share / 0.6) : 0.7;
 
-    // defense
-    const cleanSheet = hasLineup ? s.conceded === 0 : totalAgainst === 0 && qs.length > 0;
+    // attack (diminishing returns per extra goal)
+    let attack = 0;
+    for (let k = 0; k < s.goals; k++) attack += W.goal[g] * Math.pow(GOAL_DECAY, k);
+    attack += s.assists * W.assist[g];
+    attack = Math.min(ATTACK_CAP, attack);
+    const blank = s.goals === 0 && s.assists === 0 && share >= 0.5 ? W.blank[g] : 0;
+    attack += blank + s.ownGoals * OWN_GOAL_PENALTY;
+
+    // on-pitch impact (+/- per quarter)
+    const pmPerQ = played > 0 ? s.margin / played : hasLineup ? 0 : (totalFor - totalAgainst) / Math.max(1, qs.length || 4);
+    const impact = clamp(pmPerQ * W.impactPerGoal, -W.impactClamp, W.impactClamp) * weight;
+
+    // defense: conceded rate vs expectation, clean quarters, clean sheet
     let defense = 0;
-    if (cleanSheet) defense += W.cleanSheet[g];
-    else if (s.conceded <= 1) defense += W.nearCleanSheet[g];
-    if (!cleanSheet) defense += s.conceded * W.concededPer[g];
-    const marginAvg = played > 0 ? s.margin / played : totalFor - totalAgainst;
-    defense += clamp(marginAvg * W.margin, -W.marginClamp, W.marginClamp);
+    let cleanSheet = false;
+    if (played > 0) {
+      const gaPerQ = s.conceded / played;
+      defense += clamp((expectedGA - gaPerQ) * W.defense[g], -W.defenseClamp, W.defenseClamp);
+      const cleanQs = s.cleanQuarters;
+      defense += Math.min(W.cleanQuarterCap, cleanQs * W.cleanQuarter[g]);
+      cleanSheet = s.conceded === 0 && share >= 0.5;
+      if (cleanSheet) defense += W.cleanSheet[g];
+      defense *= weight;
+    } else if (!hasLineup && qs.length > 0 && totalAgainst === 0) {
+      cleanSheet = true;
+      defense += 0.2;
+    }
 
     // discipline
     const c = cards?.get(pid);
     const discipline = (c?.yellow ?? 0) * YELLOW_PENALTY + (c?.red ?? 0) * RED_PENALTY;
 
-    // team result modifier
+    // team result (the club's result, not the player's on-pitch margin — that's in impact)
     let teamResult: keyof typeof RESULT_MOD = "draw";
-    if (hasLineup && played > 0) {
-      teamResult = s.margin > 0 ? "win" : s.margin < 0 ? "loss" : "draw";
-    } else if (qs.length > 0) {
-      teamResult = totalFor > totalAgainst ? "win" : totalFor < totalAgainst ? "loss" : "draw";
+    if (qs.length > 0) {
+      const isB = isCustomLineup(lineupQuarters[0]?.lineup) && s.team === "teamB";
+      const f = isB ? totalAgainst : totalFor;
+      const a = isB ? totalFor : totalAgainst;
+      teamResult = f > a ? "win" : f < a ? "loss" : "draw";
+    } else if (resultLabel) {
+      teamResult = resultLabel;
     }
-    const teamMod = RESULT_MOD[teamResult];
+    const teamMod = RESULT_MOD[teamResult] * weight;
 
-    const bonus = 0;
-
-    const rawUnsafe = RATING_BOUNDS.base + attack + defense + discipline + teamMod + bonus;
+    const rawUnsafe = RATING_BOUNDS.base + attack + impact + defense + discipline + teamMod;
     const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_BOUNDS.base;
 
     const overrideVal = overrides?.get(pid);
@@ -280,17 +345,15 @@ export function computeMatchRatings({
 
     out.set(pid, {
       playerId: pid,
-      rating: round2(
-        isOverride
-          ? clamp(overrideVal as number, 0, RATING_BOUNDS.max)
-          : clamp(raw, RATING_BOUNDS.min, RATING_BOUNDS.max)
-      ),
+      rating: round2(isOverride ? clamp(overrideVal as number, 0, RATING_BOUNDS.max) : clamp(raw, RATING_BOUNDS.min, RATING_BOUNDS.max)),
       base: RATING_BOUNDS.base,
       attack: round2(attack),
       defense: round2(defense),
       discipline: round2(discipline),
-      teamMod,
-      bonus,
+      teamMod: round2(teamMod),
+      bonus: 0,
+      impact: round2(impact),
+      share: round2(share),
       goals: s.goals,
       assists: s.assists,
       ownGoals: s.ownGoals,
@@ -307,12 +370,14 @@ export function computeMatchRatings({
   return out;
 }
 
-/** Colour tone shared by every rating badge in the app. */
-export const ratingTone = (r: number) =>
-  r >= 8 ? "bg-blue-500 text-white"
-    : r >= 7 ? "bg-green-500 text-black"
-      : r >= 6 ? "bg-orange-500 text-black"
-        : "bg-red-500 text-white";
+/** Colour tone shared by every rating badge in the app (FotMob bands). */
+export const ratingTone = (v: number) =>
+  !v ? "bg-muted text-muted-foreground"
+    : v >= 8 ? "bg-[#1a7dff] text-white"
+      : v >= 7 ? "bg-emerald-500 text-white"
+        : v >= 6.5 ? "bg-lime-500 text-black"
+          : v >= 6 ? "bg-amber-400 text-black"
+            : "bg-red-500 text-white";
 
 export const ratingTextTone = (r: number) =>
-  r >= 8 ? "text-blue-400" : r >= 7 ? "text-green-400" : r >= 6 ? "text-primary" : "text-muted-foreground";
+  r >= 8 ? "text-[#4f9bff]" : r >= 7 ? "text-emerald-400" : r >= 6.5 ? "text-lime-400" : r >= 6 ? "text-amber-400" : "text-red-400";

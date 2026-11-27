@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Player, Match, Team, Result, GoalEvent, MatchQuarter } from "./useFutsalData";
 import { getPlayerName } from "./useFutsalData";
+import { computeMatchRatings } from "@/lib/matchRating";
 
 // ─── Data MOM Scoring System ───
 export interface DataMOMResult {
@@ -114,144 +115,66 @@ function getDFPlayersFromLineup(lineup: any): number[] {
 }
 
 // ─── Core scoring logic ───
+/**
+ * Data MOM v2 = FotMob "Player of the Match": the highest match rating from the
+ * unified rating engine (src/lib/matchRating.ts), so MOM, the lineup badges and
+ * the player profile can never disagree.
+ * Ties → more goals+assists → more quarters played → better on-pitch margin.
+ * breakdown: attack = goals/assists term, defense = defensive + on-pitch impact,
+ * clutch = team-result term, penalty = discipline/own goals.
+ */
 export function scorePlayersForMatch(
   matchId: number,
   players: Player[],
-  teams: Team[],
+  _teams: Team[],
   goalEvents: GoalEvent[],
   quarters: MatchQuarter[],
-  results: Result[],
-  filterTeam?: "teamA" | "teamB"
+  _results: Result[],
+  filterTeam?: "teamA" | "teamB",
+  match?: Match | null,
+  overrides?: Map<number, number>
 ): DataMOMResult[] {
-  const matchGoals = goalEvents.filter(g => g.match_id === matchId);
   const matchQuarters = quarters.filter(q => q.match_id === matchId).sort((a, b) => a.quarter - b.quarter);
-
   if (!hasLineupData(matchQuarters)) return [];
-  if (matchGoals.length === 0 && matchQuarters.length === 0) return [];
 
-  // 1. 초기화
-  const playerState = new Map<number, { attack: number; defense: number; penalty: number; marginSum: number; quartersPlayed: number; playedFW: boolean; apCount: number }>();
-  const init = (pid: number) => {
-    if (!playerState.has(pid)) playerState.set(pid, { attack: 0, defense: 0, penalty: 0, marginSum: 0, quartersPlayed: 0, playedFW: false, apCount: 0 });
-    return playerState.get(pid)!;
-  };
-
-  // 쿼터 번호 → 라인업 맵 (공격 점수 계산 시 포지션 조회용)
-  const quarterLineupMap = new Map<number, any>();
-  matchQuarters.forEach(q => { if (q.lineup) quarterLineupMap.set(q.quarter, q.lineup); });
-
-  // 2. 쿼터별 공통 & 수비 점수
-  matchQuarters.forEach(q => {
-    if (!q.lineup) return;
-    const isCustom = isCustomLineup(q.lineup);
-    const fieldPlayers = getFieldPlayers(q.lineup);
-    const baseDiff = (q.score_for || 0) - (q.score_against || 0);
-    const baseConceded = q.score_against || 0;
-
-    fieldPlayers.forEach(pid => {
-      if (filterTeam && isCustom) {
-        const pTeam = getPlayerTeamInLineup(q.lineup, pid);
-        if (pTeam !== filterTeam) return;
-      }
-
-      const s = init(pid);
-      const pos = getPlayerPosition(q.lineup, pid);
-
-      let diff = baseDiff;
-      let conceded = baseConceded;
-      if (isCustom) {
-        const pTeam = getPlayerTeamInLineup(q.lineup, pid);
-        if (pTeam === "teamB") {
-          diff = -baseDiff;
-          conceded = q.score_for || 0;
-        }
-      }
-
-      s.quartersPlayed += 1;
-
-      // ⚖️ 공통 코트 마진 → defense
-      s.defense += diff;
-      s.marginSum += diff;
-
-      // 🛡️ DF/GK 점수
-      if (pos === "DF" || pos === "GK") {
-        if (conceded === 0) {
-          s.defense += 3;
-        } else {
-          s.defense -= conceded * 0.2;
-        }
-      }
-
-      // ⚔️ FW 체크
-      if (pos === "FW") {
-        s.playedFW = true;
-      }
-    });
+  const m: Match = match ?? ({ id: matchId, date: "", venue_id: 0, match_type: "", is_custom: false, has_detail_log: true, youtube_link: null } as Match);
+  const ratings = computeMatchRatings({
+    match: m,
+    quarters: matchQuarters,
+    goalEvents: goalEvents.filter(g => g.match_id === matchId),
+    overrides,
   });
 
-  // 3. 공격 점수 (DF/GK 수트라이커 보너스 적용)
-  matchGoals.forEach(g => {
-    const lineup = quarterLineupMap.get(g.quarter);
-
-    if (g.goal_player_id && !g.is_own_goal) {
-      const s = init(g.goal_player_id);
-      const pos = lineup ? getPlayerPosition(lineup, g.goal_player_id) : null;
-      if (pos === "DF" || pos === "GK") {
-        s.attack += 5;
-      } else {
-        s.attack += 3;
-      }
-      s.apCount += 1;
-    }
-    if (g.assist_player_id) {
-      const s = init(g.assist_player_id);
-      const pos = lineup ? getPlayerPosition(lineup, g.assist_player_id) : null;
-      if (pos === "DF" || pos === "GK") {
-        s.attack += 3;
-      } else {
-        s.attack += 2;
-      }
-      s.apCount += 1;
-    }
-  });
-
-  // 4. 무득점 공격수 페널티
-  playerState.forEach(s => {
-    if (s.playedFW && s.apCount === 0) {
-      s.penalty -= 1;
-    }
-  });
-
-  // 5. 정렬 및 필터링
-  let scored = [...playerState.entries()].map(([pid, s]) => ({
-    playerId: pid,
-    name: getPlayerName(players, pid),
-    score: s.attack + s.defense + s.penalty,
-    breakdown: {
-      attack: s.attack,
-      defense: s.defense,
-      clutch: 0,
-      penalty: s.penalty,
-    },
-    marginSum: s.marginSum,
-    quartersPlayed: s.quartersPlayed,
-  })).sort((a, b) =>
-    b.score - a.score ||
-    b.marginSum - a.marginSum ||
-    a.quartersPlayed - b.quartersPlayed
-  );
-
+  let teamIds: Set<number> | null = null;
   if (filterTeam) {
-    const teamPlayerIds = new Set<number>();
+    teamIds = new Set<number>();
     matchQuarters.forEach(q => {
       if (!q.lineup || !isCustomLineup(q.lineup)) return;
-      const teamLineup = (q.lineup as any)[filterTeam];
-      if (teamLineup) getFieldPlayersFlat(teamLineup).forEach(pid => teamPlayerIds.add(pid));
+      const unit = (q.lineup as any)[filterTeam];
+      if (unit) getFieldPlayersFlat(unit).forEach(pid => teamIds!.add(pid));
     });
-    scored = scored.filter(s => teamPlayerIds.has(s.playerId));
   }
 
-  return scored;
+  return [...ratings.values()]
+    .filter(r => r.quartersPlayed > 0 && (!teamIds || teamIds.has(r.playerId)))
+    .sort(
+      (a, b) =>
+        b.rating - a.rating ||
+        b.goals + b.assists - (a.goals + a.assists) ||
+        b.quartersPlayed - a.quartersPlayed ||
+        b.impact - a.impact
+    )
+    .map(r => ({
+      playerId: r.playerId,
+      name: getPlayerName(players, r.playerId),
+      score: r.rating,
+      breakdown: {
+        attack: r.attack,
+        defense: Math.round((r.defense + r.impact) * 100) / 100,
+        clutch: r.teamMod,
+        penalty: r.discipline + r.ownGoals * -0.8,
+      },
+    }));
 }
 
 export function computeDataMOM(
@@ -260,9 +183,11 @@ export function computeDataMOM(
   teams: Team[],
   goalEvents: GoalEvent[],
   quarters: MatchQuarter[],
-  results: Result[]
+  results: Result[],
+  match?: Match | null,
+  overrides?: Map<number, number>
 ): DataMOMResult | null {
-  const scored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results);
+  const scored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, undefined, match, overrides);
   return scored.length > 0 ? scored[0] : null;
 }
 
@@ -273,21 +198,21 @@ export function computeDualDataMOM(
   teams: Team[],
   goalEvents: GoalEvent[],
   quarters: MatchQuarter[],
-  results: Result[]
+  results: Result[],
+  match?: Match | null,
+  overrides?: Map<number, number>
 ): { teamA: DataMOMResult | null; teamB: DataMOMResult | null } {
   const matchQuarters = quarters.filter(q => q.match_id === matchId);
   const isCustom = matchQuarters.some(q => q.lineup && isCustomLineup(q.lineup));
   if (!isCustom) {
-    const single = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results);
+    const single = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, undefined, match, overrides);
     return { teamA: single.length > 0 ? { ...single[0], team: "teamA" } : null, teamB: null };
   }
-
-  const teamAScored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamA");
-  const teamBScored = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamB");
-
+  const a = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamA", match, overrides);
+  const b = scorePlayersForMatch(matchId, players, teams, goalEvents, quarters, results, "teamB", match, overrides);
   return {
-    teamA: teamAScored.length > 0 ? { ...teamAScored[0], team: "teamA" } : null,
-    teamB: teamBScored.length > 0 ? { ...teamBScored[0], team: "teamB" } : null,
+    teamA: a.length > 0 ? { ...a[0], team: "teamA" } : null,
+    teamB: b.length > 0 ? { ...b[0], team: "teamB" } : null,
   };
 }
 
@@ -435,10 +360,12 @@ export function useMatchAnalysis(
   results: Result[],
   goalEvents: GoalEvent[],
   quarters: MatchQuarter[],
-  lang: string = "ko"
+  lang: string = "ko",
+  match?: Match | null,
+  overrides?: Map<number, number>
 ) {
-  const dataMOM = useMemo(() => computeDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
-  const dualDataMOM = useMemo(() => computeDualDataMOM(matchId, players, teams, goalEvents, quarters, results), [matchId, players, teams, goalEvents, quarters, results]);
+  const dataMOM = useMemo(() => computeDataMOM(matchId, players, teams, goalEvents, quarters, results, match, overrides), [matchId, players, teams, goalEvents, quarters, results, match, overrides]);
+  const dualDataMOM = useMemo(() => computeDualDataMOM(matchId, players, teams, goalEvents, quarters, results, match, overrides), [matchId, players, teams, goalEvents, quarters, results, match, overrides]);
   const aiComments = useMemo(() => generateMatchComment(matchId, players, teams, results, goalEvents, quarters, lang), [matchId, players, teams, results, goalEvents, quarters, lang]);
   return { dataMOM, dualDataMOM, aiComments };
 }

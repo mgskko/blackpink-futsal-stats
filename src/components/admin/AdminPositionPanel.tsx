@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import type { MatchQuarter, Player } from "@/hooks/useFutsalData";
-import { getSlots, slotMapOf, formatLabel } from "@/lib/positions";
+import { getSlots, slotMapOf, formatLabel, autoSlots, presetsFor, shapeOf } from "@/lib/positions";
 
 const ROLES = ["GK", "DF", "MF", "FW"] as const;
 const BENCH = "__BENCH__";
@@ -30,12 +30,14 @@ function unitsOf(lineup: any): { key: "main" | "A" | "B"; unit: any }[] {
 }
 
 function initialAssign(unit: any, formatCode: string): Assign {
-  const slots = getSlots(formatCode);
   const stored = slotMapOf(unit);
+  // nothing saved yet → start from the formation matching this quarter's lines
+  const auto = Object.keys(stored).length ? {} : autoSlots(unit, formatCode);
+  const fallback = getSlots(formatCode);
   const out: Assign = {};
   ROLES.forEach(role => {
     idsOf(unit?.[role] ?? unit?.[role.toLowerCase()]).forEach(id => {
-      out[String(id)] = stored[String(id)] ?? slots.find(s => s.role === role)?.code ?? role;
+      out[String(id)] = stored[String(id)] ?? auto[String(id)] ?? fallback.find(s => s.role === role)?.code ?? role;
     });
   });
   idsOf(unit?.Bench ?? unit?.bench).forEach(id => { out[String(id)] = stored[String(id)] ?? BENCH; });
@@ -72,6 +74,34 @@ export default function AdminPositionPanel({
   if (list.length === 0) return null;
   const current = list[Math.min(idx, list.length - 1)];
   const units = unitsOf(current.lineup);
+
+  /** Unit as currently edited (roles follow the chosen slots), for re-slotting with a preset. */
+  const unitFromAssign = (assign: Assign) => {
+    const u: any = { GK: [], DF: [], MF: [], FW: [], Bench: [] };
+    Object.entries(assign).forEach(([pid, code]) => {
+      if (code === BENCH) return u.Bench.push(Number(pid));
+      u[slots.find(s => s.code === code)?.role ?? "MF"].push(Number(pid));
+    });
+    return u;
+  };
+  const applyPreset = (stateKey: string, preset: string) =>
+    setState(s => {
+      const cur = s[stateKey] ?? {};
+      const bench = Object.fromEntries(Object.entries(cur).filter(([, c]) => c === BENCH));
+      return { ...s, [stateKey]: { ...bench, ...autoSlots(unitFromAssign(cur), formatCode, preset) } };
+    });
+  const applyPresetAll = (preset: string) =>
+    setState(s => {
+      const next = { ...s };
+      Object.keys(next).forEach(k => {
+        const cur = next[k];
+        const outfield = Object.entries(cur).filter(([, c]) => c !== BENCH && slots.find(x => x.code === c)?.role !== "GK").length;
+        if (!presetsFor(formatCode, outfield).some(p => p.name === preset)) return;
+        const bench = Object.fromEntries(Object.entries(cur).filter(([, c]) => c === BENCH));
+        next[k] = { ...bench, ...autoSlots(unitFromAssign(cur), formatCode, preset) };
+      });
+      return next;
+    });
 
   const setSlot = (stateKey: string, pid: number, code: string) =>
     setState(s => ({ ...s, [stateKey]: { ...(s[stateKey] ?? {}), [String(pid)]: code } }));
@@ -154,6 +184,34 @@ export default function AdminPositionPanel({
               {key !== "main" && (
                 <div className="mb-1 text-[10px] font-bold text-primary">{key === "A" ? L("팀 A", "Team A") : L("팀 B", "Team B")}</div>
               )}
+              {(() => {
+                const outfield = Object.values(assign).filter(c => c !== BENCH && slots.find(x => x.code === c)?.role !== "GK").length;
+                const presets = presetsFor(formatCode, outfield);
+                const current = shapeOf(Object.fromEntries(Object.entries(assign).filter(([, c]) => c !== BENCH)), formatCode);
+                if (!presets.length) return null;
+                return (
+                  <div className="mb-2">
+                    <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                      <span>{L("포메이션 프리셋", "Formation presets")} · {L("현재", "now")} <span className="text-foreground">{current}</span></span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {presets.map(p => (
+                        <span key={p.name} className="inline-flex overflow-hidden rounded-full ring-1 ring-border">
+                          <button
+                            onClick={() => applyPreset(stateKey, p.name)}
+                            className={`px-2.5 py-1 font-num text-[11px] font-bold ${current === p.name ? "gradient-pink text-primary-foreground" : "bg-secondary/50 text-foreground/85"}`}
+                          >
+                            {p.name}
+                          </button>
+                          <button onClick={() => applyPresetAll(p.name)} title={L("모든 쿼터에 적용", "Apply to all quarters")} className="border-l border-border bg-secondary/30 px-1.5 text-[10px] text-muted-foreground">
+                            {L("전체", "all")}
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {ids.map(pid => (
                   <div key={pid} className="flex items-center gap-2">

@@ -1,3 +1,4 @@
+import { ratingTone } from "@/lib/matchRating";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -15,9 +16,7 @@ interface Props {
 /** FotMob-style key metric summary card. */
 export default function PlayerHeroStats({ isEn, rating, appearances, goals, assists, winRate, margin, ppq, goalsPerGame }: Props) {
   const L = (ko: string, en: string) => (isEn ? en : ko);
-  const ratingColor = rating >= 7.5 ? "bg-emerald-500/15 text-emerald-400 ring-emerald-500/40"
-    : rating >= 6.8 ? "bg-primary/15 text-primary ring-primary/40"
-    : "bg-muted text-muted-foreground ring-border";
+  const ratingColor = `${ratingTone(rating)} ring-white/20`;
 
   const main = [
     { label: L("출전", "Matches"), value: appearances },
