@@ -13,6 +13,7 @@ import CreatableSelect from "@/components/ui/creatable-select";
 import { MATCH_FORMATS, DEFAULT_FORMAT } from "@/lib/positions";
 import AdminQuarterEditor from "@/components/admin/AdminQuarterEditor";
 import AdminCustomQuarterEditor from "@/components/admin/AdminCustomQuarterEditor";
+import AdminStep, { Chip } from "@/components/admin/AdminStep";
 
 const AGE_CATEGORIES = [
   "20대 초반", "20대 중반", "20대 후반",
@@ -25,7 +26,13 @@ const GOAL_TYPE_OPTIONS = ["주워먹기", "중거리골", "발리골", "헤딩�
 const ASSIST_TYPE_OPTIONS = ["킬패스", "컷백패스", "크로스", "스루패스", "숏패스", "롱패스", "코너킥", "프리킥", "헤더패스", "드리블돌파", "GK어시"];
 const BUILD_UP_OPTIONS = ["압박 탈취", "역습", "빌드업", "세트피스", "개인기", "키퍼 실수", "혼전", "세컨볼", "패스연계", "롱볼"];
 
-const AdminMatchEdit = () => {
+interface AdminMatchEditProps {
+  /** Open one match directly (per-match admin screen) instead of showing the picker. */
+  fixedMatchId?: number;
+  onDeleted?: () => void;
+}
+
+const AdminMatchEdit = ({ fixedMatchId, onDeleted }: AdminMatchEditProps = {}) => {
   const { matches, venues, teams, results, players, rosters, goalEvents } = useAllFutsalData();
   const queryClient = useQueryClient();
   const [selectedMatchId, setSelectedMatchId] = useState("");
@@ -70,6 +77,11 @@ const AdminMatchEdit = () => {
   // Roster add
   const [showAddRoster, setShowAddRoster] = useState(false);
   const [addToTeamId, setAddToTeamId] = useState<number | null>(null);
+
+  // Basic info
+  const [editDate, setEditDate] = useState("");
+  const [editOpponent, setEditOpponent] = useState("");
+  const [addTeamId, setAddTeamId] = useState<number | null>(null);
 
   // Manual MOM
   const [showMOM, setShowMOM] = useState(false);
@@ -146,10 +158,76 @@ const AdminMatchEdit = () => {
       setScoreAgainst(or2?.score_against || 0);
     }
     setEditYoutubeLink(m?.youtube_link || "");
+    setEditDate(m?.date || "");
+    setEditOpponent(mTeams.find(t => !t.is_ours)?.name || "");
+    setAddTeamId(mTeams.find(t => t.is_ours)?.id ?? null);
     setEditVenueId(m?.venue_id ? String(m.venue_id) : "");
     setEditSubVenue((m as any)?.sub_venue || "");
     setEditFormat((m as any)?.match_format || DEFAULT_FORMAT);
     setEditingVenue(false);
+  };
+
+  // Per-match screen: select the given match once data has loaded.
+  useEffect(() => {
+    if (fixedMatchId && matches.length && selectedMatchId !== String(fixedMatchId)) handleSelectMatch(String(fixedMatchId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixedMatchId, matches.length, teams.length, results.length]);
+
+  const quarterOptions = (() => {
+    const used = Math.max(4, ...matchGoals.map(g => g.quarter));
+    return Array.from({ length: Math.min(10, used + 1) }, (_, i) => i + 1);
+  })();
+
+  const handleSaveBasic = async () => {
+    if (!matchId) return;
+    if (!editDate) {
+      toast({ title: "날짜를 입력하세요", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("matches").update({ date: editDate }).eq("id", matchId);
+      if (error) throw error;
+      const name = editOpponent.trim();
+      if (!isCustomMatch && name) {
+        const opp = matchTeams.find(t => !t.is_ours);
+        if (opp) {
+          if (opp.name !== name) {
+            const { error: e2 } = await supabase.from("teams").update({ name }).eq("id", opp.id);
+            if (e2) throw e2;
+          }
+        } else {
+          // Match was created without an opponent: add the team and a mirrored result row,
+          // otherwise the match can never show a scoreline.
+          const { data: t, error: e3 } = await supabase.from("teams").insert({ match_id: matchId, name, is_ours: false }).select().single();
+          if (e3) throw e3;
+          const r = ourResult;
+          const sf = r?.score_against ?? 0;
+          const sa = r?.score_for ?? 0;
+          const { error: e4 } = await supabase.from("results").insert({
+            match_id: matchId, team_id: t.id, score_for: sf, score_against: sa, result: sf > sa ? "승" : sf < sa ? "패" : "무",
+          });
+          if (e4) throw e4;
+        }
+      }
+      invalidateAll();
+      toast({ title: "경기 정보가 저장되었습니다 ✅" });
+    } catch (err: any) {
+      toast({ title: "오류", description: err.message, variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  /** Fill the score editor with the sum of the quarter scores. */
+  const fillScoreFromQuarters = async () => {
+    if (!matchId) return;
+    const { data } = await (supabase as any).from("match_quarters").select("score_for, score_against").eq("match_id", matchId);
+    if (!data || data.length === 0) {
+      toast({ title: "저장된 쿼터 스코어가 없습니다", variant: "destructive" });
+      return;
+    }
+    setScoreFor(data.reduce((s: number, q: any) => s + (q.score_for || 0), 0));
+    setScoreAgainst(data.reduce((s: number, q: any) => s + (q.score_against || 0), 0));
+    setEditingScore(true);
   };
 
   const handleSaveScore = async () => {
@@ -232,7 +310,8 @@ const AdminMatchEdit = () => {
     try {
       const { error } = await supabase.from("goal_events").insert({
         match_id: matchId,
-        team_id: ourTeam?.id || matchTeams[0]?.id,
+        // intrasquad: the selected scoring team; otherwise our team
+        team_id: (isCustomMatch && addTeamId) || ourTeam?.id || matchTeams[0]?.id,
         quarter: addQuarter,
         goal_player_id: addGoalPlayerId ? Number(addGoalPlayerId) : null,
         assist_player_id: addIsOwnGoal ? null : (addAssistPlayerId && addAssistPlayerId !== "none" ? Number(addAssistPlayerId) : null),
@@ -243,11 +322,15 @@ const AdminMatchEdit = () => {
         build_up_process: addBuildUp || null,
       });
       if (error) throw error;
+      // Stats read goal_events only for matches flagged as detail-logged.
+      if (!selectedMatch?.has_detail_log) {
+        await supabase.from("matches").update({ has_detail_log: true }).eq("id", matchId);
+      }
       invalidateAll();
-      toast({ title: "기록이 추가되었습니다 ✅" });
-      setAddQuarter(1); setAddIsOwnGoal(false); setAddGoalPlayerId(""); setAddAssistPlayerId("");
+      toast({ title: `${addQuarter}Q 골 기록 추가 ✅` });
+      // keep the quarter selected for fast consecutive entry
+      setAddIsOwnGoal(false); setAddGoalPlayerId(""); setAddAssistPlayerId("");
       setAddTimestamp(""); setAddGoalType(""); setAddAssistType(""); setAddBuildUp("");
-      setShowAddGoal(false);
     } catch (err: any) {
       toast({ title: "오류", description: err.message, variant: "destructive" });
     } finally { setSaving(false); }
@@ -347,6 +430,8 @@ const AdminMatchEdit = () => {
     setSaving(true);
     try {
       await supabase.from("mom_votes").delete().eq("match_id", mid);
+      // worst_votes.match_id has no ON DELETE CASCADE — the match delete fails without this.
+      await supabase.from("worst_votes").delete().eq("match_id", mid);
       await supabase.from("goal_events").delete().eq("match_id", mid);
       await supabase.from("rosters").delete().eq("match_id", mid);
       await supabase.from("results").delete().eq("match_id", mid);
@@ -357,6 +442,7 @@ const AdminMatchEdit = () => {
       invalidateAll();
       toast({ title: "경기가 삭제되었습니다" });
       setSelectedMatchId("");
+      onDeleted?.();
     } catch (err: any) {
       toast({ title: "오류", description: err.message, variant: "destructive" });
     } finally { setSaving(false); setDeleteTarget(null); }
@@ -388,6 +474,7 @@ const AdminMatchEdit = () => {
 
   return (
     <div className="space-y-4 mt-4">
+      {!fixedMatchId && (
       <Select value={selectedMatchId} onValueChange={handleSelectMatch}>
         <SelectTrigger className="bg-card border-border">
           <SelectValue placeholder="수정할 경기 선택" />
@@ -405,11 +492,31 @@ const AdminMatchEdit = () => {
           })}
         </SelectContent>
       </Select>
+      )}
 
       {matchId && (
         <>
+          <AdminStep step={1} title="경기 정보" done={!!selectedMatch?.venue_id && (isCustomMatch || !!matchTeams.find(t => !t.is_ours))}
+            summary={`${selectedMatch?.date ?? ""} · ${isCustomMatch ? "자체전" : (matchTeams.find(t => !t.is_ours)?.name ?? "상대 미정")} · ${venues.find(v => v.id === selectedMatch?.venue_id)?.name ?? "구장 미정"}`}>
+          {/* Basic info: date + opponent */}
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-muted-foreground">날짜</label>
+                <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="h-9 text-xs bg-background border-border" />
+              </div>
+              {!isCustomMatch && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground">상대팀</label>
+                  <Input value={editOpponent} onChange={e => setEditOpponent(e.target.value)} placeholder="상대팀 이름" className="h-9 text-xs bg-background border-border" />
+                </div>
+              )}
+            </div>
+            <Button size="sm" onClick={handleSaveBasic} disabled={saving} className="mt-2 h-8 w-full text-xs gradient-pink text-primary-foreground"><Save size={12} /> 날짜·상대팀 저장</Button>
+          </div>
+
           {/* Venue Edit */}
-          <div className="surface rounded-2xl p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">구장</h3>
               {!editingVenue ? (
@@ -454,8 +561,29 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
+          {/* Opponent Age Category */}
+          {(() => {
+            const oppTeam = matchTeams.find(t => !t.is_ours);
+            if (!oppTeam) return null;
+            return (
+              <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                <h3 className="text-sm font-bold text-primary mb-2">상대팀 연령대</h3>
+                <div className="flex gap-2">
+                  <Select value={oppTeam.age_category || ""} onValueChange={async (v) => {
+                    await supabase.from("teams").update({ age_category: v, original_age_desc: v }).eq("id", oppTeam.id);
+                    invalidateAll();
+                    toast({ title: "연령대가 수정되었습니다 ✅" });
+                  }}>
+                    <SelectTrigger className="h-8 text-xs bg-background border-border flex-1"><SelectValue placeholder="연령대 선택" /></SelectTrigger>
+                    <SelectContent>{AGE_CATEGORIES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Match Format */}
-          <div className="surface rounded-2xl p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
             <h3 className="mb-2 text-sm font-bold text-primary">경기 포맷</h3>
             <Select
               value={editFormat}
@@ -477,7 +605,7 @@ const AdminMatchEdit = () => {
           </div>
 
           {/* YouTube Link Edit */}
-          <div className="surface rounded-2xl p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-primary">유튜브 링크</h3>
               {!editingYoutube ? (
@@ -502,53 +630,12 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
-          {/* Score Edit */}
-          <div className="surface rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-primary">스코어</h3>
-              {!editingScore ? (
-                <Button size="sm" variant="outline" onClick={() => setEditingScore(true)} className="h-7 text-xs border-primary/30 text-primary"><Edit size={12} /> 수정</Button>
-              ) : (
-                <Button size="sm" onClick={handleSaveScore} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground"><Save size={12} /> 저장</Button>
-              )}
-            </div>
-            {editingScore ? (
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamA?.name || "팀 A") : (ourTeam?.name || "우리팀")}</label>
-                  <Input type="number" value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
-                </div>
-                <span className="text-muted-foreground font-bold">:</span>
-                <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamB?.name || "팀 B") : "상대팀"}</label>
-                  <Input type="number" value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
-                </div>
-              </div>
-            ) : (
-              isCustomMatch && teamA && teamB ? (
-                (() => {
-                  const rA = matchResults.find(r => r.team_id === teamA.id);
-                  const rB = matchResults.find(r => r.team_id === teamB.id);
-                  return (
-                    <div className="text-center font-display text-xl text-foreground">
-                      <span className="text-xs text-muted-foreground mr-1">{teamA.name}</span>
-                      {rA?.score_for ?? "-"} : {rB?.score_for ?? "-"}
-                      <span className="text-xs text-muted-foreground ml-1">{teamB.name}</span>
-                      <div className="mt-1 text-[10px] text-muted-foreground">{teamA.name}: {rA?.result} · {teamB.name}: {rB?.result}</div>
-                    </div>
-                  );
-                })()
-              ) : (
-                <div className="text-center font-display text-2xl text-foreground">
-                  {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
-                  <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
-                </div>
-              )
-            )}
-          </div>
+          </AdminStep>
 
+          <AdminStep step={2} title="출전 명단" done={matchRoster.length > 0} defaultOpen={matchRoster.length === 0}
+            summary={matchRoster.length ? `${matchRoster.length}명 · ${rosterPlayers.slice(0, 4).map(p => p.name).join(", ")}${rosterPlayers.length > 4 ? " 외" : ""}` : "출전 선수를 등록하세요"}>
           {/* Roster with add/remove */}
-          <div className="surface rounded-2xl p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary">출전 선수 ({matchRoster.length}명)</h3>
               <Button size="sm" variant="outline" onClick={() => setShowAddRoster(!showAddRoster)} className="h-7 text-xs border-primary/30 text-primary">
@@ -634,69 +721,109 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
+          </AdminStep>
+
+          <AdminStep step={3} title="쿼터 스코어 · 라인업" summary="쿼터별 득실과 포지션 배치 (라인업 화면에 표시)">
+          
+          {(() => {
+            const currentMatch = matches.find(m => m.id === matchId);
+            if (currentMatch?.is_custom) {
+              return (
+                <AdminCustomQuarterEditor
+                  matchId={matchId}
+                  matchTeams={matchTeams}
+                  rosterPlayerIds={[...rosterPlayerIds]}
+                  players={players}
+                  rosters={matchRoster.map(r => ({ player_id: r.player_id, team_id: r.team_id }))}
+                />
+              );
+            }
+            return <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />;
+          })()}
+
+          </AdminStep>
+
+          <AdminStep step={4} title="골 기록" done={matchGoals.length > 0} defaultOpen={matchRoster.length > 0}
+            summary={matchGoals.length ? `${matchGoals.length}골 · ${[...new Set(matchGoals.filter(g => !g.is_own_goal && g.goal_player_id).map(g => getPlayerName(players, g.goal_player_id!)))].slice(0, 3).join(", ")}` : "득점·도움 기록"}>
           {/* Goal Events */}
-          <div className="surface rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-primary">골 이벤트 ({matchGoals.length}개)</h3>
-              <Button size="sm" variant="outline" onClick={() => setShowAddGoal(!showAddGoal)} className="h-7 text-xs border-primary/30 text-primary">
-                <Plus size={12} /> 기록
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">우리 팀 득점만 기록합니다. 실점은 쿼터 스코어에 반영하세요.</span>
+              <Button size="sm" variant={showAddGoal ? "outline" : "default"} onClick={() => setShowAddGoal(!showAddGoal)} className={`h-8 shrink-0 text-xs ${showAddGoal ? "border-border" : "gradient-pink text-primary-foreground"}`}>
+                {showAddGoal ? <><X size={12} /> 닫기</> : <><Plus size={12} /> 골 추가</>}
               </Button>
             </div>
 
-            {/* Add goal form */}
+            {/* Add goal form — quick entry: tap quarter → scorer → assist */}
             {showAddGoal && (
-              <div className="mb-3 rounded-md border border-dashed border-primary/30 bg-secondary/30 p-3 space-y-2">
-                <p className="text-[10px] text-primary font-bold">득점 기록 추가</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">쿼터</label>
-                    <Select value={String(addQuarter)} onValueChange={v => setAddQuarter(Number(v))}>
-                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue /></SelectTrigger>
-                      <SelectContent>{[1,2,3,4,5,6,7,8,9,10].map(q => <SelectItem key={q} value={String(q)}>{q}Q</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end gap-2 pb-1">
-                    <Checkbox checked={addIsOwnGoal} onCheckedChange={c => setAddIsOwnGoal(c === true)} className="border-primary" />
-                    <label className="text-xs text-muted-foreground">자책골</label>
+              <div className="mb-3 space-y-3 rounded-xl border border-dashed border-primary/40 bg-primary/[0.04] p-3">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold text-muted-foreground">쿼터</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {quarterOptions.map(q => (
+                      <Chip key={q} active={addQuarter === q} onClick={() => setAddQuarter(q)}>{q}Q</Chip>
+                    ))}
                   </div>
                 </div>
-                {addIsOwnGoal && (
+                {isCustomMatch && teamA && teamB && (
                   <div>
-                    <label className="text-[10px] text-muted-foreground">자책골 선수 (우리 팀)</label>
-                    <Select value={addGoalPlayerId} onValueChange={setAddGoalPlayerId}>
-                      <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="자책골 선수" /></SelectTrigger>
-                      <SelectContent>{rosterPlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {!addIsOwnGoal && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-muted-foreground">득점자</label>
-                      <Select value={addGoalPlayerId} onValueChange={setAddGoalPlayerId}>
-                        <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="선택" /></SelectTrigger>
-                        <SelectContent>{allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground">도움</label>
-                      <Select value={addAssistPlayerId} onValueChange={setAddAssistPlayerId}>
-                        <SelectTrigger className="h-8 text-xs bg-background border-border"><SelectValue placeholder="없음" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">없음</SelectItem>
-                          {allSelectablePlayers.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                    <p className="mb-1.5 text-[11px] font-bold text-muted-foreground">득점 팀</p>
+                    <div className="flex gap-1.5">
+                      {[teamA, teamB].map(t => (
+                        <Chip key={t.id} active={addTeamId === t.id} onClick={() => setAddTeamId(t.id)}>{t.name}</Chip>
+                      ))}
                     </div>
                   </div>
                 )}
                 <div>
-                  <label className="text-[10px] text-muted-foreground">타임스탬프 (예: 1:12:08)</label>
-                  <Input value={addTimestamp} onChange={e => setAddTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-muted-foreground">{addIsOwnGoal ? "자책골 선수 (우리 팀)" : "득점자"}</p>
+                    <Chip tone="danger" active={addIsOwnGoal} onClick={() => { setAddIsOwnGoal(v => !v); setAddAssistPlayerId(""); }}>자책골</Chip>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rosterPlayers.map(p => (
+                      <Chip
+                        key={p.id}
+                        active={addGoalPlayerId === String(p.id)}
+                        onClick={() => {
+                          setAddGoalPlayerId(String(p.id));
+                          if (addAssistPlayerId === String(p.id)) setAddAssistPlayerId("");
+                          // intrasquad: the scorer's roster team is the scoring team
+                          const rt = matchRoster.find(r => r.player_id === p.id)?.team_id;
+                          if (isCustomMatch && rt) setAddTeamId(rt);
+                        }}
+                      >
+                        {p.name}
+                      </Chip>
+                    ))}
+                  </div>
+                  {rosterPlayers.length === 0 && <p className="text-xs text-muted-foreground">먼저 2단계에서 명단을 등록하세요.</p>}
                 </div>
-                <GoalEditFields isOwnGoal={addIsOwnGoal} goalType={addGoalType} setGoalType={setAddGoalType}
-                  assistType={addAssistType} setAssistType={setAddAssistType} buildUp={addBuildUp} setBuildUp={setAddBuildUp} />
-                <Button size="sm" onClick={handleAddGoalRecord} disabled={saving} className="w-full h-8 text-xs gradient-pink text-primary-foreground">추가</Button>
+                {!addIsOwnGoal && (
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-bold text-muted-foreground">도움</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Chip tone="neutral" active={!addAssistPlayerId || addAssistPlayerId === "none"} onClick={() => setAddAssistPlayerId("")}>없음</Chip>
+                      {rosterPlayers.filter(p => String(p.id) !== addGoalPlayerId).map(p => (
+                        <Chip key={p.id} active={addAssistPlayerId === String(p.id)} onClick={() => setAddAssistPlayerId(String(p.id))}>{p.name}</Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <details className="group rounded-lg bg-black/10 px-3 py-2">
+                  <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground">상세 정보 (선택) · 영상 시간, 골 유형</summary>
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">영상 타임스탬프 (예: 1:12:08)</label>
+                      <Input value={addTimestamp} onChange={e => setAddTimestamp(e.target.value)} placeholder="0:00" className="h-8 text-xs bg-background border-border" />
+                    </div>
+                    <GoalEditFields isOwnGoal={addIsOwnGoal} goalType={addGoalType} setGoalType={setAddGoalType}
+                      assistType={addAssistType} setAssistType={setAddAssistType} buildUp={addBuildUp} setBuildUp={setAddBuildUp} />
+                  </div>
+                </details>
+                <Button onClick={handleAddGoalRecord} disabled={saving || !addGoalPlayerId} className="h-10 w-full gradient-pink font-bold text-primary-foreground">
+                  {saving ? "저장 중..." : `${addQuarter}Q 골 기록 추가`}
+                </Button>
               </div>
             )}
 
@@ -785,8 +912,65 @@ const AdminMatchEdit = () => {
             </div>
           </div>
 
+          </AdminStep>
+
+          <AdminStep step={5} title="최종 스코어" done={!!ourResult && ((ourResult.score_for ?? 0) + (ourResult.score_against ?? 0) > 0 || ourResult.result !== "무")}
+            summary={ourResult ? `${ourResult.score_for ?? "-"} : ${ourResult.score_against ?? "-"} (${ourResult.result})` : "결과 미입력"}>
+          {/* Score Edit */}
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-primary">스코어</h3>
+              {!editingScore ? (
+                <div className="flex gap-1.5">
+                  {!isCustomMatch && (
+                    <Button size="sm" variant="outline" onClick={fillScoreFromQuarters} className="h-7 text-xs border-border">쿼터 합계 적용</Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => setEditingScore(true)} className="h-7 text-xs border-primary/30 text-primary"><Edit size={12} /> 수정</Button>
+                </div>
+              ) : (
+                <Button size="sm" onClick={handleSaveScore} disabled={saving} className="h-7 text-xs gradient-pink text-primary-foreground"><Save size={12} /> 저장</Button>
+              )}
+            </div>
+            {editingScore ? (
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamA?.name || "팀 A") : (ourTeam?.name || "우리팀")}</label>
+                  <Input type="number" value={scoreFor} onChange={e => setScoreFor(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+                </div>
+                <span className="text-muted-foreground font-bold">:</span>
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground">{isCustomMatch ? (teamB?.name || "팀 B") : "상대팀"}</label>
+                  <Input type="number" value={scoreAgainst} onChange={e => setScoreAgainst(Number(e.target.value))} className="h-8 text-center bg-background border-border" />
+                </div>
+              </div>
+            ) : (
+              isCustomMatch && teamA && teamB ? (
+                (() => {
+                  const rA = matchResults.find(r => r.team_id === teamA.id);
+                  const rB = matchResults.find(r => r.team_id === teamB.id);
+                  return (
+                    <div className="text-center font-display text-xl text-foreground">
+                      <span className="text-xs text-muted-foreground mr-1">{teamA.name}</span>
+                      {rA?.score_for ?? "-"} : {rB?.score_for ?? "-"}
+                      <span className="text-xs text-muted-foreground ml-1">{teamB.name}</span>
+                      <div className="mt-1 text-[10px] text-muted-foreground">{teamA.name}: {rA?.result} · {teamB.name}: {rB?.result}</div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center font-display text-2xl text-foreground">
+                  {ourResult?.score_for ?? "-"} : {ourResult?.score_against ?? "-"}
+                  <span className="ml-2 text-sm text-muted-foreground">({ourResult?.result})</span>
+                </div>
+              )
+            )}
+          </div>
+
+          </AdminStep>
+
+          <AdminStep step={6} title="MOM 지정" optional summary="투표 대신 MOM을 직접 지정">
           {/* Manual MOM */}
-          <div className="surface rounded-2xl p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-primary flex items-center gap-1"><Star size={14} /> MOM 수동 지정</h3>
               <Button size="sm" variant="outline" onClick={() => setShowMOM(!showMOM)} className="h-7 text-xs border-primary/30 text-primary">
@@ -804,43 +988,7 @@ const AdminMatchEdit = () => {
             )}
           </div>
 
-          {/* Opponent Age Category */}
-          {(() => {
-            const oppTeam = matchTeams.find(t => !t.is_ours);
-            if (!oppTeam) return null;
-            return (
-              <div className="surface rounded-2xl p-4">
-                <h3 className="text-sm font-bold text-primary mb-2">상대팀 연령대</h3>
-                <div className="flex gap-2">
-                  <Select value={oppTeam.age_category || ""} onValueChange={async (v) => {
-                    await supabase.from("teams").update({ age_category: v, original_age_desc: v }).eq("id", oppTeam.id);
-                    invalidateAll();
-                    toast({ title: "연령대가 수정되었습니다 ✅" });
-                  }}>
-                    <SelectTrigger className="h-8 text-xs bg-background border-border flex-1"><SelectValue placeholder="연령대 선택" /></SelectTrigger>
-                    <SelectContent>{AGE_CATEGORIES.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Quarter Editor - conditional for custom/normal matches */}
-          {(() => {
-            const currentMatch = matches.find(m => m.id === matchId);
-            if (currentMatch?.is_custom) {
-              return (
-                <AdminCustomQuarterEditor
-                  matchId={matchId}
-                  matchTeams={matchTeams}
-                  rosterPlayerIds={[...rosterPlayerIds]}
-                  players={players}
-                  rosters={matchRoster.map(r => ({ player_id: r.player_id, team_id: r.team_id }))}
-                />
-              );
-            }
-            return <AdminQuarterEditor matchId={matchId} rosterPlayerIds={[...rosterPlayerIds]} players={players} />;
-          })()}
+          </AdminStep>
 
           {/* Delete Match */}
           <Button variant="destructive" onClick={() => setDeleteTarget({ type: "match", id: matchId })} className="w-full">

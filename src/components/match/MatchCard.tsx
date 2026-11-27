@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { motion } from "framer-motion";
-import { ChevronRight, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import burneesLogo from "@/assets/burnees-logo.png";
 import { parseLocalDate } from "@/lib/utils";
 
 export type MatchStatus = "win" | "draw" | "loss" | "scheduled";
@@ -24,78 +24,82 @@ interface Props {
   onClick: () => void;
 }
 
-const TONE: Record<MatchStatus, { bar: string; chip: string; score: string }> = {
-  win: { bar: "from-win/90 to-win/20", chip: "bg-win/15 text-win ring-win/30", score: "text-win" },
-  draw: { bar: "from-draw/90 to-draw/20", chip: "bg-draw/15 text-draw ring-draw/30", score: "text-draw" },
-  loss: { bar: "from-loss/90 to-loss/20", chip: "bg-loss/15 text-loss ring-loss/30", score: "text-loss" },
-  scheduled: { bar: "from-muted-foreground/50 to-transparent", chip: "bg-muted text-muted-foreground ring-border", score: "text-muted-foreground" },
+const DOW_KO = ["일", "월", "화", "수", "목", "금", "토"];
+const DOW_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const RESULT_PILL: Record<Exclude<MatchStatus, "scheduled">, string> = {
+  win: "bg-win text-white",
+  draw: "bg-draw text-black",
+  loss: "bg-loss text-white",
 };
 
-const DOW_KO = ["일", "월", "화", "수", "목", "금", "토"];
-const DOW_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+function Crest({ name, ours }: { name: string; ours?: boolean }) {
+  if (ours) return <img src={burneesLogo} alt="" className="h-5 w-5 shrink-0 rounded-full" />;
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return (
+    <span
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white"
+      style={{ background: `linear-gradient(145deg, hsl(${h} 65% 52%), hsl(${(h + 40) % 360} 55% 30%))` }}
+    >
+      {name.trim().charAt(0)}
+    </span>
+  );
+}
 
+/** SofaScore-style dense row: date | stacked teams | stacked score | result pill. */
 function MatchCard(p: Props) {
   const d = parseLocalDate(p.date);
-  const tone = TONE[p.status];
   const played = p.status !== "scheduled";
+  const ourWin = p.status === "win";
+  const oppWin = p.status === "loss";
 
   return (
-    <motion.button
+    <button
       type="button"
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -40px 0px" }}
-      transition={{ duration: 0.45, delay: Math.min(p.index, 6) * 0.04, ease: [0.16, 1, 0.3, 1] }}
-      whileTap={{ scale: 0.98 }}
       onClick={p.onClick}
-      className="surface group relative flex w-full items-stretch overflow-hidden rounded-[22px] text-left"
+      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
     >
-      {/* result rail */}
-      <span aria-hidden className={`w-1 shrink-0 bg-gradient-to-b ${tone.bar}`} />
-
-      {/* date block */}
-      <div className="flex w-14 shrink-0 flex-col items-center justify-center border-r border-white/[0.06] py-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          {p.isEn ? `${d.toLocaleString("en", { month: "short" })}` : `${d.getMonth() + 1}월`}
+      <div className="flex w-11 shrink-0 flex-col items-center border-r border-white/[0.06] pr-3 text-center">
+        <span className="font-num text-[13px] font-bold leading-tight">
+          {d.getMonth() + 1}.{d.getDate()}
         </span>
-        <span className="font-num text-[26px] font-extrabold leading-none tracking-tight">{d.getDate()}</span>
-        <span className="mt-0.5 text-[9px] font-semibold text-muted-foreground">{(p.isEn ? DOW_EN : DOW_KO)[d.getDay()]}</span>
+        <span className="text-[10px] font-medium text-muted-foreground">{(p.isEn ? DOW_EN : DOW_KO)[d.getDay()]}</span>
+        <span className={`mt-0.5 text-[9px] font-bold ${played ? "text-muted-foreground" : "text-primary"}`}>{played ? (p.isEn ? "FT" : "종료") : p.statusLabel}</span>
       </div>
 
-      <div className="min-w-0 flex-1 px-3.5 py-3">
-        <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
-          <span className="shrink-0 rounded-md bg-secondary/70 px-1.5 py-px font-bold text-foreground/80">{p.sportBadge}</span>
-          {p.isCustom && <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-px font-bold text-primary">{p.customLabel}</span>}
-          <span className="truncate">{p.venue}</span>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Crest name={p.ourName} ours={!p.isCustom} />
+          <span className={`truncate text-[14px] ${!played || ourWin || p.status === "draw" ? "font-bold" : "font-medium text-foreground/60"}`}>{p.ourName}</span>
         </div>
-
-        <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <span className="truncate text-[13px] font-bold">{p.ourName}</span>
-          {played ? (
-            <span className="flex items-center gap-1 font-num text-[22px] font-extrabold leading-none tracking-tight">
-              <span className={p.status === "loss" ? "text-foreground/60" : tone.score}>{p.scoreFor ?? "-"}</span>
-              <span className="text-sm text-muted-foreground/60">:</span>
-              <span className={p.status === "loss" ? tone.score : "text-foreground/60"}>{p.scoreAgainst ?? "-"}</span>
-            </span>
-          ) : (
-            <span className="font-display text-lg tracking-widest text-muted-foreground">VS</span>
-          )}
-          <span className="truncate text-right text-[13px] font-bold text-foreground/85">{p.oppName}</span>
+        <div className="flex items-center gap-2">
+          <Crest name={p.oppName} />
+          <span className={`truncate text-[14px] ${!played || oppWin || p.status === "draw" ? "font-bold" : "font-medium text-foreground/60"}`}>{p.oppName}</span>
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span className="shrink-0">{p.sportBadge}</span>
+          {p.isCustom && <span className="shrink-0 font-bold text-primary">{p.customLabel}</span>}
+          {p.venue && <span className="truncate">· {p.venue}</span>}
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-3">
-        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ring-1 ${tone.chip}`}>{p.statusLabel}</span>
-        {p.attending ? (
-          <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary">
-            <Users size={10} /> {p.attending}
+      {played ? (
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="flex flex-col items-end gap-1.5 font-num text-[17px] font-extrabold leading-5 tabular-nums">
+            <span className={ourWin || p.status === "draw" ? "" : "text-foreground/50"}>{p.scoreFor ?? "-"}</span>
+            <span className={oppWin || p.status === "draw" ? "" : "text-foreground/50"}>{p.scoreAgainst ?? "-"}</span>
+          </div>
+          <span className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-black ${RESULT_PILL[p.status as Exclude<MatchStatus, "scheduled">]}`}>
+            {p.statusLabel}
           </span>
-        ) : (
-          <span className="max-w-[56px] truncate text-[9px] uppercase tracking-wider text-muted-foreground">{p.matchType}</span>
-        )}
-      </div>
-      <ChevronRight size={14} className="mr-2 self-center text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
-    </motion.button>
+        </div>
+      ) : p.attending ? (
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-[11px] font-bold text-primary">
+          <Users size={11} /> {p.attending}
+        </span>
+      ) : null}
+    </button>
   );
 }
 

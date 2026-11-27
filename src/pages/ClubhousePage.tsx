@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Book, Newspaper, Shirt, Shield, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import PageHeader from "@/components/PageHeader";
+import DetailHeader from "@/components/DetailHeader";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useGuideSections } from "@/data/guideSections";
 import { useTranslation } from "react-i18next";
@@ -40,7 +40,7 @@ const ClubhousePage = () => {
 
   return (
     <div className="relative z-10">
-          <PageHeader title="CLUBHOUSE" subtitle={L("버니즈 클럽하우스", "Bunnies Clubhouse")} />
+          <DetailHeader title="CLUBHOUSE" subtitle={L("버니즈 클럽하우스", "Bunnies Clubhouse")} />
       <div className="px-4">
         {/* Section switcher */}
         <div className="flex surface rounded-2xl overflow-hidden mb-6">

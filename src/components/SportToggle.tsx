@@ -10,12 +10,31 @@ interface Props {
   className?: string;
   /** hide the "All" segment (default: shown) */
   withAll?: boolean;
+  /** smaller secondary filter (chips) */
+  compact?: boolean;
 }
 
 const SPORTS: SportFilter[] = ["all", "soccer", "futsal"];
 
-export default function SportToggle({ value, onChange, isEn, className, withAll = true }: Props) {
+export default function SportToggle({ value, onChange, isEn, className, withAll = true, compact = false }: Props) {
   const options = withAll ? SPORTS : SPORTS.filter(s => s !== "all");
+  if (compact) {
+    return (
+      <div className={cn("flex gap-1.5", className)}>
+        {options.map(s => (
+          <button
+            key={s}
+            onClick={() => onChange(s)}
+            className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 transition-colors ${
+              s === value ? "bg-foreground text-background ring-foreground" : "text-muted-foreground ring-border hover:text-foreground"
+            }`}
+          >
+            {sportEmoji(s)} {sportLabel(s, isEn)}
+          </button>
+        ))}
+      </div>
+    );
+  }
   return (
     <div role="tablist" className={cn("liquid-glass inline-flex rounded-full p-1", className)}>
       {options.map(s => {

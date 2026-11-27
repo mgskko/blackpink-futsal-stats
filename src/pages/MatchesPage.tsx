@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { PenSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +14,7 @@ import SeasonHero, { type ResultKind, type SeasonRecord } from "@/components/mat
 import MatchCard, { type MatchStatus } from "@/components/match/MatchCard";
 import { useTeamName } from "@/lib/displayName";
 import { localISODate } from "@/lib/utils";
-import { filterMatchesBySport, sportOfMatch, sportLabel, sportEmoji, type SportFilter } from "@/lib/sport";
+import { filterMatchesBySport, sportOfMatch, sportEmoji, type SportFilter } from "@/lib/sport";
 
 /** Live attending-count per match (realtime). */
 function useAttendanceCounts(enabled: boolean) {
@@ -48,6 +49,7 @@ const MatchesPage = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { matches: allSportMatches, venues, teams, results, isLoading } = useAllFutsalData();
   const [sport, setSport] = useState<SportFilter>("all");
+  const [view, setView] = useState<"results" | "fixtures">("results");
   const attendanceCounts = useAttendanceCounts(!!user);
   const { t, i18n } = useTranslation();
   const isEn = (i18n.language ?? "ko").startsWith("en");
@@ -103,10 +105,14 @@ const MatchesPage = () => {
     };
   }, [rows, attendanceCounts, teamName, t]);
 
+  const fixtures = useMemo(() => rows.filter(r => r.status === "scheduled").reverse(), [rows]);
+  const played = useMemo(() => rows.filter(r => r.status !== "scheduled"), [rows]);
+  const visible = view === "results" ? played : fixtures;
+
   // Month sections
   const sections = useMemo(() => {
     const out: { key: string; label: string; items: typeof rows }[] = [];
-    rows.forEach(r => {
+    visible.forEach(r => {
       const key = r.match.date.slice(0, 7);
       let sec = out[out.length - 1];
       if (!sec || sec.key !== key) {
@@ -118,7 +124,7 @@ const MatchesPage = () => {
       sec.items.push(r);
     });
     return out;
-  }, [rows, isEn]);
+  }, [visible, isEn]);
 
   if (authLoading || (user && isLoading)) return <SplashScreen />;
   if (!user) return <SignInHero />;
@@ -147,19 +153,35 @@ const MatchesPage = () => {
 
       <SeasonHero record={record} next={next} isEn={isEn} onOpenMatch={id => navigate(`/match/${id}`)} />
 
-      <div className="sticky top-0 z-30 px-4 pb-2 pt-4" style={{ top: "calc(env(safe-area-inset-top) + 4rem)" }}>
-        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full" />
+      <div className="sticky z-30 space-y-2 border-b border-white/[0.04] bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl" style={{ top: "calc(env(safe-area-inset-top) + 3.75rem)" }}>
+        <div className="segmented flex w-full" role="tablist">
+          {([
+            ["results", isEn ? `Results ${played.length}` : `결과 ${played.length}`],
+            ["fixtures", isEn ? `Fixtures ${fixtures.length}` : `일정 ${fixtures.length}`],
+          ] as const).map(([k, l]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={view === k}
+              onClick={() => setView(k)}
+              className={`relative flex-1 rounded-full py-2 text-[13px] font-bold transition-colors ${view === k ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              {view === k && <motion.span layoutId="matches-view-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+              <span className="relative">{l}</span>
+            </button>
+          ))}
+        </div>
+        <SportToggle value={sport} onChange={setSport} isEn={isEn} className="w-full" compact />
       </div>
 
       <div className="px-4">
         {sections.map(sec => (
           <section key={sec.key} className="mt-3">
-            <h2 className="mb-2 flex items-center gap-2 px-1 text-[12px] font-bold tracking-wide text-muted-foreground" style={{ fontFamily: "inherit" }}>
+            <h2 className="mb-1.5 flex items-center justify-between px-1 text-[12px] font-bold text-muted-foreground" style={{ fontFamily: "inherit" }}>
               {sec.label}
-              <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-              <span className="font-num text-[10px]">{sec.items.length}</span>
+              <span className="font-num text-[10px] font-semibold">{sec.items.length}{isEn ? "" : "경기"}</span>
             </h2>
-            <div className="space-y-2.5">
+            <div className="surface divide-y divide-white/[0.05] overflow-hidden rounded-2xl">
               {sec.items.map(({ match, mr, sides, status, venue }) => (
                 <MatchCard
                   key={match.id}
@@ -167,7 +189,7 @@ const MatchesPage = () => {
                   isEn={isEn}
                   date={match.date}
                   venue={venue}
-                  sportBadge={`${sportEmoji(sportOfMatch(match))} ${sportLabel(sportOfMatch(match), isEn)}`}
+                  sportBadge={`${sportEmoji(sportOfMatch(match))} ${match.match_type}`}
                   matchType={match.match_type}
                   isCustom={match.is_custom}
                   customLabel={t("matches.selfMatch")}
@@ -184,9 +206,9 @@ const MatchesPage = () => {
             </div>
           </section>
         ))}
-        {rows.length === 0 && (
+        {visible.length === 0 && (
           <div className="surface mt-4 rounded-3xl px-6 py-12 text-center text-sm text-muted-foreground">
-            {isEn ? "No matches yet." : "아직 등록된 경기가 없어요."}
+            {view === "fixtures" ? (isEn ? "No upcoming fixtures." : "예정된 경기가 없어요.") : isEn ? "No results yet." : "아직 결과가 없어요."}
           </div>
         )}
       </div>

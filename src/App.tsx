@@ -23,9 +23,12 @@ const StatisticsPage = lazy(() => import("@/pages/StatisticsPage"));
 const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
 const TacticsPage = lazy(() => import("@/pages/TacticsPage"));
 const ClubhousePage = lazy(() => import("@/pages/ClubhousePage"));
+const ClubPage = lazy(() => import("@/pages/ClubPage"));
 const TreasuryPage = lazy(() => import("@/pages/TreasuryPage"));
 const MyPage = lazy(() => import("@/pages/MyPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const AdminMatchScreen = lazy(() => import("@/pages/AdminMatchPage").then(m => ({ default: m.AdminMatchScreen })));
+const AdminNewMatchScreen = lazy(() => import("@/pages/AdminMatchPage").then(m => ({ default: m.AdminNewMatchScreen })));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -53,11 +56,14 @@ function AppRoutes() {
           <Route path="/stats" element={<StatisticsPage />} />
           <Route path="/compare" element={<ComparisonPage />} />
           <Route path="/tactics" element={<TacticsPage />} />
+          <Route path="/club" element={<ClubPage />} />
           <Route path="/guide" element={<ClubhousePage />} />
           <Route path="/clubhouse" element={<Navigate to="/guide" replace />} />
           <Route path="/treasury" element={<TreasuryPage />} />
           <Route path="/my" element={<MyPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/new" element={<AdminNewMatchScreen />} />
+          <Route path="/admin/match/:id" element={<AdminMatchScreen />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
