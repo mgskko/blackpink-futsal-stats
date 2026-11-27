@@ -68,7 +68,7 @@ export function computeSeasonRatings(
   const playedIds = new Set(played.map(m => m.id));
 
   // ── single source of truth: season rating = mean of per-match ratings ──
-  const matchRatingByPlayer = new Map<number, number[]>();
+  const matchRatingByPlayer = new Map<number, { r: number; w: number }[]>();
   played.forEach(m => {
     const overrides = new Map<number, number>();
     overrideKeyed.forEach((v, k) => {
@@ -83,7 +83,7 @@ export function computeSeasonRatings(
       overrides,
     });
     ratings.forEach((d, pid) => {
-      matchRatingByPlayer.set(pid, [...(matchRatingByPlayer.get(pid) ?? []), d.rating]);
+      matchRatingByPlayer.set(pid, [...(matchRatingByPlayer.get(pid) ?? []), { r: d.rating, w: Math.max(0.25, d.share) }]);
     });
   });
 
@@ -139,12 +139,12 @@ export function computeSeasonRatings(
     const hasData = apps > 0;
     // Season rating = mean of the unified per-match ratings (minus a light discipline tax)
     const myMatchRatings = matchRatingByPlayer.get(p.id) ?? [];
-    const meanMatch = myMatchRatings.length > 0
-      ? myMatchRatings.reduce((a, b) => a + b, 0) / myMatchRatings.length
-      : RATING_BOUNDS.base;
+    // participation-weighted: a full match counts more than a one-quarter cameo
+    const wSum = myMatchRatings.reduce((a, b) => a + b.w, 0);
+    const meanMatch = wSum > 0 ? myMatchRatings.reduce((a, b) => a + b.r * b.w, 0) / wSum : RATING_BOUNDS.base;
     const rawUnsafe = meanMatch - fines * 0.1;
     const raw = Number.isFinite(rawUnsafe) ? rawUnsafe : RATING_BOUNDS.base;
-    const rating = hasData
+    const rating = hasData && wSum > 0
       ? Math.max(RATING_BOUNDS.min, Math.min(RATING_BOUNDS.max, Math.round(raw * 100) / 100))
       : 0;
 

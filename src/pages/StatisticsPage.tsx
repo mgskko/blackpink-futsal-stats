@@ -13,6 +13,7 @@ import SportToggle from "@/components/SportToggle";
 import POTMCard from "@/components/stats/POTMCard";
 import RecentFormBoard from "@/components/stats/RecentFormBoard";
 import Leaderboard, { type LeaderRow } from "@/components/stats/Leaderboard";
+import ChemistryTab from "@/components/stats/ChemistryTab";
 import { useAllQuarters } from "@/hooks/useSquadTable";
 import { localISODate } from "@/lib/utils";
 import { filterMatchesBySport, type SportFilter } from "@/lib/sport";
@@ -70,7 +71,7 @@ const StatisticsPage = () => {
   const { data: allQuarters = [] } = useAllQuarters();
   const [sport, setSport] = useState<SportFilter>("all");
   const [season, setSeason] = useState<SeasonFilter>("all");
-  const [tab, setTab] = useState<"players" | "team">("players");
+  const [tab, setTab] = useState<"players" | "chem" | "team">("players");
 
   const sportMatches = useMemo(() => filterMatchesBySport(allMatches, sport), [allMatches, sport]);
   const years = useMemo(() => [...new Set(sportMatches.map(m => m.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a)), [sportMatches]);
@@ -92,7 +93,8 @@ const StatisticsPage = () => {
   // Long-term inactive, guests and placeholder accounts never appear in rankings.
   const inactiveIds = useMemo(() => getInactivePlayerIds(players, sportMatches, rosters), [players, sportMatches, rosters]);
   const memberPlayers = useMemo(
-    () => players.filter(p => !(p as any).is_guest && !inactiveIds.has(p.id) && !EXCLUDED_NAMES.has(p.name)),
+    // Stats are members-only: guests, non-members, long-term inactive and placeholders never rank.
+    () => players.filter(p => (p as any).is_member === true && !(p as any).is_guest && !inactiveIds.has(p.id) && !EXCLUDED_NAMES.has(p.name)),
     [players, inactiveIds]
   );
   const memberIds = useMemo(() => new Set(memberPlayers.map(p => p.id)), [memberPlayers]);
@@ -159,7 +161,7 @@ const StatisticsPage = () => {
     <div className="relative z-10">
       <PageHeader
         title="STATS"
-        subtitle={L(`${matches.length}경기 기준`, `Based on ${matches.length} matches`)}
+        subtitle={L(`정회원 ${memberPlayers.length}명 · ${matches.length}경기 기준`, `${memberPlayers.length} members · ${matches.length} matches`)}
         rightSlot={
           <button onClick={() => navigate("/compare")} className="liquid-glass pressable flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-primary">
             <Swords size={12} /> {L("1:1 비교", "Compare")}
@@ -169,7 +171,7 @@ const StatisticsPage = () => {
 
       <div className="sticky z-30 space-y-2 border-b border-white/[0.04] bg-background/85 px-4 pb-3 pt-2 backdrop-blur-xl" style={{ top: "calc(env(safe-area-inset-top) + 3.75rem)" }}>
         <div className="segmented flex w-full">
-          {([["players", L("선수", "Players")], ["team", L("팀", "Team")]] as const).map(([k, l]) => (
+          {([["players", L("선수", "Players")], ["chem", L("케미", "Chemistry")], ["team", L("팀", "Team")]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`relative flex-1 rounded-full py-2 text-[13px] font-bold ${tab === k ? "text-primary-foreground" : "text-muted-foreground"}`}>
               {tab === k && <motion.span layoutId="stats-tab-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
               <span className="relative">{l}</span>
@@ -191,7 +193,9 @@ const StatisticsPage = () => {
       </div>
 
       <div className="space-y-3 px-4 pt-3">
-        {tab === "players" ? (
+        {tab === "chem" ? (
+          <ChemistryTab players={memberPlayers} quarters={fQuarters} goalEvents={fGoals} rosters={fRosters} isEn={isEn} nameOf={id => getPlayerName(players, id, lang)} />
+        ) : tab === "players" ? (
           <>
             <POTMCard players={memberPlayers} matches={matches} teams={fTeams} results={fResults} rosters={fRosters} goalEvents={fGoals} allQuarters={fQuarters} />
             <Leaderboard title={`${S("평점", "Rating")} · ${L(`${boards.minApps}경기 이상`, `min. ${boards.minApps} apps`)}`} rows={boards.rating} rating emptyText={empty} allLabel={allLabel} />

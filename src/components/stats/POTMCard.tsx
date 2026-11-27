@@ -55,10 +55,10 @@ export default function POTMCard({ players, matches, teams, results, rosters, go
       matchIdsWithQ.forEach(mid => {
         const match = monthMatches.find(m => m.id === mid);
         if (match?.is_custom) {
-          const dual = computeDualDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+          const dual = computeDualDataMOM(mid, players, teams, goalEvents, allQuarters, results, match);
           if ((dual.teamA && dual.teamA.playerId === p.id) || (dual.teamB && dual.teamB.playerId === p.id)) momCount++;
         } else {
-          const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results);
+          const mom = computeDataMOM(mid, players, teams, goalEvents, allQuarters, results, match);
           if (mom && mom.playerId === p.id) momCount++;
         }
       });

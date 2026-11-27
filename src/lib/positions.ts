@@ -30,9 +30,14 @@ export const MATCH_FORMATS: MatchFormat[] = [
     slots: [
       s("GK", "골레이로", "Goleiro", "GK", 50, 88),
       s("FIXO", "픽소", "Fixo", "DF", 50, 68),
+      s("L-FIXO", "좌측 픽소", "Left Fixo", "DF", 28, 68),
+      s("R-FIXO", "우측 픽소", "Right Fixo", "DF", 72, 68),
+      s("ALA", "중앙 아라", "Central Ala", "MF", 50, 46),
       s("L-ALA", "좌측 아라", "Left Ala", "MF", 20, 46),
       s("R-ALA", "우측 아라", "Right Ala", "MF", 80, 46),
       s("PIVO", "피보", "Pivo", "FW", 50, 22),
+      s("L-PIVO", "좌측 피보", "Left Pivo", "FW", 32, 22),
+      s("R-PIVO", "우측 피보", "Right Pivo", "FW", 68, 22),
     ],
   },
   {
@@ -309,3 +314,84 @@ export const roleLabel = (role: RoleKey, isEn: boolean, sport: "futsal" | "socce
   };
   return isEn ? map[role][1] : map[role][0];
 };
+
+// ─────────────────────────────────────────────────────────────
+// Formation presets & automatic slotting
+// ─────────────────────────────────────────────────────────────
+const FUTSAL_SHAPES = ["1-2-1", "2-2", "3-1", "2-1-1", "1-1-2", "1-2-2", "2-2-1", "2-1-2", "3-1-1", "1-3-1", "2-2-2", "3-2-1", "2-3-1", "1-3-2", "3-2-2", "2-3-2", "3-3-1"];
+const SOCCER_SHAPES = ["2-3-1", "3-2-1", "3-3-1", "2-3-2", "3-3-2", "3-2-2", "3-4-1", "4-3-1", "4-2-2", "3-3-3", "4-3-2", "4-4-1", "3-4-2", "4-4-2", "4-3-3", "3-5-2", "4-5-1", "5-3-2", "3-4-3", "5-4-1"];
+
+export interface FormationPreset {
+  name: string;
+  counts: { DF: number; MF: number; FW: number };
+}
+
+const shapeCounts = (name: string) => {
+  const n = name.split("-").map(Number);
+  return n.length === 2 ? { DF: n[0], MF: 0, FW: n[1] } : { DF: n[0], MF: n[1], FW: n[2] };
+};
+
+const roleSlots = (formatCode: string | null | undefined, role: RoleKey) =>
+  getSlots(formatCode).filter(sl => sl.role === role).sort((a, b) => a.x - b.x || b.y - a.y);
+
+/** Pick `n` slots of a line, spread evenly across the width (1 → most central). */
+function spread(list: PositionSlot[], n: number): PositionSlot[] {
+  if (n <= 0 || list.length === 0) return [];
+  if (n === 1) return [[...list].sort((a, b) => Math.abs(a.x - 50) - Math.abs(b.x - 50) || b.y - a.y)[0]];
+  if (n >= list.length) return [...list, ...Array(n - list.length).fill(list[list.length - 1])];
+  const out: PositionSlot[] = [];
+  for (let k = 0; k < n; k++) out.push(list[Math.round((k * (list.length - 1)) / (n - 1))]);
+  return out;
+}
+
+/** Shapes playable in this format for a given number of outfield players. */
+export function presetsFor(formatCode: string | null | undefined, outfield: number): FormationPreset[] {
+  const f = getFormat(formatCode);
+  const avail = { DF: roleSlots(formatCode, "DF").length, MF: roleSlots(formatCode, "MF").length, FW: roleSlots(formatCode, "FW").length };
+  return (f.sport === "soccer" ? SOCCER_SHAPES : FUTSAL_SHAPES)
+    .map(name => ({ name, counts: shapeCounts(name) }))
+    .filter(p => p.counts.DF + p.counts.MF + p.counts.FW === outfield && p.counts.DF <= avail.DF && p.counts.MF <= avail.MF && p.counts.FW <= avail.FW && p.counts.DF >= 1);
+}
+
+const ROLE_RANK: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
+const idsIn = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
+
+/**
+ * Slot every on-pitch player of a lineup unit.
+ * - `preset` given → that shape (players may change line: deepest players fill the back line).
+ * - otherwise → the shape matching the unit's current role counts, keeping each player's role.
+ * Existing `_slot` codes are ignored (call only when you want a fresh layout).
+ */
+export function autoSlots(unit: any, formatCode: string | null | undefined, preset?: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!unit || typeof unit !== "object") return out;
+  const byRole: Record<RoleKey, number[]> = { GK: idsIn(unit.GK ?? unit.gk), DF: idsIn(unit.DF ?? unit.df), MF: idsIn(unit.MF ?? unit.mf), FW: idsIn(unit.FW ?? unit.fw) };
+  const gkSlot = roleSlots(formatCode, "GK")[0]?.code ?? "GK";
+  byRole.GK.forEach(id => (out[String(id)] = gkSlot));
+
+  const counts = preset ? shapeCounts(preset) : { DF: byRole.DF.length, MF: byRole.MF.length, FW: byRole.FW.length };
+  const targets: PositionSlot[] = [
+    ...spread(roleSlots(formatCode, "DF"), counts.DF),
+    ...spread(roleSlots(formatCode, "MF"), counts.MF),
+    ...spread(roleSlots(formatCode, "FW"), counts.FW),
+  ];
+  // keep each line's left→right order of the target slots
+  const outfield = [...byRole.DF, ...byRole.MF, ...byRole.FW];
+  outfield.forEach((id, i) => {
+    const t = targets[i] ?? targets[targets.length - 1];
+    if (t) out[String(id)] = t.code;
+  });
+  return out;
+}
+
+/** Shape label ("2-2-1") for a slot map, by line. */
+export function shapeOf(slotMap: Record<string, string>, formatCode?: string | null): string {
+  const c = { DF: 0, MF: 0, FW: 0 };
+  Object.values(slotMap).forEach(code => {
+    const r = getSlot(code, formatCode)?.role;
+    if (r && r !== "GK") c[r]++;
+  });
+  return c.MF ? `${c.DF}-${c.MF}-${c.FW}` : `${c.DF}-${c.FW}`;
+}
+
+export const ROLE_ORDER_RANK = ROLE_RANK;
