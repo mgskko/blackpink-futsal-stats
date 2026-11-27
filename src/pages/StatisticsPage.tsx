@@ -32,6 +32,7 @@ import FinesBoard from "@/components/stats/FinesBoard";
 import ChemistryAnalyzer from "@/components/stats/ChemistryAnalyzer";
 import { getInactivePlayerIds } from "@/hooks/useInactivePlayers";
 import QuarterFormSection from "@/components/stats/QuarterFormSection";
+import RecentFormBoard from "@/components/stats/RecentFormBoard";
 
 type FilterType = "all" | "custom" | string;
 
@@ -364,6 +365,7 @@ const StatisticsPage = () => {
       <div className="px-4 pt-2">
         {activeTab === "player" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <RecentFormBoard players={memberPlayers} matches={filteredMatches} rosters={filteredRosters} goalEvents={filteredGoalEvents} />
             {/* POTM Card */}
             <POTMCard players={memberPlayers} matches={filteredMatches} teams={filteredTeams} results={filteredResults} rosters={filteredRosters} goalEvents={filteredGoalEvents} allQuarters={filteredQuarters} />
 
