@@ -18,6 +18,9 @@ interface Props {
   isCustom: boolean;
   ageGroup?: string | null;
   isEn: boolean;
+  /** "Name 1Q, 3Q" lines shown under each side */
+  ourScorers?: string[];
+  oppScorers?: string[];
 }
 
 const crest = (name: string) => {
@@ -86,6 +89,14 @@ export default function Scoreboard(p: Props) {
             <span className="max-w-[7rem] truncate text-center text-[13px] font-bold text-foreground/85">{p.oppName}</span>
           </Float3D>
         </div>
+
+        {(p.ourScorers?.length || p.oppScorers?.length) ? (
+          <div className="mt-4 grid grid-cols-[1fr_auto_1fr] gap-2 text-[11px] leading-relaxed text-foreground/80">
+            <ul className="space-y-0.5 text-right">{p.ourScorers?.map(l => <li key={l}>{l}</li>)}</ul>
+            <span className="pt-0.5 text-xs">⚽</span>
+            <ul className="space-y-0.5">{p.oppScorers?.map(l => <li key={l}>{l}</li>)}</ul>
+          </div>
+        ) : null}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-white/10 pt-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><CalendarDays size={11} />{p.date}</span>

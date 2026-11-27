@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Plus, Edit, Trash2, Save, X } from "lucide-react";
-import PageHeader from "@/components/PageHeader";
+import DetailHeader from "@/components/DetailHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -184,7 +184,7 @@ const TacticsPage = () => {
 
   return (
     <div className="relative z-10">
-      <PageHeader title="TACTICS" subtitle="감독의 작전판" />
+      <DetailHeader title="TACTICS" subtitle="감독의 작전판" />
 
       <div className="px-4 space-y-4">
         <SquadDepthBoard playerNames={playerNames} onPlayerClick={(id) => navigate(`/player/${id}`)} />

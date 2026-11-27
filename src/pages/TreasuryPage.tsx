@@ -11,7 +11,7 @@ import {
   CalendarDays,
   Users,
 } from "lucide-react";
-import PageHeader from "@/components/PageHeader";
+import DetailHeader from "@/components/DetailHeader";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -140,7 +140,7 @@ const TreasuryPage = () => {
 
   return (
     <div className="relative z-10">
-      <PageHeader title="TREASURY" subtitle={isEnglish ? "Club ledger" : "구단 회비 장부"} />
+      <DetailHeader title="TREASURY" subtitle={isEnglish ? "Club ledger" : "구단 회비 장부"} />
       <div className="space-y-5 px-4">
         {/* Balance card */}
         <motion.div
