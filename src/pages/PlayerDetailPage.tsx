@@ -17,6 +17,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { getConcacafBadges, type ConcacafBadge } from "@/lib/concacaf";
 import DetailHeader, { DETAIL_HEADER_OFFSET } from "@/components/DetailHeader";
 import RatingBadge from "@/components/player/RatingBadge";
+import UnderlineTabs from "@/components/UnderlineTabs";
 import RecentRatings from "@/components/player/RecentRatings";
 import { computeMatchRatings } from "@/lib/matchRating";
 import Tilt3D from "@/components/fx/Tilt3D";
@@ -488,16 +489,18 @@ const PlayerDetailPage = () => {
       </div>
 
       {/* Tabs: Overview / Matches / Career (FotMob) */}
-      <div className="sticky z-20 mt-4 bg-gradient-to-b from-background via-background/85 to-transparent px-4 pb-2 pt-2" style={{ top: DETAIL_HEADER_OFFSET }}>
-        <div className="liquid-glass flex gap-1 rounded-full p-1">
-          {(["overview", "matches", "career"] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`relative flex-1 rounded-full py-1.5 text-[13px] font-bold transition-colors ${activeTab === tab ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {activeTab === tab && <motion.span layoutId="player-tab-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-              <span className="relative">{tab === "overview" ? L("개요", "Overview") : tab === "matches" ? L("경기", "Matches") : L("커리어", "Career")}</span>
-            </button>
-          ))}
-        </div>
+      <div className="mt-4">
+        <UnderlineTabs
+          id="player"
+          top={DETAIL_HEADER_OFFSET}
+          value={activeTab}
+          onChange={k => setActiveTab(k as typeof activeTab)}
+          tabs={[
+            ["overview", L("개요", "Overview")],
+            ["matches", L("경기", "Matches")],
+            ["career", L("커리어", "Career")],
+          ] as const}
+        />
       </div>
 
       {activeTab !== "career" && (
