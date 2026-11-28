@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ExternalLink, SlidersHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Maximize2, SlidersHorizontal, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlayerName } from "@/hooks/useFutsalData";
 import { ratingTone } from "@/lib/matchRating";
+import FotmobPitch, { type PitchTeam } from "@/components/match/FotmobPitch";
 import AdminPositionPanel from "@/components/admin/AdminPositionPanel";
 import { DEFAULT_FORMAT, formatLabel, getFormat, getSlot, slotMapOf, slotLabel, autoSlots, shapeOf } from "@/lib/positions";
 import type { Player, MatchQuarter, GoalEvent, Team } from "@/hooks/useFutsalData";
@@ -25,12 +27,6 @@ interface Props {
 
 const ROLE_ORDER = ["GK", "DF", "MF", "FW"] as const;
 const ROLE_Y: Record<string, number> = { GK: 88, DF: 68, MF: 46, FW: 22 };
-const ROLE_RING: Record<string, string> = {
-  GK: "ring-yellow-400/80",
-  DF: "ring-blue-400/80",
-  MF: "ring-green-400/80",
-  FW: "ring-red-400/80",
-};
 
 const isCustomLineup = (l: any) => !!l && typeof l === "object" && !Array.isArray(l) && (l.teamA || l.teamB);
 const idsOf = (raw: any): number[] => (raw == null ? [] : (Array.isArray(raw) ? raw : [raw]).map(Number).filter(n => !Number.isNaN(n)));
@@ -123,14 +119,6 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const avatar = (id: number) => players.find(p => p.id === id)?.profile_image_url ?? null;
   const kit = (id: number) => players.find(p => p.id === id)?.back_number ?? null;
   const isSoccer = getFormat(formatCode ?? DEFAULT_FORMAT).sport === "soccer";
-  const S = {
-    avatar: isSoccer ? 42 : 68,
-    ring: isSoccer ? "ring-2" : "ring-[3px]",
-    name: isSoccer ? "text-[9px] max-w-[58px] px-1" : "text-[11px] max-w-[84px] px-1.5",
-    slot: isSoccer ? "text-[8px] px-1" : "text-[9px] px-1.5",
-    badge: isSoccer ? "text-[8px] px-1" : "text-[10px] px-1.5",
-    initial: isSoccer ? "text-[10px]" : "text-sm",
-  };
   const roleLabel = (role: string) =>
     isEn ? role : role === "GK" ? "골키퍼" : role === "DF" ? "수비수" : role === "MF" ? "미드필더" : role === "FW" ? "공격수" : role === "Bench" ? "벤치" : role;
 
@@ -150,22 +138,18 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
-  const [is3D, setIs3D] = useState(() => {
-    try {
-      return localStorage.getItem("pitch-view") !== "2d";
-    } catch {
-      return true;
-    }
-  });
-  const toggle3D = () =>
-    setIs3D(v => {
-      try {
-        localStorage.setItem("pitch-view", v ? "2d" : "3d");
-      } catch {
-        /* storage unavailable */
-      }
-      return !v;
-    });
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFull(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [full]);
 
   const safeIdx = Math.min(idx, Math.max(0, list.length - 1));
   const current = list[safeIdx];
@@ -200,193 +184,93 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
   const matchRating = (pid: number) => ratings?.get(pid)?.rating ?? 6;
   const isOverridden = (pid: number) => !!ratings?.get(pid)?.isOverride;
 
-  const TILT = isSoccer ? 38 : 44;
-  const tilt = is3D ? TILT : 0;
-
-  const renderPitch = (lineup: any, label?: string, accent?: string) => {
-    const positions = positionsOf(lineup, formatCode, isSoccer);
-    const bench = benchOf(lineup);
-    const av = is3D ? Math.round(S.avatar * 0.78) : S.avatar; // standing tokens need less footprint
-    return (
-      <div className="min-w-0 flex-1">
-        {label && <div className={`mb-1 text-center text-[10px] font-bold ${accent ?? "text-muted-foreground"}`}>{label}</div>}
-        <div className="relative w-full" style={{ perspective: 1100, perspectiveOrigin: "50% 10%" }}>
-          <motion.div
-            className="relative w-full"
-            initial={false}
-            animate={{ rotateX: tilt, scale: is3D ? 0.92 : 1, y: is3D ? -6 : 0 }}
-            transition={{ type: "spring", stiffness: 140, damping: 20 }}
-            style={{ aspectRatio: "3/4", transformStyle: "preserve-3d", transformOrigin: "50% 62%" }}
-          >
-            {/* slab thickness (visible in 3D) */}
-            <div className="absolute inset-0 rounded-2xl bg-[#0a2611]" style={{ transform: "translateZ(-14px)" }} aria-hidden />
-            {/* turf */}
-            <div
-              className="absolute inset-0 overflow-hidden rounded-2xl border border-white/10 shadow-[inset_0_0_40px_rgba(0,0,0,0.45)]"
-              style={{
-                backgroundColor: "#15501f",
-                backgroundImage:
-                  "repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 6.25%, rgba(0,0,0,0.05) 6.25% 12.5%), repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 5px), radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.14), transparent 60%), radial-gradient(90% 60% at 50% 110%, rgba(0,0,0,0.35), transparent 70%)",
-              }}
-            >
-              <div className="pointer-events-none absolute inset-0">
-                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/25" />
-                <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/25" />
-                <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/50" />
-                <div className="absolute left-1/2 top-0 h-[15%] w-1/2 -translate-x-1/2 rounded-b-lg border-b border-l border-r border-white/20" />
-                <div className="absolute left-1/2 top-0 h-[6%] w-1/4 -translate-x-1/2 rounded-b border-b border-l border-r border-white/20" />
-                <div className="absolute bottom-0 left-1/2 h-[15%] w-1/2 -translate-x-1/2 rounded-t-lg border-l border-r border-t border-white/20" />
-                <div className="absolute bottom-0 left-1/2 h-[6%] w-1/4 -translate-x-1/2 rounded-t border-l border-r border-t border-white/20" />
-                <div className="absolute inset-1 rounded-xl border border-white/15" />
-              </div>
-              {/* stadium light sweep */}
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.07)_45%,transparent_60%)]" />
-              {/* formation label */}
-              {(() => {
-                const shape = shapeOf(Object.fromEntries(positions.filter(p => p.slot).map(p => [String(p.playerId), p.slot!])), formatCode);
-                return shape && shape !== "0-0" ? (
-                  <span className="absolute bottom-2 left-2 rounded-md bg-black/45 px-1.5 py-0.5 font-num text-[11px] font-extrabold tracking-wide text-white/90 backdrop-blur-sm">{shape}</span>
-                ) : null;
-              })()}
-            </div>
-
-            {/* goals (stand up in 3D) */}
-            {[0, 100].map(top => (
-              <div
-                key={top}
-                aria-hidden
-                className="absolute left-1/2 h-0 w-[22%] -translate-x-1/2"
-                style={{ top: `${top}%`, transformStyle: "preserve-3d" }}
-              >
-                <motion.div
-                  initial={false}
-                  animate={{ rotateX: -tilt, opacity: is3D ? 1 : 0 }}
-                  className="absolute bottom-0 left-0 h-5 w-full rounded-t-sm border-2 border-b-0 border-white/80 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.25)_0_1px,transparent_1px_5px),repeating-linear-gradient(0deg,rgba(255,255,255,0.25)_0_1px,transparent_1px_5px)]"
-                  style={{ transformOrigin: "50% 100%" }}
-                />
-              </div>
-            ))}
-
-            {positions.map((p, i) => {
-              const img = avatar(p.playerId);
-              const qs = quarterStats(p.playerId);
-              return (
-                <div
-                  key={`${p.playerId}-${p.role}-${i}`}
-                  className="absolute z-10 h-0 w-0"
-                  style={{ left: `${p.x}%`, top: `${p.y}%`, transformStyle: "preserve-3d" }}
-                >
-                  {/* contact shadow on the turf */}
-                  <motion.div
-                    aria-hidden
-                    initial={false}
-                    animate={{ opacity: is3D ? 0.65 : 0, scale: is3D ? 1 : 0.5, x: "-50%", y: "-50%", z: 1 }}
-                    className="absolute left-0 top-0 rounded-[50%] bg-black blur-[3px]"
-                    style={{ width: av * 0.95, height: av * 0.34 }}
-                  />
-                  <motion.div
-                    className="absolute left-0 top-0 flex flex-col items-center gap-1"
-                    initial={false}
-                    animate={{ rotateX: -tilt, x: "-50%", y: is3D ? "-100%" : "-50%" }}
-                    transition={{ type: "spring", stiffness: 140, damping: 20, delay: is3D ? i * 0.025 : 0 }}
-                    style={{ transformOrigin: "50% 100%" }}
-                  >
-                    <button
-                      onClick={() => setSel(p.playerId)}
-                      className="flex flex-col items-center gap-0.5 transition-transform active:scale-95"
-                    >
-                      <div className="relative">
-                        <div
-                          className={`relative overflow-hidden rounded-full bg-black/60 ${S.ring} ${ROLE_RING[p.role] ?? "ring-white/50"} shadow-[0_6px_16px_rgba(0,0,0,0.55)]`}
-                          style={{ height: av, width: av }}
-                        >
-                          {img ? (
-                            <img src={img} alt={pn(p.playerId)} className="h-full w-full object-cover" loading="lazy" draggable={false} />
-                          ) : (
-                            <span className={`flex h-full w-full items-center justify-center bg-gradient-to-b from-white/15 to-black/40 font-bold text-white ${S.initial}`}>
-                              {kit(p.playerId) ?? p.role}
-                            </span>
-                          )}
-                        </div>
-                        <span className={`absolute -right-2 -top-1.5 rounded-md py-px font-extrabold shadow ${S.badge} ${ratingTone(matchRating(p.playerId))} ${isOverridden(p.playerId) ? "ring-1 ring-white/80" : ""}`}>
-                          {matchRating(p.playerId).toFixed(1)}
-                        </span>
-                        {img && kit(p.playerId) != null && (
-                          <span className={`absolute -left-2 -top-1.5 flex items-center justify-center rounded-md bg-black/75 px-1 font-bold text-white ring-1 ring-white/20 ${isSoccer ? "h-4 min-w-4 text-[8px]" : "h-5 min-w-5 text-[10px]"}`}>
-                            {kit(p.playerId)}
-                          </span>
-                        )}
-                      </div>
-                      <span className={`mt-1 truncate rounded bg-black/60 py-px font-semibold text-white backdrop-blur-sm ${S.name}`}>
-                        {pn(p.playerId)}
-                      </span>
-                      {p.slot && !is3D && (
-                        <span className={`max-w-[76px] truncate rounded bg-primary/80 py-px font-bold text-primary-foreground ${S.slot}`}>
-                          {slotLabel(p.slot, isEn, formatCode)}
-                        </span>
-                      )}
-                      {(qs.goals > 0 || qs.assists > 0) && (
-                        <span className={`flex items-center gap-1 rounded-full bg-black/60 py-px font-bold text-white ${S.slot}`}>
-                          {qs.goals > 0 && <span>⚽{qs.goals}</span>}
-                          {qs.assists > 0 && <span className="text-primary">🅰{qs.assists}</span>}
-                        </span>
-                      )}
-                    </button>
-                  </motion.div>
-                </div>
-              );
-            })}
-          </motion.div>
-        </div>
-        {bench.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            <span className="text-[9px] font-bold text-muted-foreground">{L("벤치", "Bench")}</span>
-            {bench.map((id, i) => (
-              <button key={`b-${id}-${i}`} onClick={() => setSel(id)} className="rounded-full border border-border bg-card px-1.5 py-0.5 text-[9px] text-muted-foreground hover:text-primary">
-                {pn(id)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  // ── FotMob pitch data ──
+  const topRated = (() => {
+    let best: number | null = null, bestR = -1;
+    ratings?.forEach((d, pid) => { if (d.rating > bestR) { bestR = d.rating; best = pid; } });
+    return best;
+  })();
+  const toPitchTeam = (unit: any, kitColor: "pink" | "sky" | "orange", label?: string, compact = false): PitchTeam => {
+    const pos = positionsOf(unit, formatCode, compact || isSoccer);
+    return {
+      label,
+      kitColor,
+      formation: shapeOf(Object.fromEntries(pos.filter(p => p.slot).map(p => [String(p.playerId), p.slot!])), formatCode),
+      players: pos.map(p => {
+        const qs = quarterStats(p.playerId);
+        return {
+          playerId: p.playerId,
+          x: p.x,
+          y: p.y,
+          name: pn(p.playerId),
+          kit: kit(p.playerId),
+          photo: avatar(p.playerId),
+          rating: ratings?.get(p.playerId)?.rating ?? null,
+          ratingAdjusted: isOverridden(p.playerId),
+          goals: qs.goals,
+          assists: qs.assists,
+          ownGoals: quarterGoals.filter(g => g.is_own_goal && g.goal_player_id === p.playerId).length,
+          potm: p.playerId === topRated,
+          slot: p.slot ?? null,
+        };
+      }),
+    };
   };
-
+  const lineupNow: any = current.lineup;
+  const home = custom ? toPitchTeam(lineupNow.teamA, "sky", matchTeams[0]?.name ?? L("A팀", "Team A"), true) : toPitchTeam(lineupNow, "pink");
+  const away = custom ? toPitchTeam(lineupNow.teamB, "orange", matchTeams[1]?.name ?? L("B팀", "Team B"), true) : undefined;
+  const benchIds = custom ? [...benchOf(lineupNow.teamA), ...benchOf(lineupNow.teamB)] : benchOf(lineupNow);
+  const sportKey: "futsal" | "soccer" = isSoccer ? "soccer" : "futsal";
   const selStats = sel !== null ? playerStats(sel) : null;
+  const go = (d: number) => setIdx(i => Math.min(list.length - 1, Math.max(0, Math.min(i, list.length - 1) + d)));
+
+  const QuarterChips = ({ dark = false }: { dark?: boolean }) => (
+    <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+      {list.map((q, i) => (
+        <button
+          key={q.quarter}
+          onClick={() => setIdx(i)}
+          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+            i === safeIdx ? "bg-foreground text-background" : dark ? "bg-white/10 text-white/80" : "bg-secondary/70 text-muted-foreground"
+          }`}
+        >
+          {isEn ? `Q${q.quarter}` : `${q.quarter}Q`}
+          <span className="ml-1.5 font-num opacity-70">{q.score_for}-{q.score_against}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const swipe = {
+    drag: editing ? false : ("x" as const),
+    dragConstraints: { left: 0, right: 0 },
+    dragElastic: 0.18,
+    onDragEnd: (_: unknown, info: { offset: { x: number } }) => {
+      if (info.offset.x < -60) go(1);
+      else if (info.offset.x > 60) go(-1);
+    },
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-display text-lg tracking-wider text-primary">{L("쿼터별 라인업", "QUARTER LINEUP")}</h2>
-          <p className="text-[10px] text-muted-foreground">{formatLabel(formatCode ?? DEFAULT_FORMAT, isEn)}</p>
+          <h2 className="text-[17px] font-bold" style={{ fontFamily: "inherit" }}>{L("라인업", "Lineup")}</h2>
+          <p className="text-[11px] text-muted-foreground">{formatLabel(formatCode ?? DEFAULT_FORMAT, isEn)} · {L("좌우로 넘겨 쿼터 이동", "swipe to change quarter")}</p>
         </div>
         <div className="flex items-center gap-1.5">
-        <button
-          onClick={toggle3D}
-          aria-pressed={is3D}
-          className="segmented pressable !p-0.5 text-[11px] font-bold"
-          aria-label={L("2D / 3D 보기 전환", "Toggle 2D / 3D view")}
-        >
-          {(["2D", "3D"] as const).map(v => {
-            const on = (v === "3D") === is3D;
-            return (
-              <span key={v} className={`relative rounded-full px-2.5 py-1 transition-colors ${on ? "text-primary-foreground" : "text-muted-foreground"}`}>
-                {on && <motion.span layoutId="pitch-view-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-                <span className="relative">{v}</span>
-              </span>
-            );
-          })}
-        </button>
-        {isAdmin && (
-          <button
-            onClick={() => setEditing(e => !e)}
-            className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold ${editing ? "border border-border text-muted-foreground" : "border border-primary/50 text-primary"}`}
-          >
-            {editing ? <X size={12} /> : <SlidersHorizontal size={12} />}
-            {editing ? L("닫기", "Close") : L("포지션 지정", "Positions")}
+          {isAdmin && (
+            <button
+              onClick={() => setEditing(e => !e)}
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold ${editing ? "border border-border text-muted-foreground" : "border border-primary/50 text-primary"}`}
+            >
+              {editing ? <X size={12} /> : <SlidersHorizontal size={12} />}
+              {editing ? L("닫기", "Close") : L("포지션", "Positions")}
+            </button>
+          )}
+          <button onClick={() => setFull(true)} className="flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-[11px] font-bold text-background">
+            <Maximize2 size={12} /> {L("크게 보기", "Full screen")}
           </button>
-        )}
         </div>
       </div>
 
@@ -394,110 +278,89 @@ export default function QuarterPitchViewer({ quarters, players, goalEvents, matc
         <AdminPositionPanel matchId={matchId} quarters={list} players={players} formatCode={formatCode ?? DEFAULT_FORMAT} />
       )}
 
-      {/* Quarter tabs */}
-      <div className="mb-3 flex gap-1 overflow-x-auto pb-1">
-        {list.map((q, i) => (
-          <button
-            key={q.quarter}
-            onClick={() => setIdx(i)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-all ${
-              i === safeIdx ? "gradient-pink text-primary-foreground" : "border border-border text-muted-foreground hover:text-primary"
-            }`}
-          >
-            {isEn ? `Q${q.quarter}` : `${q.quarter}Q`}
-            <span className="ml-1 text-[10px] opacity-70">{q.score_for}-{q.score_against}</span>
-          </button>
-        ))}
-      </div>
+      <QuarterChips />
 
-      <div className="surface rounded-3xl p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <button
-            onClick={() => setIdx(Math.max(0, safeIdx - 1))}
-            disabled={safeIdx === 0}
-            className="rounded-full border border-border p-1 text-muted-foreground disabled:opacity-30"
-            aria-label={L("이전 쿼터", "Previous quarter")}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <div className="text-center">
-            <div className="text-sm font-bold text-foreground">{L(`${current.quarter}쿼터`, `Quarter ${current.quarter}`)}</div>
-            <div className="text-[11px] text-muted-foreground">{current.score_for} - {current.score_against}</div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current.quarter}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.18 }}
+          className="mt-2.5"
+          {...swipe}
+        >
+          <FotmobPitch sport={sportKey} home={home} away={away} token={isSoccer ? (custom ? 30 : 36) : custom ? 40 : 54} onPlayer={setSel} />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* bench */}
+      {benchIds.length > 0 && (
+        <section className="surface mt-3 overflow-hidden rounded-2xl">
+          <h3 className="px-4 pb-1 pt-3 text-[13px] font-bold" style={{ fontFamily: "inherit" }}>{L(`${current.quarter}쿼터 벤치`, `Bench · Q${current.quarter}`)}</h3>
+          <div className="divide-y divide-white/[0.05]">
+            {benchIds.map((id, i) => {
+              const r = ratings?.get(id)?.rating;
+              return (
+                <button key={`${id}-${i}`} onClick={() => setSel(id)} className="flex w-full items-center gap-3 px-4 py-2 text-left">
+                  <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-secondary font-num text-xs font-bold">
+                    {avatar(id) ? <img src={avatar(id)!} alt="" className="h-full w-full object-cover" /> : kit(id) ?? pn(id).charAt(0)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{pn(id)}</span>
+                  {r != null && <span className={`rounded-md px-1.5 font-num text-[11px] font-extrabold ${ratingTone(r)}`}>{r.toFixed(1)}</span>}
+                </button>
+              );
+            })}
           </div>
-          <button
-            onClick={() => setIdx(Math.min(list.length - 1, safeIdx + 1))}
-            disabled={safeIdx === list.length - 1}
-            className="rounded-full border border-border p-1 text-muted-foreground disabled:opacity-30"
-            aria-label={L("다음 쿼터", "Next quarter")}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        </section>
+      )}
 
-        <AnimatePresence mode="wait">
+      {/* full-screen pop-up (portal: must sit above the bottom tab bar) */}
+      {createPortal(<AnimatePresence>
+        {full && (
           <motion.div
-            key={current.quarter}
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -24 }}
-            transition={{ duration: 0.2 }}
-            drag={editing ? false : "x"}
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (editing) return;
-              if (info.offset.x < -60) setIdx(Math.min(list.length - 1, safeIdx + 1));
-              else if (info.offset.x > 60) setIdx(Math.max(0, safeIdx - 1));
-            }}
+            className="fixed inset-0 z-[70] flex flex-col bg-black/90 backdrop-blur-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+            role="dialog"
+            aria-modal
           >
-            {custom ? (
-              <div className="grid grid-cols-2 gap-2">
-                {renderPitch((current.lineup as any).teamA, `🅰️ ${matchTeams[0]?.name ?? L("A팀", "Team A")}`, "text-blue-400")}
-                {renderPitch((current.lineup as any).teamB, `🅱️ ${matchTeams[1]?.name ?? L("B팀", "Team B")}`, "text-orange-400")}
+            <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-4 py-3 text-white">
+              <div className="min-w-0">
+                <div className="text-[15px] font-bold">{L(`${current.quarter}쿼터 라인업`, `Quarter ${current.quarter} lineup`)}</div>
+                <div className="font-num text-xs text-white/60">{current.score_for} - {current.score_against} · {home.formation}{away ? ` / ${away.formation}` : ""}</div>
               </div>
-            ) : (
-              renderPitch(current.lineup)
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="mt-3 rounded-xl border border-border bg-secondary/20 p-2.5">
-          <div className="mb-1.5 text-[10px] font-bold tracking-wider text-primary">
-            {L("이 쿼터 득점 / 도움", "GOALS & ASSISTS THIS QUARTER")}
-          </div>
-          {quarterGoals.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">{L("이 쿼터에는 골이 없습니다.", "No goals in this quarter.")}</p>
-          ) : (
-            <div className="space-y-1">
-              {quarterGoals.map(g => (
-                <div key={g.id} className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-primary">⚽</span>
-                  {g.is_own_goal ? (
-                    <span className="text-destructive">
-                      {L("자책골", "Own Goal")} ({g.goal_player_id ? pn(g.goal_player_id) : "???"})
-                    </span>
-                  ) : (
-                    <>
-                      <button onClick={() => g.goal_player_id && setSel(g.goal_player_id)} className="font-medium text-foreground hover:text-primary">
-                        {g.goal_player_id ? pn(g.goal_player_id) : "???"}
-                      </button>
-                      {g.assist_player_id && (
-                        <>
-                          <span className="text-muted-foreground">←</span>
-                          <span className="text-[10px] text-muted-foreground">🅰️</span>
-                          <button onClick={() => setSel(g.assist_player_id!)} className="text-muted-foreground hover:text-primary">
-                            {pn(g.assist_player_id)}
-                          </button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
+              <button onClick={() => setFull(false)} aria-label={L("닫기", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+                <X size={18} />
+              </button>
             </div>
-          )}
-        </div>
-      </div>
+            <div className="mx-auto w-full max-w-lg px-4"><QuarterChips dark /></div>
+            <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-3">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={current.quarter}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.18 }}
+                  className="h-full"
+                  style={{ aspectRatio: isSoccer ? "68 / 105" : "25 / 42", maxWidth: "100%" }}
+                  {...swipe}
+                >
+                  <FotmobPitch sport={sportKey} home={home} away={away} token={isSoccer ? (custom ? 34 : 44) : custom ? 46 : 64} onPlayer={id => { setFull(false); setSel(id); }} className="h-full" />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            <div className="flex items-center justify-center gap-6 pb-4 text-white/80">
+              <button onClick={() => go(-1)} disabled={safeIdx === 0} className="rounded-full bg-white/10 p-2.5 disabled:opacity-30" aria-label={L("이전 쿼터", "Previous quarter")}><ChevronLeft size={18} /></button>
+              <span className="font-num text-sm">{safeIdx + 1} / {list.length}</span>
+              <button onClick={() => go(1)} disabled={safeIdx === list.length - 1} className="rounded-full bg-white/10 p-2.5 disabled:opacity-30" aria-label={L("다음 쿼터", "Next quarter")}><ChevronRight size={18} /></button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>, document.body)}
 
       <Sheet open={sel !== null} onOpenChange={o => !o && setSel(null)}>
         <SheetContent side="bottom" className="rounded-t-2xl">

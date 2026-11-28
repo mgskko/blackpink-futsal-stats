@@ -1,4 +1,4 @@
-import { localISODate } from "@/lib/utils";
+import { localISODate, parseLocalDate } from "@/lib/utils";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SplashScreen from "@/components/SplashScreen";
 import DetailHeader, { DETAIL_HEADER_OFFSET } from "@/components/DetailHeader";
 import Scoreboard from "@/components/match/Scoreboard";
+import UnderlineTabs from "@/components/UnderlineTabs";
 import MatchTimeline from "@/components/match/MatchTimeline";
 import PlayerOfTheMatch from "@/components/match/PlayerOfTheMatch";
 import PlayerStatsTable from "@/components/match/PlayerStatsTable";
@@ -222,27 +223,20 @@ const MatchDetailPage = () => {
         <div className="mx-4 mt-4"><MatchPrediction matchId={matchId} /></div>
       )}
 
-      {/* Tab bar */}
-      <div className="sticky z-20 mt-4 bg-gradient-to-b from-background via-background/85 to-transparent px-4 pb-3 pt-2" style={{ top: DETAIL_HEADER_OFFSET }}>
-        <div className="liquid-glass no-scrollbar flex gap-1 overflow-x-auto rounded-full p-1">
-          {([
+      {/* Tab bar (FotMob underline tabs) */}
+      <div className="mt-4">
+        <UnderlineTabs
+          id="match"
+          top={DETAIL_HEADER_OFFSET}
+          value={tab}
+          onChange={k => setTab(k as typeof tab)}
+          tabs={[
             ["facts", L("개요", "Overview")],
             ["lineup", L("라인업", "Lineup")],
             ["stats", L("선수", "Players")],
             ["h2h", L("상대 전적", "H2H")],
-          ] as const).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`relative flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors ${
-                tab === key ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab === key && <motion.span layoutId="match-tab-pill" className="absolute inset-0 rounded-full gradient-pink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-              <span className="relative">{label}</span>
-            </button>
-          ))}
-        </div>
+          ] as const}
+        />
       </div>
 
       {/* ===== OVERVIEW ===== */}
@@ -302,6 +296,26 @@ const MatchDetailPage = () => {
               </ul>
             </section>
           )}
+
+          {/* Match info (FotMob) */}
+          <section className="surface rounded-2xl p-4">
+            <h3 className="mb-2.5 text-[15px] font-bold" style={{ fontFamily: "inherit" }}>{L("경기 정보", "Match info")}</h3>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+              {[
+                [L("날짜", "Date"), `${match.date} (${(isEn ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["일", "월", "화", "수", "목", "금", "토"])[parseLocalDate(match.date).getDay()]})`],
+                [L("구장", "Venue"), venue ? `${venue.name}${match.sub_venue ? ` ${match.sub_venue}` : ""}` : "-"],
+                [L("경기 방식", "Format"), match.match_type],
+                [L("구분", "Type"), match.is_custom ? L("자체전", "Intrasquad") : L("친선 · 리그", "Friendly / league")],
+                ...(opponentTeam?.age_category ? [[L("상대 연령대", "Opponent age"), opponentTeam.original_age_desc || opponentTeam.age_category]] : []),
+                ...(attendingPlayers.length ? [[L("참석", "Attending"), L(`${attendingPlayers.length}명`, `${attendingPlayers.length}`)]] : []),
+              ].map(([k, v]) => (
+                <div key={k as string} className="min-w-0">
+                  <dt className="text-[11px] text-muted-foreground">{k}</dt>
+                  <dd className="truncate font-semibold">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
           {!isScheduled && <h3 className="px-1 pt-2 text-[13px] font-bold text-muted-foreground" style={{ fontFamily: "inherit" }}>{L("멤버 투표", "Member votes")}</h3>}
         </div>
